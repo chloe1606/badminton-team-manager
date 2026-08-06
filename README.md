@@ -1,19 +1,39 @@
 # badminton-team-manager
 
-A lightweight static web app to help badminton teams manage players, track who is available for a session, and generate balanced doubles pairings.
+React + TypeScript foundation for a badminton team management system.
 
-## Features
-
-- Add and remove team members
-- Track each player's skill level
-- Mark who is available for the next session
-- Generate doubles pairings plus a waiting list when needed
-- Persist data in the browser with `localStorage`
-
-## Run locally
-
-Open `/home/runner/work/badminton-team-manager/badminton-team-manager/index.html` in a browser, or serve the repository with a static file server such as:
+## Setup
 
 ```bash
-python3 -m http.server 8000
+npm install
 ```
+
+## Run
+
+```bash
+npm run dev
+```
+
+Build for production:
+
+```bash
+npm run build
+npm run preview
+```
+
+## Project structure
+
+- `/src/app/router.tsx` - route map and feature page wiring
+- `/src/auth` - authentication context/provider, hook, and auth service layer
+- `/src/components/layout` - responsive app shell/header/navigation
+- `/src/components/routing` - route protection pattern for private pages
+- `/src/components/ui` - reusable UI primitives (`Button`, `Card`, `Input`)
+- `/src/pages` - public login, protected dashboard, and domain placeholders
+- `/src/styles/global.css` - global design tokens, base styles, and responsive rules
+
+## Authentication integration
+
+The auth flow is intentionally provider-agnostic. Swap the default `mockAuthService`
+implementation in `/src/auth/services/mockAuthService.ts` with your real auth backend
+implementation (same `AuthService` interface in `/src/types/auth.ts`) and pass it to
+`AuthProvider`.
