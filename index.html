@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Badminton Team Manager</title>
+    <style>
+      :root {
+        color-scheme: light;
+        font-family: Arial, Helvetica, sans-serif;
+        --bg: #f5f7fb;
+        --card: #ffffff;
+        --text: #1f2937;
+        --muted: #6b7280;
+        --accent: #0f766e;
+        --accent-strong: #115e59;
+        --border: #d1d5db;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+      }
+
+      main {
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 24px 16px 40px;
+      }
+
+      h1,
+      h2,
+      h3,
+      p {
+        margin-top: 0;
+      }
+
+      .hero {
+        background: linear-gradient(135deg, #134e4a, #0f766e);
+        color: #fff;
+        padding: 24px;
+        border-radius: 16px;
+        margin-bottom: 24px;
+      }
+
+      .hero p {
+        margin-bottom: 0;
+        max-width: 720px;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 20px;
+      }
+
+      .card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 20px;
+        box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
+      }
+
+      form {
+        display: grid;
+        gap: 12px;
+      }
+
+      label {
+        font-weight: 600;
+        font-size: 0.95rem;
+      }
+
+      input,
+      select,
+      button {
+        width: 100%;
+        border-radius: 10px;
+        border: 1px solid var(--border);
+        padding: 10px 12px;
+        font: inherit;
+      }
+
+      button {
+        background: var(--accent);
+        border-color: var(--accent);
+        color: #fff;
+        font-weight: 700;
+        cursor: pointer;
+      }
+
+      button:hover {
+        background: var(--accent-strong);
+      }
+
+      button.secondary {
+        background: transparent;
+        color: var(--accent-strong);
+      }
+
+      ul {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+      }
+
+      .player-list li,
+      .pairings li {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        align-items: center;
+        padding: 12px 0;
+        border-bottom: 1px solid #e5e7eb;
+      }
+
+      .player-list li:last-child,
+      .pairings li:last-child {
+        border-bottom: 0;
+      }
+
+      .player-meta {
+        color: var(--muted);
+        font-size: 0.92rem;
+      }
+
+      .player-actions {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+
+      .player-actions button {
+        width: auto;
+        padding: 8px 10px;
+      }
+
+      .empty {
+        color: var(--muted);
+        margin: 0;
+      }
+
+      .stats {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px;
+        margin-top: 16px;
+      }
+
+      .stat {
+        background: #ecfeff;
+        border-radius: 12px;
+        padding: 14px;
+      }
+
+      .stat strong {
+        display: block;
+        font-size: 1.5rem;
+      }
+
+      .waiting-list {
+        margin-top: 16px;
+      }
+
+      .pill {
+        display: inline-block;
+        border-radius: 999px;
+        background: #ccfbf1;
+        color: #134e4a;
+        padding: 3px 10px;
+        font-size: 0.8rem;
+        font-weight: 700;
+      }
+
+      @media (max-width: 640px) {
+        .stats {
+          grid-template-columns: 1fr;
+        }
+
+        .player-list li,
+        .pairings li {
+          flex-direction: column;
+          align-items: flex-start;
+        }
+
+        .player-actions {
+          width: 100%;
+        }
+
+        .player-actions button {
+          flex: 1;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <section class="hero">
+        <h1>Badminton Team Manager</h1>
+        <p>
+          Organize your team, see who is ready for the next session, and create
+          simple doubles pairings in a few clicks.
+        </p>
+      </section>
+
+      <section class="grid">
+        <article class="card">
+          <h2>Add team member</h2>
+          <form id="player-form">
+            <div>
+              <label for="player-name">Player name</label>
+              <input id="player-name" name="player-name" required maxlength="40" />
+            </div>
+            <div>
+              <label for="player-level">Skill level</label>
+              <select id="player-level" name="player-level">
+                <option>Beginner</option>
+                <option>Intermediate</option>
+                <option>Advanced</option>
+              </select>
+            </div>
+            <button type="submit">Add player</button>
+          </form>
+          <div class="stats">
+            <div class="stat">
+              <span>Total players</span>
+              <strong id="total-players">0</strong>
+            </div>
+            <div class="stat">
+              <span>Available today</span>
+              <strong id="available-players">0</strong>
+            </div>
+            <div class="stat">
+              <span>Courts needed</span>
+              <strong id="courts-needed">0</strong>
+            </div>
+          </div>
+        </article>
+
+        <article class="card">
+          <h2>Team roster</h2>
+          <p class="empty" id="roster-empty">No players yet. Add your first teammate.</p>
+          <ul class="player-list" id="player-list"></ul>
+        </article>
+      </section>
+
+      <section class="grid" style="margin-top: 20px">
+        <article class="card">
+          <h2>Session pairings</h2>
+          <p class="empty" id="pairings-empty">
+            Mark players as available to generate doubles pairings.
+          </p>
+          <ul class="pairings" id="pairings-list"></ul>
+          <div class="waiting-list" id="waiting-list"></div>
+          <button class="secondary" id="generate-pairings" type="button">
+            Generate pairings
+          </button>
+        </article>
+      </section>
+    </main>
+
+    <script>
+      const storageKey = "badminton-team-manager.players";
+
+      const playerForm = document.getElementById("player-form");
+      const playerNameInput = document.getElementById("player-name");
+      const playerLevelInput = document.getElementById("player-level");
+      const playerList = document.getElementById("player-list");
+      const rosterEmpty = document.getElementById("roster-empty");
+      const totalPlayers = document.getElementById("total-players");
+      const availablePlayers = document.getElementById("available-players");
+      const courtsNeeded = document.getElementById("courts-needed");
+      const pairingsList = document.getElementById("pairings-list");
+      const pairingsEmpty = document.getElementById("pairings-empty");
+      const waitingList = document.getElementById("waiting-list");
+      const generatePairingsButton = document.getElementById("generate-pairings");
+
+      const levelWeight = {
+        Beginner: 1,
+        Intermediate: 2,
+        Advanced: 3,
+      };
+
+      let players = loadPlayers();
+      let pairings = [];
+      let waiting = [];
+
+      function loadPlayers() {
+        try {
+          const saved = JSON.parse(window.localStorage.getItem(storageKey));
+          return Array.isArray(saved) ? saved : [];
+        } catch (error) {
+          return [];
+        }
+      }
+
+      function savePlayers() {
+        window.localStorage.setItem(storageKey, JSON.stringify(players));
+      }
+
+      function resetPairings() {
+        pairings = [];
+        waiting = [];
+      }
+
+      function addPlayer(name, level) {
+        players.push({
+          id: crypto.randomUUID(),
+          name,
+          level,
+          available: true,
+        });
+        resetPairings();
+        savePlayers();
+        render();
+      }
+
+      function toggleAvailability(id) {
+        players = players.map((player) =>
+          player.id === id
+            ? { ...player, available: !player.available }
+            : player
+        );
+        resetPairings();
+        savePlayers();
+        render();
+      }
+
+      function removePlayer(id) {
+        players = players.filter((player) => player.id !== id);
+        resetPairings();
+        savePlayers();
+        render();
+      }
+
+      function generatePairings() {
+        const available = players
+          .filter((player) => player.available)
+          .sort((left, right) => levelWeight[right.level] - levelWeight[left.level]);
+
+        const nextPairings = [];
+        for (let index = 0; index + 3 < available.length; index += 4) {
+          nextPairings.push([
+            available[index],
+            available[index + 3],
+            available[index + 1],
+            available[index + 2],
+          ]);
+        }
+
+        pairings = nextPairings;
+        waiting = available.slice(nextPairings.length * 4);
+        renderPairings();
+      }
+
+      function renderStats() {
+        const availableCount = players.filter((player) => player.available).length;
+        totalPlayers.textContent = players.length;
+        availablePlayers.textContent = availableCount;
+        courtsNeeded.textContent = Math.ceil(availableCount / 4) || 0;
+      }
+
+      function renderRoster() {
+        rosterEmpty.hidden = players.length > 0;
+        playerList.innerHTML = "";
+
+        players.forEach((player) => {
+          const item = document.createElement("li");
+          item.innerHTML = `
+            <div>
+              <strong>${escapeHtml(player.name)}</strong>
+              <div class="player-meta">${player.level}</div>
+            </div>
+            <div class="player-actions">
+              <span class="pill">${player.available ? "Available" : "Resting"}</span>
+              <button type="button" data-action="toggle" data-player-id="${player.id}">
+                ${player.available ? "Mark resting" : "Mark available"}
+              </button>
+              <button type="button" data-action="remove" data-player-id="${player.id}">
+                Remove
+              </button>
+            </div>
+          `;
+          playerList.appendChild(item);
+        });
+      }
+
+      function renderPairings() {
+        pairingsList.innerHTML = "";
+        waitingList.innerHTML = "";
+
+        const availableCount = players.filter((player) => player.available).length;
+        const hasPairings = pairings.length > 0;
+        pairingsEmpty.hidden = hasPairings || availableCount > 0;
+        if (!hasPairings && availableCount > 0) {
+          pairingsEmpty.textContent =
+            "Not enough available players for a full doubles game yet.";
+          pairingsEmpty.hidden = false;
+        } else if (availableCount === 0) {
+          pairingsEmpty.textContent =
+            "Mark players as available to generate doubles pairings.";
+        }
+
+        pairings.forEach((court, index) => {
+          const item = document.createElement("li");
+          item.innerHTML = `
+            <div>
+              <strong>Court ${index + 1}</strong>
+              <div class="player-meta">
+                ${escapeHtml(court[0].name)} &amp; ${escapeHtml(court[1].name)}
+                vs
+                ${escapeHtml(court[2].name)} &amp; ${escapeHtml(court[3].name)}
+              </div>
+            </div>
+          `;
+          pairingsList.appendChild(item);
+        });
+
+        if (waiting.length > 0) {
+          waitingList.innerHTML = `
+            <h3>Waiting list</h3>
+            <p>${waiting.map((player) => escapeHtml(player.name)).join(", ")}</p>
+          `;
+        }
+      }
+
+      function escapeHtml(value) {
+        return value
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll('"', "&quot;")
+          .replaceAll("'", "&#39;");
+      }
+
+      function render() {
+        renderStats();
+        renderRoster();
+        renderPairings();
+      }
+
+      playerForm.addEventListener("submit", (event) => {
+        event.preventDefault();
+        const name = playerNameInput.value.trim();
+        if (!name) {
+          return;
+        }
+
+        addPlayer(name, playerLevelInput.value);
+        playerForm.reset();
+        playerLevelInput.value = "Beginner";
+        playerNameInput.focus();
+      });
+
+      playerList.addEventListener("click", (event) => {
+        const button = event.target.closest("button");
+        if (!button) {
+          return;
+        }
+
+        const { action, playerId } = button.dataset;
+        if (action === "toggle") {
+          toggleAvailability(playerId);
+        }
+        if (action === "remove") {
+          removePlayer(playerId);
+        }
+      });
+
+      generatePairingsButton.addEventListener("click", generatePairings);
+
+      render();
+    </script>
+  </body>
+</html>
