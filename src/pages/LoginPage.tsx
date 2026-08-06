@@ -40,6 +40,11 @@ export function LoginPage() {
       <Card className="auth-card" aria-labelledby="login-heading">
         <h1 id="login-heading">Badminton Team Manager</h1>
         <p className="muted">Sign in to access team planning and attendance tools.</p>
+        <p className="muted" style={{ fontSize: '0.85em' }}>
+          <strong>Admin:</strong> admin@badminton.local / admin123
+          &nbsp;&nbsp;|&nbsp;&nbsp;
+          <strong>User:</strong> user@badminton.local / user123
+        </p>
         <form className="stack" onSubmit={handleSubmit} noValidate>
           <label htmlFor="email">Email</label>
           <Input

@@ -31,7 +31,19 @@ npm run preview
 - `/src/pages` - public login, protected dashboard, and domain placeholders
 - `/src/styles/global.css` - global design tokens, base styles, and responsive rules
 
-## Authentication integration
+## Login accounts
+
+Two built-in roles are available for testing with the mock auth service:
+
+| Role  | Email                      | Password  | Capabilities                          |
+|-------|----------------------------|-----------|---------------------------------------|
+| Admin | admin@badminton.local      | admin123  | View matches + add new match dates    |
+| User  | user@badminton.local       | user123   | View matches only (read-only)         |
+
+Admins see an **Add Match** form on the Matches page and can create new fixtures.  
+User-role accounts see the match list and can export the calendar but cannot add or edit matches.
+
+
 
 The auth flow is intentionally provider-agnostic. Swap the default `mockAuthService`
 implementation in `/src/auth/services/mockAuthService.ts` with your real auth backend
