@@ -50,6 +50,7 @@ export function AuthProvider({ children, service = mockAuthService }: AuthProvid
     () => ({
       user,
       isAuthenticated: Boolean(user),
+      isAdmin: user?.role === 'admin',
       isLoading,
       login,
       logout,
