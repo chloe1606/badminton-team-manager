@@ -32,11 +32,11 @@ export const mockAuthService: AuthService = {
   },
   async login(credentials: LoginCredentials) {
     const account = mockAuthAccounts.find(
-      (a) => a.email === credentials.email.trim() && a.password === credentials.password,
+      (a) => a.username === credentials.username.trim() && a.password === credentials.password,
     )
 
     if (!account) {
-      throw new Error('Invalid email or password.')
+      throw new Error('Invalid username or password.')
     }
 
     const user: AuthUser = { ...account.user }

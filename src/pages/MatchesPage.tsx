@@ -9,6 +9,7 @@ import type {
   MatchDetailsInput,
   MatchFormatConfig,
   MatchGameScore,
+  MatchPairAssignment,
   MatchRecord,
   MatchResult,
 } from '../types/matches'
@@ -20,6 +21,8 @@ import {
   gamesNeededToWin,
   getAddressById,
   getClubById,
+  normalizeAssignedPairs,
+  suggestAssignedPairs,
   sortMatchesChronologically,
   summarizeMatchResult,
   validateRubberGames,
@@ -47,9 +50,22 @@ interface MatchDetailsDraft {
 function cloneFormat(format: MatchFormatConfig): MatchFormatConfig {
   return {
     numberOfRubbers: format.numberOfRubbers,
+    rubbersPerPlayer: format.rubbersPerPlayer,
     pairingSlots: [...format.pairingSlots],
+    squad: { ...format.squad },
     scoring: { ...format.scoring },
   }
+}
+
+const playersById = new Map(samplePlayers.map((player) => [player.id, player] as const))
+
+function getPlayer(playerId: string) {
+  return playersById.get(playerId)
+}
+
+function formatGenderLabel(playerId: string): string {
+  const gender = getPlayer(playerId)?.gender
+  return gender ? gender.charAt(0).toUpperCase() + gender.slice(1) : 'Unknown'
 }
 
 function toDateTimeLocalValue(value?: string): string {
@@ -340,7 +356,19 @@ function MatchResultEditor({
 }
 
 function getPlayerName(playerId: string): string {
-  return samplePlayers.find((player) => player.id === playerId)?.name ?? 'Unknown player'
+  return getPlayer(playerId)?.name ?? 'Unknown player'
+}
+
+function getPlayerSummary(playerId: string): string {
+  return `${getPlayerName(playerId)} · ${formatGenderLabel(playerId)}`
+}
+
+function formatPairSummary(pair: MatchPairAssignment): string {
+  if (pair.playerIds.length === 0) {
+    return 'Not assigned'
+  }
+
+  return pair.playerIds.map(getPlayerName).join(' + ')
 }
 
 function MatchPlayerSelectionEditor({
@@ -348,32 +376,154 @@ function MatchPlayerSelectionEditor({
   onSave,
 }: {
   match: MatchRecord
-  onSave: (matchId: string, playerIds: string[]) => void
+  onSave: (
+    matchId: string,
+    playerIds: string[],
+    assignedPairs: MatchPairAssignment[],
+  ) => string | undefined
 }) {
   const availablePlayers = useMemo(
     () => samplePlayers.filter((player) => (match.availablePlayerIds ?? []).includes(player.id)),
     [match.availablePlayerIds],
   )
   const [selectedPlayerIds, setSelectedPlayerIds] = useState(match.assignedPlayerIds ?? [])
+  const [assignedPairs, setAssignedPairs] = useState<MatchPairAssignment[]>(() =>
+    normalizeAssignedPairs(
+      match.assignedPairs && match.assignedPairs.some((pair) => pair.playerIds.length > 0)
+        ? match.assignedPairs
+        : suggestAssignedPairs(match.assignedPlayerIds ?? [], match.format, playersById),
+      match.format,
+    ),
+  )
+  const [draggedPlayerId, setDraggedPlayerId] = useState<string | null>(null)
+  const [error, setError] = useState('')
   const [status, setStatus] = useState('')
+  const selectedPlayerIdSet = useMemo(() => new Set(selectedPlayerIds), [selectedPlayerIds])
+  const selectedPlayers = useMemo(
+    () => availablePlayers.filter((player) => selectedPlayerIdSet.has(player.id)),
+    [availablePlayers, selectedPlayerIdSet],
+  )
 
   useEffect(() => {
-    setSelectedPlayerIds((match.assignedPlayerIds ?? []).filter((playerId) =>
+    const nextSelectedPlayerIds = (match.assignedPlayerIds ?? []).filter((playerId) =>
       availablePlayers.some((player) => player.id === playerId),
-    ))
+    )
+
+    setSelectedPlayerIds(nextSelectedPlayerIds)
+    setAssignedPairs(
+      normalizeAssignedPairs(
+        match.assignedPairs && match.assignedPairs.some((pair) => pair.playerIds.length > 0)
+          ? match.assignedPairs
+          : suggestAssignedPairs(nextSelectedPlayerIds, match.format, playersById),
+        match.format,
+      ).map((pair) => ({
+        ...pair,
+        playerIds: pair.playerIds.filter((playerId) => nextSelectedPlayerIds.includes(playerId)),
+      })),
+    )
+    setError('')
     setStatus('')
   }, [availablePlayers, match.assignedPlayerIds])
 
   function togglePlayer(playerId: string, checked: boolean) {
+    setError('')
     setSelectedPlayerIds((currentIds) =>
       checked ? [...currentIds, playerId] : currentIds.filter((id) => id !== playerId),
+    )
+    if (!checked) {
+      setAssignedPairs((currentPairs) =>
+        currentPairs.map((pair) => ({
+          ...pair,
+          playerIds: pair.playerIds.filter((id) => id !== playerId),
+        })),
+      )
+    }
+  }
+
+  function getSlotLabel(positionIndex: number): string {
+    if (match.format.squad.pairingRule === 'mixed') {
+      return positionIndex === 0 ? 'Lady' : 'Man'
+    }
+
+    return `Player ${positionIndex + 1}`
+  }
+
+  function canDropPlayerIntoSlot(playerId: string, positionIndex: number): boolean {
+    if (!selectedPlayerIdSet.has(playerId)) {
+      return false
+    }
+
+    if (match.format.squad.pairingRule !== 'mixed') {
+      return true
+    }
+
+    const player = getPlayer(playerId)
+    return positionIndex === 0 ? player?.gender === 'lady' : player?.gender === 'man'
+  }
+
+  function assignPlayerToSlot(playerId: string, pairSlot: string, positionIndex: number) {
+    if (!canDropPlayerIntoSlot(playerId, positionIndex)) {
+      setError(`Drop ${getPlayerName(playerId)} into a matching ${getSlotLabel(positionIndex).toLowerCase()} slot.`)
+      return
+    }
+
+    setError('')
+    setAssignedPairs((currentPairs) =>
+      normalizeAssignedPairs(
+        currentPairs.map((pair) => {
+          const withoutPlayerIds = match.format.squad.allowPlayerReuseAcrossPairs
+            ? [...pair.playerIds]
+            : pair.playerIds.filter((id) => id !== playerId)
+
+          if (pair.pairSlot !== pairSlot) {
+            return { ...pair, playerIds: withoutPlayerIds }
+          }
+
+          const nextPlayerIds = [...withoutPlayerIds]
+          nextPlayerIds[positionIndex] = playerId
+
+          const otherIndex = positionIndex === 0 ? 1 : 0
+          if (nextPlayerIds[otherIndex] === playerId) {
+            nextPlayerIds[otherIndex] = undefined as unknown as string
+          }
+
+          return {
+            ...pair,
+            playerIds: nextPlayerIds.filter(Boolean).slice(0, 2),
+          }
+        }),
+        match.format,
+      ),
+    )
+  }
+
+  function clearSlot(pairSlot: string, positionIndex: number) {
+    setAssignedPairs((currentPairs) =>
+      currentPairs.map((pair) => {
+        if (pair.pairSlot !== pairSlot) {
+          return pair
+        }
+
+        return {
+          ...pair,
+          playerIds: pair.playerIds.filter((_, currentIndex) => currentIndex !== positionIndex),
+        }
+      }),
     )
   }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    onSave(match.id, selectedPlayerIds)
-    setStatus('Players linked to match.')
+    setError('')
+    setStatus('')
+
+    const saveError = onSave(match.id, selectedPlayerIds, assignedPairs)
+    if (saveError) {
+      setError(saveError)
+      return
+    }
+
+    setStatus('Squad and pairs saved.')
   }
 
   if (availablePlayers.length === 0) {
@@ -382,6 +532,11 @@ function MatchPlayerSelectionEditor({
 
   return (
     <form className="stack stack-tight" onSubmit={handleSubmit}>
+      <p className="muted">
+        Select exactly {match.format.squad.squadSize} players: {match.format.squad.ladiesRequired}{' '}
+        ladies and {match.format.squad.menRequired} men.
+      </p>
+
       {availablePlayers.map((player) => {
         const checked = selectedPlayerIds.includes(player.id)
         return (
@@ -391,15 +546,96 @@ function MatchPlayerSelectionEditor({
               type="checkbox"
               onChange={(event) => togglePlayer(player.id, event.target.checked)}
             />
-            <span>{player.name}</span>
+            <span>
+              {player.name} · {formatGenderLabel(player.id)}
+            </span>
           </label>
         )
       })}
 
+      <div className="stack stack-tight">
+        <div className="card-heading">
+          <h4>Configured pairs</h4>
+          <p className="muted">
+            Drag selected players into each pair.{' '}
+            {match.format.squad.allowPlayerReuseAcrossPairs
+              ? 'Players can be reused across pair slots.'
+              : 'Each selected player can only appear once.'}
+          </p>
+        </div>
+
+        {selectedPlayers.length > 0 ? (
+          <div className="pill-list">
+            {selectedPlayers.map((player) => (
+              <button
+                key={player.id}
+                className="player-pill"
+                draggable
+                type="button"
+                onDragStart={() => setDraggedPlayerId(player.id)}
+                onDragEnd={() => setDraggedPlayerId(null)}
+              >
+                {player.name} · {formatGenderLabel(player.id)}
+              </button>
+            ))}
+          </div>
+        ) : (
+          <p className="muted">Select the squad first, then drag players into pair slots.</p>
+        )}
+
+        <div className="pair-assignment-grid">
+          {assignedPairs.map((pair) => (
+            <div className="result-editor" key={pair.pairSlot}>
+              <strong>{pair.pairSlot}</strong>
+              <div className="pair-slot-grid">
+                {[0, 1].map((positionIndex) => {
+                  const playerId = pair.playerIds[positionIndex]
+                  return (
+                    <div
+                      key={`${pair.pairSlot}-${positionIndex}`}
+                      className="pair-drop-zone"
+                      onDragOver={(event) => {
+                        if (draggedPlayerId && canDropPlayerIntoSlot(draggedPlayerId, positionIndex)) {
+                          event.preventDefault()
+                        }
+                      }}
+                      onDrop={(event) => {
+                        event.preventDefault()
+                        if (draggedPlayerId) {
+                          assignPlayerToSlot(draggedPlayerId, pair.pairSlot, positionIndex)
+                          setDraggedPlayerId(null)
+                        }
+                      }}
+                    >
+                      <span className="muted">{getSlotLabel(positionIndex)}</span>
+                      {playerId ? (
+                        <div className="pair-drop-zone-content">
+                          <span>{getPlayerSummary(playerId)}</span>
+                          <Button type="button" variant="ghost" onClick={() => clearSlot(pair.pairSlot, positionIndex)}>
+                            Clear
+                          </Button>
+                        </div>
+                      ) : (
+                        <span className="muted">Drop player here</span>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {error ? (
+        <p className="error-text" role="alert">
+          {error}
+        </p>
+      ) : null}
       {status ? <p className="muted">{status}</p> : null}
 
       <div className="form-actions">
-        <Button type="submit">Save player links</Button>
+        <Button type="submit">Save squad and pairs</Button>
       </div>
     </form>
   )
@@ -709,6 +945,203 @@ export function MatchesPage() {
         </div>
       </Card>
 
+      <section className="stack" aria-label="Match list">
+        {sortedMatches.map((match, index) => {
+          const club = getClubById(clubDirectory, match.opponentClubId)
+          const address = getAddressById(club, match.venueId)
+          const opponentName = formatOpponentName(match, club)
+          const resultSummary = summarizeMatchResult(match.result, match.format)
+          const pendingRubbers = match.format.numberOfRubbers - resultSummary.completedRubbers
+          const availablePlayerIds = match.availablePlayerIds ?? []
+          const assignedPlayerIds = match.assignedPlayerIds ?? []
+          const isCurrentPlayerAvailable = user?.playerId
+            ? availablePlayerIds.includes(user.playerId)
+            : false
+
+          return (
+            <Card key={match.id}>
+              <div className="card-heading">
+                <div>
+                  <p className="eyebrow">Match {index + 1}</p>
+                  <h2>{match.teamDisplayName} vs {opponentName}</h2>
+                  <p className="muted">{match.leagueName}</p>
+                </div>
+                <Button onClick={() => exportMatch(match.id)} variant="ghost">
+                  Export to calendar
+                </Button>
+              </div>
+
+              <p className="muted">{formatMatchDateRange(match.startAt, match.endAt)}</p>
+
+              <div className="responsive-columns">
+                <div>
+                  <h3>Venue</h3>
+                  <p>
+                    <strong>{address?.venueName ?? 'Venue TBC'}</strong>
+                    <br />
+                    {address?.address ?? 'Select a venue for this fixture.'}
+                  </p>
+                  {address?.notes ? <p className="muted venue-note">Notes: {address.notes}</p> : null}
+                </div>
+
+                <div>
+                  <h3>Format</h3>
+                  <p className="muted">{match.format.rubbersPerPlayer} rubbers per player</p>
+                </div>
+              </div>
+
+              {match.notes ? <p>{match.notes}</p> : null}
+
+              <section className="stack stack-tight">
+                <div className="card-heading">
+                  <h3>Players</h3>
+                  <p className="muted">
+                    {assignedPlayerIds.length > 0
+                      ? `${assignedPlayerIds.length} linked`
+                      : 'No squad linked yet.'}
+                  </p>
+                </div>
+
+                {user?.playerId ? (
+                  <div className="form-actions">
+                    <Button
+                      type="button"
+                      variant={isCurrentPlayerAvailable ? 'secondary' : 'primary'}
+                      onClick={() =>
+                        updateMatchAvailability(match.id, user.playerId!, !isCurrentPlayerAvailable)
+                      }
+                    >
+                      {isCurrentPlayerAvailable ? 'Mark unavailable' : 'Mark available'}
+                    </Button>
+                    {assignedPlayerIds.includes(user.playerId) ? (
+                      <span className="muted">Selected by admin.</span>
+                    ) : null}
+                  </div>
+                ) : null}
+
+                <div className="responsive-columns">
+                  <div>
+                    <h4>Available players</h4>
+                    {availablePlayerIds.length > 0 ? (
+                      <ul className="detail-list">
+                        {availablePlayerIds.map((playerId) => (
+                          <li key={`${match.id}-available-${playerId}`}>{getPlayerSummary(playerId)}</li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="muted">No availability recorded yet.</p>
+                    )}
+                  </div>
+
+                  <div>
+                    <h4>Linked players</h4>
+                    {assignedPlayerIds.length > 0 ? (
+                      <ul className="detail-list">
+                        {assignedPlayerIds.map((playerId) => (
+                          <li key={`${match.id}-assigned-${playerId}`}>{getPlayerSummary(playerId)}</li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="muted">Admin has not linked a squad to this match yet.</p>
+                    )}
+                  </div>
+                </div>
+
+                <div>
+                  <h4>Pairings</h4>
+                  <ul className="detail-list">
+                    {normalizeAssignedPairs(match.assignedPairs, match.format).map((pair) => (
+                      <li key={`${match.id}-${pair.pairSlot}`}>
+                        <strong>{pair.pairSlot}</strong>
+                        <br />
+                        {formatPairSummary(pair)}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                {isAdmin ? (
+                  <details>
+                    <summary>Edit match</summary>
+                    <div className="details-panel">
+                      <MatchDetailsEditor
+                        match={match}
+                        onDelete={removeMatch}
+                        onSave={updateMatch}
+                      />
+                    </div>
+                  </details>
+                ) : null}
+
+                {isAdmin ? (
+                  <details>
+                    <summary>Link squad and pairs</summary>
+                    <div className="details-panel">
+                      <MatchPlayerSelectionEditor match={match} onSave={assignMatchPlayers} />
+                    </div>
+                  </details>
+                ) : null}
+              </section>
+
+              <section className="stack stack-tight">
+                <div className="card-heading">
+                  <h3>Results</h3>
+                  {match.result ? (
+                    <p className="muted">
+                      {resultSummary.rubbersWon} won / {resultSummary.rubbersLost} lost
+                      {pendingRubbers > 0 ? ` · ${pendingRubbers} pending` : ''}
+                    </p>
+                  ) : (
+                    <p className="muted">No results logged yet.</p>
+                  )}
+                </div>
+
+                {match.result ? (
+                  <>
+                    <ul className="detail-list">
+                      {match.result.rubbers.map((rubber, rubberIndex) => {
+                        const rubberWinner = deriveRubberWinner(rubber.games, match.format)
+                        return (
+                          <li key={rubber.id}>
+                            <strong>
+                              Rubber {rubberIndex + 1} · {rubber.pairSlot}
+                            </strong>
+                            <br />
+                            {rubber.games.length > 0
+                              ? rubber.games
+                                  .map((game) => `${game.ourScore}-${game.theirScore}`)
+                                  .join(', ')
+                              : 'No scores yet'}
+                            <br />
+                            <span className="muted">
+                              {rubberWinner === 'us'
+                                ? 'Won'
+                                : rubberWinner === 'them'
+                                  ? 'Lost'
+                                  : 'In progress'}
+                            </span>
+                          </li>
+                        )
+                      })}
+                    </ul>
+                    {match.result.notes ? <p>{match.result.notes}</p> : null}
+                  </>
+                ) : null}
+
+                {isAdmin ? (
+                  <details>
+                    <summary>{match.result ? 'Edit results' : 'Log results'}</summary>
+                    <div className="details-panel">
+                      <MatchResultEditor match={match} onSave={updateMatchResult} />
+                    </div>
+                  </details>
+                ) : null}
+              </section>
+            </Card>
+          )
+        })}
+      </section>
+
       {isAdmin ? (
         <Card>
           <h2>Add Match</h2>
@@ -807,193 +1240,6 @@ export function MatchesPage() {
           </form>
         </Card>
       ) : null}
-
-      <section className="stack" aria-label="Match list">
-        {sortedMatches.map((match, index) => {
-          const club = getClubById(clubDirectory, match.opponentClubId)
-          const address = getAddressById(club, match.venueId)
-          const opponentName = formatOpponentName(match, club)
-          const resultSummary = summarizeMatchResult(match.result, match.format)
-          const pendingRubbers = match.format.numberOfRubbers - resultSummary.completedRubbers
-          const availablePlayerIds = match.availablePlayerIds ?? []
-          const assignedPlayerIds = match.assignedPlayerIds ?? []
-          const isCurrentPlayerAvailable = user?.playerId
-            ? availablePlayerIds.includes(user.playerId)
-            : false
-
-          return (
-            <Card key={match.id}>
-              <div className="card-heading">
-                <div>
-                  <p className="eyebrow">Match {index + 1}</p>
-                  <h2>{match.teamDisplayName} vs {opponentName}</h2>
-                  <p className="muted">{match.leagueName}</p>
-                </div>
-                <Button onClick={() => exportMatch(match.id)} variant="ghost">
-                  Export to calendar
-                </Button>
-              </div>
-
-              <p className="muted">{formatMatchDateRange(match.startAt, match.endAt)}</p>
-
-              <div className="responsive-columns">
-                <div>
-                  <h3>Venue</h3>
-                  <p>
-                    <strong>{address?.venueName ?? 'Venue TBC'}</strong>
-                    <br />
-                    {address?.address ?? 'Select a venue for this fixture.'}
-                  </p>
-                  {address?.notes ? <p className="muted venue-note">Notes: {address.notes}</p> : null}
-                </div>
-
-                <div>
-                  <h3>Format</h3>
-                  <p className="muted">
-                    {match.format.numberOfRubbers} rubbers · {match.format.pairingSlots.join(', ')} ·{' '}
-                    {match.format.scoring.presetName}
-                  </p>
-                </div>
-              </div>
-
-              {match.notes ? <p>{match.notes}</p> : null}
-
-              <section className="stack stack-tight">
-                <div className="card-heading">
-                  <h3>Players</h3>
-                  <p className="muted">
-                    {assignedPlayerIds.length > 0
-                      ? `${assignedPlayerIds.length} linked`
-                      : 'No players linked yet.'}
-                  </p>
-                </div>
-
-                {user?.playerId ? (
-                  <div className="form-actions">
-                    <Button
-                      type="button"
-                      variant={isCurrentPlayerAvailable ? 'secondary' : 'primary'}
-                      onClick={() =>
-                        updateMatchAvailability(match.id, user.playerId!, !isCurrentPlayerAvailable)
-                      }
-                    >
-                      {isCurrentPlayerAvailable ? 'Mark unavailable' : 'Mark available'}
-                    </Button>
-                    {assignedPlayerIds.includes(user.playerId) ? (
-                      <span className="muted">Selected by admin.</span>
-                    ) : null}
-                  </div>
-                ) : null}
-
-                <div className="responsive-columns">
-                  <div>
-                    <h4>Available players</h4>
-                    {availablePlayerIds.length > 0 ? (
-                      <ul className="detail-list">
-                        {availablePlayerIds.map((playerId) => (
-                          <li key={`${match.id}-available-${playerId}`}>{getPlayerName(playerId)}</li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <p className="muted">No availability recorded yet.</p>
-                    )}
-                  </div>
-
-                  <div>
-                    <h4>Linked players</h4>
-                    {assignedPlayerIds.length > 0 ? (
-                      <ul className="detail-list">
-                        {assignedPlayerIds.map((playerId) => (
-                          <li key={`${match.id}-assigned-${playerId}`}>{getPlayerName(playerId)}</li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <p className="muted">Admin has not linked players to this match yet.</p>
-                    )}
-                  </div>
-                </div>
-
-                {isAdmin ? (
-                  <details>
-                    <summary>Edit match</summary>
-                    <div className="details-panel">
-                      <MatchDetailsEditor
-                        match={match}
-                        onDelete={removeMatch}
-                        onSave={updateMatch}
-                      />
-                    </div>
-                  </details>
-                ) : null}
-
-                {isAdmin ? (
-                  <details>
-                    <summary>Link players</summary>
-                    <div className="details-panel">
-                      <MatchPlayerSelectionEditor match={match} onSave={assignMatchPlayers} />
-                    </div>
-                  </details>
-                ) : null}
-              </section>
-
-              <section className="stack stack-tight">
-                <div className="card-heading">
-                  <h3>Results</h3>
-                  {match.result ? (
-                    <p className="muted">
-                      {resultSummary.rubbersWon} won / {resultSummary.rubbersLost} lost
-                      {pendingRubbers > 0 ? ` · ${pendingRubbers} pending` : ''}
-                    </p>
-                  ) : (
-                    <p className="muted">No results logged yet.</p>
-                  )}
-                </div>
-
-                {match.result ? (
-                  <>
-                    <ul className="detail-list">
-                      {match.result.rubbers.map((rubber, rubberIndex) => {
-                        const rubberWinner = deriveRubberWinner(rubber.games, match.format)
-                        return (
-                          <li key={rubber.id}>
-                            <strong>
-                              Rubber {rubberIndex + 1} · {rubber.pairSlot}
-                            </strong>
-                            <br />
-                            {rubber.games.length > 0
-                              ? rubber.games
-                                  .map((game) => `${game.ourScore}-${game.theirScore}`)
-                                  .join(', ')
-                              : 'No scores yet'}
-                            <br />
-                            <span className="muted">
-                              {rubberWinner === 'us'
-                                ? 'Won'
-                                : rubberWinner === 'them'
-                                  ? 'Lost'
-                                  : 'In progress'}
-                            </span>
-                          </li>
-                        )
-                      })}
-                    </ul>
-                    {match.result.notes ? <p>{match.result.notes}</p> : null}
-                  </>
-                ) : null}
-
-                {isAdmin ? (
-                  <details>
-                    <summary>{match.result ? 'Edit results' : 'Log results'}</summary>
-                    <div className="details-panel">
-                      <MatchResultEditor match={match} onSave={updateMatchResult} />
-                    </div>
-                  </details>
-                ) : null}
-              </section>
-            </Card>
-          )
-        })}
-      </section>
     </div>
   )
 }

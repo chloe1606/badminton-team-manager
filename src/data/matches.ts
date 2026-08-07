@@ -3,7 +3,9 @@ import type { MatchFormatConfig, MatchRecord, TeamSettings } from '../types/matc
 function cloneFormat(format: MatchFormatConfig): MatchFormatConfig {
   return {
     numberOfRubbers: format.numberOfRubbers,
+    rubbersPerPlayer: format.rubbersPerPlayer,
     pairingSlots: [...format.pairingSlots],
+    squad: { ...format.squad },
     scoring: { ...format.scoring },
   }
 }
@@ -17,7 +19,15 @@ export const defaultTeamSettings: TeamSettings = {
   },
   matchFormat: {
     numberOfRubbers: 6,
+    rubbersPerPlayer: 3,
     pairingSlots: ['Pair 1', 'Pair 2', 'Pair 3'],
+    squad: {
+      squadSize: 6,
+      ladiesRequired: 3,
+      menRequired: 3,
+      pairingRule: 'mixed',
+      allowPlayerReuseAcrossPairs: false,
+    },
     scoring: {
       presetName: 'Best of 3 to 21 (cap 30)',
       bestOf: 3,
@@ -48,7 +58,6 @@ export const defaultMatchFixtures: MatchRecord[] = [
     startAt: '2026-08-24T20:00:00',
     endAt: '2026-08-24T22:00:00',
     venueId: 'orpington-darrick-wood-sports-centre',
-    notes: 'Away fixture with venue notes included in the selector.',
     createdAt: '2026-08-02T09:00:00.000Z',
     teamDisplayName: 'Parklangley 3 Mixed',
     leagueName: 'Current League',
