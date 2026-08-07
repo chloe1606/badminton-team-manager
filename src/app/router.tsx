@@ -4,6 +4,7 @@ import { ProtectedRoute } from '../components/routing/ProtectedRoute'
 import { DashboardPage } from '../pages/DashboardPage'
 import { FeaturePage } from '../pages/FeaturePage'
 import { LoginPage } from '../pages/LoginPage'
+import { MatchesPage } from '../pages/MatchesPage'
 import { NotFoundPage } from '../pages/NotFoundPage'
 
 export const appRouter = createBrowserRouter([
@@ -59,12 +60,7 @@ export const appRouter = createBrowserRouter([
           },
           {
             path: '/matches',
-            element: (
-              <FeaturePage
-                title="Matches"
-                description="Prepare for matches or tournaments with future planning tools."
-              />
-            ),
+            element: <MatchesPage />,
           },
         ],
       },
