@@ -438,6 +438,14 @@ a {
   color: var(--color-muted);
 }
 
+.overview-table .col-num {
+  width: 2rem;
+}
+
+.overview-table .col-fixture {
+  width: 14rem;
+}
+
 .overview-table .col-venue {
   width: 10rem;
 }

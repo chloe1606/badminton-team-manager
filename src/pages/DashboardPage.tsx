@@ -54,8 +54,8 @@ export function DashboardPage() {
           <table className="overview-table">
             <thead>
               <tr>
-                <th>#</th>
-                <th>Fixture</th>
+                <th className="col-num">#</th>
+                <th className="col-fixture">Fixture</th>
                 <th>Location</th>
                 <th>Date &amp; Time</th>
                 <th>Venue</th>
@@ -80,8 +80,8 @@ export function DashboardPage() {
 
                 return (
                   <tr key={match.id}>
-                    <td>{index + 1}</td>
-                    <td>{match.teamDisplayName} vs {opponentName}</td>
+                    <td className="col-num">{index + 1}</td>
+                    <td className="col-fixture">{match.teamDisplayName} vs {opponentName}</td>
                     <td>{match.location === 'home' ? 'Home' : 'Away'}</td>
                     <td>{formatMatchDateRange(match.startAt)}</td>
                     <td className="col-venue">{venue ? [venue.venueName, venue.address].filter(Boolean).join(' · ') : 'Venue TBC'}</td>
