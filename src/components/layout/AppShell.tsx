@@ -6,8 +6,6 @@ const navItems = [
   { to: '/', label: 'Dashboard' },
   { to: '/members', label: 'Members' },
   { to: '/teams', label: 'Teams' },
-  { to: '/sessions', label: 'Sessions' },
-  { to: '/attendance', label: 'Attendance' },
   { to: '/matches', label: 'Matches' },
   { to: '/club-contacts', label: 'Club Contacts' },
   { to: '/settings', label: 'Settings' },
