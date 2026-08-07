@@ -664,6 +664,46 @@ function SelectPlayersPanel({
   )
 }
 
+function AdminAvailabilityPanel({
+  match,
+  onToggleAvailability,
+}: {
+  match: MatchRecord
+  onToggleAvailability: (matchId: string, playerId: string, isAvailable: boolean) => void
+}) {
+  const availablePlayerIdSet = new Set(match.availablePlayerIds ?? [])
+
+  return (
+    <details>
+      <summary className="details-summary">Record availability</summary>
+      <div className="details-panel">
+        <p className="muted">
+          Mark players available or unavailable if they have not updated their availability yet.
+        </p>
+        <div className="stack">
+          {samplePlayers.map((player) => {
+            const isAvailable = availablePlayerIdSet.has(player.id)
+            return (
+              <label className="checkbox-row" key={player.id}>
+                <input
+                  checked={isAvailable}
+                  onChange={(event) =>
+                    onToggleAvailability(match.id, player.id, event.target.checked)
+                  }
+                  type="checkbox"
+                />
+                <span className={`player-gender-indicator player-gender-indicator--${player.gender}`}>
+                  {player.name}
+                </span>
+              </label>
+            )
+          })}
+        </div>
+      </div>
+    </details>
+  )
+}
+
 function MatchDetailsEditor({
   match,
   onDelete,
@@ -1091,6 +1131,10 @@ export function MatchesPage() {
                       />
                     </div>
                   </details>
+                  <AdminAvailabilityPanel
+                    match={match}
+                    onToggleAvailability={updateMatchAvailability}
+                  />
                   <SelectPlayersPanel match={match} onSave={assignMatchPlayers} />
                   <details>
                     <summary className="details-summary">{match.result ? 'Edit results' : 'Log results'}</summary>
