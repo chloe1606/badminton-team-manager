@@ -4,6 +4,7 @@ import { useAuth } from '../auth/hooks/useAuth'
 import { Button } from '../components/ui/Button'
 import { Card } from '../components/ui/Card'
 import { Input } from '../components/ui/Input'
+import { samplePlayerLogins } from '../data/players'
 
 export function LoginPage() {
   const { isAuthenticated, login, isLoading } = useAuth()
@@ -40,11 +41,21 @@ export function LoginPage() {
       <Card className="auth-card" aria-labelledby="login-heading">
         <h1 id="login-heading">Badminton Team Manager</h1>
         <p className="muted">Sign in to access team planning and attendance tools.</p>
-        <p className="muted" style={{ fontSize: '0.85em' }}>
-          <strong>Admin:</strong> admin@badminton.local / admin123
-          &nbsp;&nbsp;|&nbsp;&nbsp;
-          <strong>User:</strong> user@badminton.local / user123
-        </p>
+        <div className="stack stack-tight muted" style={{ fontSize: '0.85em' }}>
+          <p style={{ margin: 0 }}>
+            <strong>Admin:</strong> admin@badminton.local / admin123
+          </p>
+          <div>
+            <strong>Sample players:</strong>
+            <ul className="detail-list">
+              {samplePlayerLogins.map((player) => (
+                <li key={player.id}>
+                  {player.name}: {player.email} / {player.password}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
         <form className="stack" onSubmit={handleSubmit} noValidate>
           <label htmlFor="email">Email</label>
           <Input

@@ -1,10 +1,11 @@
-export type UserRole = 'admin' | 'user'
+export type UserRole = 'admin' | 'player'
 
 export interface AuthUser {
   id: string
   name: string
   email: string
   role: UserRole
+  playerId?: string
 }
 
 export interface LoginCredentials {

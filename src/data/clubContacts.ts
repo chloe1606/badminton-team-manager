@@ -1,0 +1,276 @@
+import type { ClubDirectoryEntry } from '../types/matches'
+
+export const clubDirectory: ClubDirectoryEntry[] = [
+  {
+    id: '4u',
+    name: '4U',
+    contacts: [
+      {
+        id: '4u-rachel-chung',
+        name: 'Rachel Chung',
+        email: 'rachchung@googlemail.com',
+        phone: '07811 183375',
+      },
+    ],
+    addresses: [
+      {
+        id: '4u-royal-greenwich-trust-school',
+        venueName: 'Royal Greenwich Trust School',
+        address: '765 Woolwich Rd, London SE7 8LJ',
+      },
+    ],
+  },
+  {
+    id: 'bexley',
+    name: 'Bexley',
+    contacts: [
+      {
+        id: 'bexley-abdul-jabbar',
+        name: 'Abdul Jabbar',
+        email: 'bexleybaddyclub@gmail.com',
+        phone: '07598 467445',
+      },
+    ],
+    addresses: [
+      {
+        id: 'bexley-welling-school',
+        venueName: 'Welling School',
+        address: 'Berwick Road, DA16 1QU',
+      },
+      {
+        id: 'bexley-trinity-school',
+        venueName: 'Trinity School',
+        address: 'Belvedere, DA17 6HT',
+      },
+    ],
+  },
+  {
+    id: 'central-strood',
+    name: 'Central Strood',
+    contacts: [
+      {
+        id: 'central-strood-helen-major',
+        name: 'Helen Major',
+        email: 'helen-major@hotmail.co.uk',
+        phone: '07805 928940',
+      },
+    ],
+    addresses: [
+      {
+        id: 'central-strood-castlemaine-hall',
+        venueName: 'Castlemaine Hall',
+        address: '100 Castlemaine Avenue, Gillingham ME7 2QE',
+      },
+    ],
+  },
+  {
+    id: 'chislehurst',
+    name: 'Chislehurst',
+    contacts: [
+      {
+        id: 'chislehurst-dan-gardner',
+        name: 'Dan Gardner',
+        email: 'hello@chislehurstbadmintonclub.com',
+        phone: '07792 601490',
+      },
+    ],
+    addresses: [
+      {
+        id: 'chislehurst-kemnal-technical-college',
+        venueName: 'Kemnal Technical College',
+        address: 'The Avenue, Sidcup, Kent, BR5 3DJ',
+        notes: 'The Rear',
+      },
+    ],
+  },
+  {
+    id: 'cooperswood',
+    name: 'Cooperswood',
+    contacts: [
+      {
+        id: 'cooperswood-debbie-edmunds',
+        name: 'Debbie Edmunds',
+        email: 'debbieedmunds@outlook.com',
+        phone: '07799 661886',
+      },
+      {
+        id: 'cooperswood-sharron-duff',
+        name: 'Sharron Duff',
+        email: 'sharron@alladvance.co.uk',
+        phone: '07710 479475',
+      },
+    ],
+    addresses: [
+      {
+        id: 'cooperswood-chislehurst-school-for-girls',
+        venueName: 'Chislehurst School For Girls',
+        address: 'Beaverwood Road, Chislehurst, BR7 6HE',
+      },
+    ],
+  },
+  {
+    id: 'crofton-arrows',
+    name: 'Crofton Arrows',
+    contacts: [
+      {
+        id: 'crofton-arrows-stephen-huie',
+        name: 'Stephen Huie',
+        email: 'stephenhuie65@gmail.com',
+        phone: '07956 426280',
+      },
+    ],
+    addresses: [
+      {
+        id: 'crofton-arrows-prendergast-vale-school',
+        venueName: 'Prendergast Vale School',
+        address: 'Elmira Road, London SE13 7BN',
+      },
+    ],
+  },
+  {
+    id: 'crossfire-badminton-club',
+    name: 'Crossfire Badminton Club',
+    contacts: [
+      {
+        id: 'crossfire-wayne-philogene',
+        name: 'Wayne Philogene',
+        email: 'wayne.crossfire@gmail.com',
+        phone: '07956 285246',
+      },
+    ],
+    addresses: [
+      {
+        id: 'crossfire-haberdashers-sports-ground',
+        venueName: 'Haberdashers Sports Ground',
+        address: 'St Asaph Road, Brockley, SE4 2ED',
+      },
+    ],
+  },
+  {
+    id: 'falcons',
+    name: 'Falcons',
+    contacts: [
+      {
+        id: 'falcons-chandra-singh',
+        name: 'Chandra Singh',
+        email: '09.chandrashekhar@gmail.com',
+        phone: '07392 106164',
+      },
+    ],
+    addresses: [
+      {
+        id: 'falcons-trinity-school',
+        venueName: 'Trinity School',
+        address: 'Belvedere, DA17 6HT',
+      },
+    ],
+  },
+  {
+    id: 'net-flicks',
+    name: 'Net Flicks',
+    contacts: [
+      {
+        id: 'net-flicks-sinclair-palmer',
+        name: 'Sinclair Palmer',
+        email: 'sinclair.palm@gmail.com',
+        phone: '07801 894543',
+      },
+    ],
+    addresses: [
+      {
+        id: 'net-flicks-salmon-youth-centre',
+        venueName: 'Salmon Youth Centre',
+        address: '43 Old Jamaica Road, London SE16 4TE',
+        notes: 'Restricted parking',
+      },
+    ],
+  },
+  {
+    id: 'orpington',
+    name: 'Orpington',
+    contacts: [
+      {
+        id: 'orpington-norman-froment',
+        name: 'Norman Froment',
+        email: 'norman.froment@btinternet.com',
+        phone: '07759 543973',
+      },
+    ],
+    addresses: [
+      {
+        id: 'orpington-darrick-wood-sports-centre',
+        venueName: 'Darrick Wood Sports Centre',
+        address: 'Lovibonds Avenue, Orpington, BR6 8EW',
+        notes: 'Mens 4s, Mon 8pm',
+      },
+      {
+        id: 'orpington-charles-darwin-sports-centre',
+        venueName: 'Charles Darwin Sports Centre',
+        address: 'Jail Lane, Biggin Hill, Westerham, TN16 3AU',
+        notes: 'Mens 6s, Tues 8pm',
+      },
+    ],
+  },
+  {
+    id: 'park-langley',
+    name: 'Park Langley',
+    contacts: [
+      {
+        id: 'park-langley-rob-kettle',
+        name: 'Rob Kettle',
+        email: 'rob.kettle@theparklangleyclub.co.uk',
+        phone: '0208 658 9028',
+      },
+    ],
+    addresses: [
+      {
+        id: 'park-langley-the-parklangley-club',
+        venueName: 'The Parklangley Club',
+        address: '44A Wickham Way, Beckenham, BR3 3AF',
+      },
+    ],
+  },
+  {
+    id: 'trinity',
+    name: 'Trinity',
+    contacts: [
+      {
+        id: 'trinity-julie-henderson-russell-boyle',
+        name: 'Julie Henderson Russell Boyle',
+        email: 'julierussell796@gmail.com',
+        phone: '07766 144715',
+      },
+    ],
+    addresses: [
+      {
+        id: 'trinity-colfes-school',
+        venueName: 'Colfes School',
+        address: 'Upwood Road, Lee, SE12 8AW',
+      },
+      {
+        id: 'trinity-castlemaine-hall',
+        venueName: 'Castlemaine Hall',
+        address: '100 Castlemaine Avenue, Gillingham ME7 2QE',
+      },
+    ],
+  },
+  {
+    id: 'westmoreland-dominoes',
+    name: 'Westmoreland Dominoes',
+    contacts: [
+      {
+        id: 'westmoreland-dominoes-julie-mcghee',
+        name: 'Julie McGhee',
+        email: 'juljerry@gmail.com',
+        phone: '07808 933771',
+      },
+    ],
+    addresses: [
+      {
+        id: 'westmoreland-dominoes-charles-darwin-sports-centre',
+        venueName: 'Charles Darwin Sports Centre',
+        address: 'Jail Lane, Biggin Hill, Westerham, TN16 3AU',
+      },
+    ],
+  },
+].sort((left, right) => left.name.localeCompare(right.name))

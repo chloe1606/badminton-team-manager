@@ -1,20 +1,7 @@
 import type { AuthService, AuthUser, LoginCredentials } from '../../types/auth'
+import { mockAuthAccounts } from '../../data/players'
 
 const STORAGE_KEY = 'badminton-team-manager.auth-user'
-
-// Predefined accounts – passwords are intentionally plain-text for this mock service.
-const ACCOUNTS: Array<{ email: string; password: string; user: Omit<AuthUser, 'id'> }> = [
-  {
-    email: 'admin@badminton.local',
-    password: 'admin123',
-    user: { name: 'Admin', email: 'admin@badminton.local', role: 'admin' },
-  },
-  {
-    email: 'user@badminton.local',
-    password: 'user123',
-    user: { name: 'User', email: 'user@badminton.local', role: 'user' },
-  },
-]
 
 function readStoredUser(): AuthUser | null {
   const value = window.localStorage.getItem(STORAGE_KEY)
@@ -44,7 +31,7 @@ export const mockAuthService: AuthService = {
     return readStoredUser()
   },
   async login(credentials: LoginCredentials) {
-    const account = ACCOUNTS.find(
+    const account = mockAuthAccounts.find(
       (a) => a.email === credentials.email.trim() && a.password === credentials.password,
     )
 
@@ -52,7 +39,7 @@ export const mockAuthService: AuthService = {
       throw new Error('Invalid email or password.')
     }
 
-    const user: AuthUser = { id: crypto.randomUUID(), ...account.user }
+    const user: AuthUser = { ...account.user }
     writeStoredUser(user)
     return user
   },

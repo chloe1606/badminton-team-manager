@@ -1,4 +1,12 @@
-import type { MatchFixture } from '../data/matches'
+export interface CalendarFixture {
+  id: string
+  title: string
+  startAt: string
+  endAt?: string
+  venueName: string
+  venueAddress: string
+  description?: string
+}
 
 const DEFAULT_EVENT_DURATION_MS = 2 * 60 * 60 * 1000
 
@@ -26,7 +34,7 @@ function escapeIcsText(value: string): string {
   return value.replace(/\\/g, '\\\\').replace(/\n/g, '\\n').replace(/,/g, '\\,').replace(/;/g, '\\;')
 }
 
-export function createMatchesCalendarIcs(fixtures: MatchFixture[]): string {
+export function createMatchesCalendarIcs(fixtures: CalendarFixture[]): string {
   const now = new Date()
   const lines: string[] = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//badminton-team-manager//fixtures//EN', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH']
 
