@@ -62,6 +62,15 @@ export interface MatchResult {
   notes?: string
 }
 
+export interface MatchDetailsInput {
+  opponentClubId: string
+  opponentTeamNumber?: number
+  startAt: string
+  endAt?: string
+  venueId: string
+  notes?: string
+}
+
 export interface MatchRecord {
   id: string
   opponentClubId: string
@@ -79,13 +88,7 @@ export interface MatchRecord {
   format: MatchFormatConfig
 }
 
-export interface NewMatchInput {
-  opponentClubId: string
-  opponentTeamNumber?: number
-  startAt: string
-  endAt?: string
-  venueId: string
-  notes?: string
+export interface NewMatchInput extends MatchDetailsInput {
   teamDisplayName: string
   leagueName: string
   format: MatchFormatConfig

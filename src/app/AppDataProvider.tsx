@@ -7,7 +7,13 @@ import {
   type ReactNode,
 } from 'react'
 import { defaultMatchFixtures, defaultTeamSettings } from '../data/matches'
-import type { MatchRecord, MatchResult, NewMatchInput, TeamSettings } from '../types/matches'
+import type {
+  MatchDetailsInput,
+  MatchRecord,
+  MatchResult,
+  NewMatchInput,
+  TeamSettings,
+} from '../types/matches'
 
 const MATCH_STORAGE_KEY = 'badminton-team-manager.matches'
 const SETTINGS_STORAGE_KEY = 'badminton-team-manager.team-settings'
@@ -16,6 +22,8 @@ interface AppDataContextValue {
   matches: MatchRecord[]
   teamSettings: TeamSettings
   addMatch: (match: NewMatchInput) => void
+  updateMatch: (matchId: string, match: MatchDetailsInput) => void
+  removeMatch: (matchId: string) => void
   updateMatchAvailability: (matchId: string, playerId: string, isAvailable: boolean) => void
   assignMatchPlayers: (matchId: string, playerIds: string[]) => void
   updateMatchResult: (matchId: string, result?: MatchResult) => void
@@ -73,6 +81,16 @@ export function AppDataProvider({ children }: AppDataProviderProps) {
             createdAt: new Date().toISOString(),
           },
         ])
+      },
+      updateMatch: (matchId, nextMatch) => {
+        setMatches((currentMatches) =>
+          currentMatches.map((match) =>
+            match.id === matchId ? { ...match, ...nextMatch } : match,
+          ),
+        )
+      },
+      removeMatch: (matchId) => {
+        setMatches((currentMatches) => currentMatches.filter((match) => match.id !== matchId))
       },
       updateMatchAvailability: (matchId, playerId, isAvailable) => {
         setMatches((currentMatches) =>

@@ -5,7 +5,13 @@ import { Button } from '../components/ui/Button'
 import { Card } from '../components/ui/Card'
 import { clubDirectory } from '../data/clubContacts'
 import { samplePlayers } from '../data/players'
-import type { MatchFormatConfig, MatchGameScore, MatchRecord, MatchResult } from '../types/matches'
+import type {
+  MatchDetailsInput,
+  MatchFormatConfig,
+  MatchGameScore,
+  MatchRecord,
+  MatchResult,
+} from '../types/matches'
 import { createMatchesCalendarIcs, downloadIcs, type CalendarFixture } from '../utils/calendar'
 import {
   deriveRubberWinner,
@@ -29,11 +35,76 @@ interface RubberDraft {
   games: GameDraft[]
 }
 
+interface MatchDetailsDraft {
+  opponentClubId: string
+  opponentTeamNumber: string
+  venueId: string
+  startAt: string
+  endAt: string
+  notes: string
+}
+
 function cloneFormat(format: MatchFormatConfig): MatchFormatConfig {
   return {
     numberOfRubbers: format.numberOfRubbers,
     pairingSlots: [...format.pairingSlots],
     scoring: { ...format.scoring },
+  }
+}
+
+function toDateTimeLocalValue(value?: string): string {
+  return value ? value.slice(0, 16) : ''
+}
+
+function createMatchDetailsDraft(match: MatchRecord): MatchDetailsDraft {
+  return {
+    opponentClubId: match.opponentClubId,
+    opponentTeamNumber: match.opponentTeamNumber?.toString() ?? '',
+    venueId: match.venueId,
+    startAt: toDateTimeLocalValue(match.startAt),
+    endAt: toDateTimeLocalValue(match.endAt),
+    notes: match.notes ?? '',
+  }
+}
+
+function validateMatchDetailsInput(draft: MatchDetailsDraft): {
+  data?: MatchDetailsInput
+  error?: string
+} {
+  const parsedTeamNumber = draft.opponentTeamNumber ? Number(draft.opponentTeamNumber) : undefined
+
+  if (!draft.opponentClubId) {
+    return { error: 'Select an opponent club.' }
+  }
+
+  if (!draft.venueId) {
+    return { error: 'Select a venue.' }
+  }
+
+  if (!draft.startAt) {
+    return { error: 'Select a match date and time.' }
+  }
+
+  if (
+    parsedTeamNumber !== undefined &&
+    (!Number.isInteger(parsedTeamNumber) || parsedTeamNumber < 1 || parsedTeamNumber > 5)
+  ) {
+    return { error: 'Opponent team number must be between 1 and 5.' }
+  }
+
+  if (draft.endAt && new Date(draft.endAt).getTime() <= new Date(draft.startAt).getTime()) {
+    return { error: 'End time must be after the start time.' }
+  }
+
+  return {
+    data: {
+      opponentClubId: draft.opponentClubId,
+      opponentTeamNumber: parsedTeamNumber,
+      startAt: draft.startAt,
+      endAt: draft.endAt || undefined,
+      venueId: draft.venueId,
+      notes: draft.notes.trim() || undefined,
+    },
   }
 }
 
@@ -334,13 +405,208 @@ function MatchPlayerSelectionEditor({
   )
 }
 
+function MatchDetailsEditor({
+  match,
+  onDelete,
+  onSave,
+}: {
+  match: MatchRecord
+  onDelete: (matchId: string) => void
+  onSave: (matchId: string, match: MatchDetailsInput) => void
+}) {
+  const [draft, setDraft] = useState(() => createMatchDetailsDraft(match))
+  const [error, setError] = useState('')
+  const [status, setStatus] = useState('')
+  const selectedClub = useMemo(
+    () => getClubById(clubDirectory, draft.opponentClubId),
+    [draft.opponentClubId],
+  )
+  const availableVenues = selectedClub?.addresses ?? []
+
+  useEffect(() => {
+    setDraft(createMatchDetailsDraft(match))
+    setError('')
+    setStatus('')
+  }, [match])
+
+  useEffect(() => {
+    if (availableVenues.length === 1) {
+      setDraft((currentDraft) =>
+        currentDraft.venueId === availableVenues[0].id
+          ? currentDraft
+          : { ...currentDraft, venueId: availableVenues[0].id },
+      )
+      return
+    }
+
+    if (!availableVenues.some((address) => address.id === draft.venueId)) {
+      setDraft((currentDraft) => ({ ...currentDraft, venueId: '' }))
+    }
+  }, [availableVenues, draft.venueId])
+
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    setError('')
+    setStatus('')
+
+    const { data, error: nextError } = validateMatchDetailsInput(draft)
+
+    if (nextError || !data) {
+      setError(nextError ?? 'Unable to save match.')
+      return
+    }
+
+    onSave(match.id, data)
+    setStatus('Match updated.')
+  }
+
+  function handleRemove() {
+    if (!window.confirm('Remove this match?')) {
+      return
+    }
+
+    onDelete(match.id)
+  }
+
+  return (
+    <form className="stack" onSubmit={handleSubmit} noValidate>
+      <div className="form-grid">
+        <label className="field">
+          <span>Opponent club</span>
+          <select
+            className="input"
+            value={draft.opponentClubId}
+            onChange={(event) =>
+              setDraft((currentDraft) => ({
+                ...currentDraft,
+                opponentClubId: event.target.value,
+              }))
+            }
+          >
+            <option value="">Select a club</option>
+            {clubDirectory.map((club) => (
+              <option key={club.id} value={club.id}>
+                {club.name}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className="field">
+          <span>Opponent team number</span>
+          <select
+            className="input"
+            value={draft.opponentTeamNumber}
+            onChange={(event) =>
+              setDraft((currentDraft) => ({
+                ...currentDraft,
+                opponentTeamNumber: event.target.value,
+              }))
+            }
+          >
+            <option value="">Not set</option>
+            {[1, 2, 3, 4, 5].map((teamNumber) => (
+              <option key={teamNumber} value={teamNumber}>
+                {teamNumber}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className="field field-span-2">
+          <span>Venue</span>
+          <select
+            className="input"
+            disabled={!selectedClub}
+            value={draft.venueId}
+            onChange={(event) =>
+              setDraft((currentDraft) => ({
+                ...currentDraft,
+                venueId: event.target.value,
+              }))
+            }
+          >
+            <option value="">{selectedClub ? 'Select a venue' : 'Choose a club first'}</option>
+            {availableVenues.map((venue) => (
+              <option key={venue.id} value={venue.id}>
+                {[venue.venueName, venue.address, venue.notes].filter(Boolean).join(' · ')}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className="field">
+          <span>Start date and time</span>
+          <input
+            className="input"
+            type="datetime-local"
+            value={draft.startAt}
+            onChange={(event) =>
+              setDraft((currentDraft) => ({
+                ...currentDraft,
+                startAt: event.target.value,
+              }))
+            }
+          />
+        </label>
+
+        <label className="field">
+          <span>End date and time</span>
+          <input
+            className="input"
+            type="datetime-local"
+            value={draft.endAt}
+            onChange={(event) =>
+              setDraft((currentDraft) => ({
+                ...currentDraft,
+                endAt: event.target.value,
+              }))
+            }
+          />
+        </label>
+      </div>
+
+      <label className="field">
+        <span>Match notes</span>
+        <textarea
+          className="input textarea-input"
+          rows={3}
+          value={draft.notes}
+          onChange={(event) =>
+            setDraft((currentDraft) => ({
+              ...currentDraft,
+              notes: event.target.value,
+            }))
+          }
+        />
+      </label>
+
+      {error ? (
+        <p className="error-text" role="alert">
+          {error}
+        </p>
+      ) : null}
+      {status ? <p className="muted">{status}</p> : null}
+
+      <div className="form-actions">
+        <Button type="submit">Save changes</Button>
+        <Button type="button" variant="ghost" onClick={handleRemove}>
+          Remove match
+        </Button>
+      </div>
+    </form>
+  )
+}
+
 export function MatchesPage() {
   const { isAdmin, user } = useAuth()
   const {
     addMatch,
     assignMatchPlayers,
     matches,
+    removeMatch,
     teamSettings,
+    updateMatch,
     updateMatchAvailability,
     updateMatchResult,
   } = useAppData()
@@ -396,43 +662,22 @@ export function MatchesPage() {
     setError('')
     setStatus('')
 
-    const parsedTeamNumber = opponentTeamNumber ? Number(opponentTeamNumber) : undefined
+    const { data, error: nextError } = validateMatchDetailsInput({
+      opponentClubId,
+      opponentTeamNumber,
+      venueId,
+      startAt,
+      endAt,
+      notes,
+    })
 
-    if (!opponentClubId) {
-      setError('Select an opponent club.')
-      return
-    }
-
-    if (!venueId) {
-      setError('Select a venue.')
-      return
-    }
-
-    if (!startAt) {
-      setError('Select a match date and time.')
-      return
-    }
-
-    if (
-      parsedTeamNumber !== undefined &&
-      (!Number.isInteger(parsedTeamNumber) || parsedTeamNumber < 1 || parsedTeamNumber > 5)
-    ) {
-      setError('Opponent team number must be between 1 and 5.')
-      return
-    }
-
-    if (endAt && new Date(endAt).getTime() <= new Date(startAt).getTime()) {
-      setError('End time must be after the start time.')
+    if (nextError || !data) {
+      setError(nextError ?? 'Unable to add match.')
       return
     }
 
     addMatch({
-      opponentClubId,
-      opponentTeamNumber: parsedTeamNumber,
-      startAt,
-      endAt: endAt || undefined,
-      venueId,
-      notes: notes.trim() || undefined,
+      ...data,
       teamDisplayName,
       leagueName: teamSettings.profile.leagueName.trim(),
       format: cloneFormat(teamSettings.matchFormat),
@@ -667,6 +912,19 @@ export function MatchesPage() {
                     )}
                   </div>
                 </div>
+
+                {isAdmin ? (
+                  <details>
+                    <summary>Edit match</summary>
+                    <div className="details-panel">
+                      <MatchDetailsEditor
+                        match={match}
+                        onDelete={removeMatch}
+                        onSave={updateMatch}
+                      />
+                    </div>
+                  </details>
+                ) : null}
 
                 {isAdmin ? (
                   <details>
