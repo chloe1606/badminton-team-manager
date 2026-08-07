@@ -913,18 +913,6 @@ function MatchDetailsEditor({
         </label>
 
         <label className="field">
-          <span>Location</span>
-          <select
-            className="input"
-            value={location}
-            onChange={(event) => setLocation(event.target.value as MatchLocation)}
-          >
-            <option value="home">Home</option>
-            <option value="away">Away</option>
-          </select>
-        </label>
-
-        <label className="field">
           <span>Opponent team number</span>
           <select
             className="input"
@@ -1324,6 +1312,18 @@ export function MatchesPage() {
                       {club.name}
                     </option>
                   ))}
+                </select>
+              </label>
+
+              <label className="field">
+                <span>Location</span>
+                <select
+                  className="input"
+                  value={location}
+                  onChange={(event) => setLocation(event.target.value as MatchLocation)}
+                >
+                  <option value="home">Home</option>
+                  <option value="away">Away</option>
                 </select>
               </label>
 
