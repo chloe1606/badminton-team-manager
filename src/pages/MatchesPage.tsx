@@ -959,7 +959,7 @@ export function MatchesPage() {
             : false
 
           return (
-            <Card key={match.id}>
+            <Card key={match.id} className="match-card">
               <div className="card-heading">
                 <div>
                   <p className="eyebrow">Match {index + 1}</p>
@@ -971,34 +971,39 @@ export function MatchesPage() {
                 </Button>
               </div>
 
-              <p className="muted">{formatMatchDateRange(match.startAt, match.endAt)}</p>
-
-              <div className="responsive-columns">
-                <div>
-                  <h3>Venue</h3>
-                  <p>
+              <div className="match-table" aria-label={`Match ${index + 1} details`}>
+                <div className="match-table-row">
+                  <span className="match-table-label">Date</span>
+                  <div>{formatMatchDateRange(match.startAt, match.endAt)}</div>
+                </div>
+                <div className="match-table-row">
+                  <span className="match-table-label">Venue</span>
+                  <div>
                     <strong>{address?.venueName ?? 'Venue TBC'}</strong>
                     <br />
                     {address?.address ?? 'Select a venue for this fixture.'}
-                  </p>
-                  {address?.notes ? <p className="muted venue-note">Notes: {address.notes}</p> : null}
+                    {address?.notes ? <p className="muted venue-note">Notes: {address.notes}</p> : null}
+                  </div>
                 </div>
-
-                <div>
-                  <h3>Format</h3>
-                  <p className="muted">{match.format.rubbersPerPlayer} rubbers per player</p>
+                <div className="match-table-row">
+                  <span className="match-table-label">Format</span>
+                  <div>{match.format.rubbersPerPlayer} rubbers per player</div>
                 </div>
+                {match.notes ? (
+                  <div className="match-table-row">
+                    <span className="match-table-label">Notes</span>
+                    <div>{match.notes}</div>
+                  </div>
+                ) : null}
               </div>
-
-              {match.notes ? <p>{match.notes}</p> : null}
 
               <section className="stack stack-tight">
                 <div className="card-heading">
                   <h3>Players</h3>
                   <p className="muted">
                     {assignedPlayerIds.length > 0
-                      ? `${assignedPlayerIds.length} linked`
-                      : 'No squad linked yet.'}
+                      ? `${assignedPlayerIds.length} selected`
+                      : 'No squad selected yet.'}
                   </p>
                 </div>
 
@@ -1034,7 +1039,7 @@ export function MatchesPage() {
                   </div>
 
                   <div>
-                    <h4>Linked players</h4>
+                    <h4>Selected players</h4>
                     {assignedPlayerIds.length > 0 ? (
                       <ul className="detail-list">
                         {assignedPlayerIds.map((playerId) => (
@@ -1042,7 +1047,7 @@ export function MatchesPage() {
                         ))}
                       </ul>
                     ) : (
-                      <p className="muted">Admin has not linked a squad to this match yet.</p>
+                      <p className="muted">Admin has not selected a squad for this match yet.</p>
                     )}
                   </div>
                 </div>
@@ -1075,7 +1080,7 @@ export function MatchesPage() {
 
                 {isAdmin ? (
                   <details>
-                    <summary>Link squad and pairs</summary>
+                    <summary>Select squad and pairs</summary>
                     <div className="details-panel">
                       <MatchPlayerSelectionEditor match={match} onSave={assignMatchPlayers} />
                     </div>

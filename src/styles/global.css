@@ -267,6 +267,35 @@ a {
   margin-bottom: 0;
 }
 
+.match-card {
+  padding: var(--space-4);
+}
+
+.match-table {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.match-table-row {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border-top: 1px solid var(--color-border);
+}
+
+.match-table-row:first-child {
+  border-top: 0;
+}
+
+.match-table-label {
+  color: var(--color-muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
 .details-panel {
   margin-top: var(--space-3);
 }
@@ -354,6 +383,11 @@ a {
 
   .responsive-columns {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .match-table-row {
+    grid-template-columns: 10rem minmax(0, 1fr);
+    align-items: start;
   }
 
   .pair-slot-grid {
