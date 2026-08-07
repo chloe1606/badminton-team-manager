@@ -1,31 +1,13 @@
 import { useMemo } from 'react'
 import { useAppData } from '../app/AppDataProvider'
-import { Button } from '../components/ui/Button'
+import { useAuth } from '../auth/hooks/useAuth'
 import { Card } from '../components/ui/Card'
 import { clubDirectory } from '../data/clubContacts'
-import { samplePlayers } from '../data/players'
-import type { MatchRecord } from '../types/matches'
-import { createMatchesCalendarIcs, downloadIcs } from '../utils/calendar'
 import {
   formatOpponentName,
-  getAddressById,
   getClubById,
   sortMatchesChronologically,
-  summarizeMatchResult,
 } from '../utils/matches'
-
-const playersById = new Map(samplePlayers.map((player) => [player.id, player.name] as const))
-
-function getPlayerName(playerId: string): string {
-  return playersById.get(playerId) ?? 'Unknown player'
-}
-
-function getVenueClub(match: MatchRecord, homeClubId: string) {
-  if (match.location === 'home') {
-    return getClubById(clubDirectory, homeClubId)
-  }
-  return getClubById(clubDirectory, match.opponentClubId)
-}
 
 function formatMatchDateRange(startAt: string): string {
   const formatter = new Intl.DateTimeFormat(undefined, {
@@ -36,8 +18,19 @@ function formatMatchDateRange(startAt: string): string {
 }
 
 export function DashboardPage() {
-  const { matches, teamSettings } = useAppData()
-  const sortedMatches = useMemo(() => sortMatchesChronologically(matches), [matches])
+  const { matches } = useAppData()
+  const { user } = useAuth()
+  const playerId = user?.playerId
+  const playerMatches = useMemo(
+    () =>
+      sortMatchesChronologically(matches).filter(
+        (match) =>
+          playerId &&
+          ((match.availablePlayerIds ?? []).includes(playerId) ||
+            (match.assignedPlayerIds ?? []).includes(playerId)),
+      ),
+    [matches, playerId],
+  )
 
   return (
     <div className="stack">
@@ -50,6 +43,12 @@ export function DashboardPage() {
       </Card>
 
       <Card>
+        <div className="card-heading">
+          <div>
+            <h2>Your Matches</h2>
+            <p className="muted">Matches you have marked available for or been selected to play.</p>
+          </div>
+        </div>
         <div className="overview-table-wrap">
           <table className="overview-table">
             <thead>
@@ -58,25 +57,16 @@ export function DashboardPage() {
                 <th className="col-fixture">Fixture</th>
                 <th>Location</th>
                 <th>Date &amp; Time</th>
-                <th>Venue</th>
-                <th>Available</th>
-                <th>Selected</th>
-                <th>Result</th>
-                <th>Export</th>
+                <th>Available?</th>
+                <th>Selected?</th>
               </tr>
             </thead>
             <tbody>
-              {sortedMatches.map((match, index) => {
+              {playerMatches.map((match, index) => {
                 const opponentClub = getClubById(clubDirectory, match.opponentClubId)
                 const opponentName = formatOpponentName(match, opponentClub)
-                const venueClub = getVenueClub(match, teamSettings.profile.homeClubId)
-                const venue = getAddressById(venueClub, match.venueId)
-                const availablePlayers = (match.availablePlayerIds ?? []).map(getPlayerName)
-                const selectedPlayers = (match.assignedPlayerIds ?? []).map(getPlayerName)
-                const summary = summarizeMatchResult(match.result, match.format)
-                const resultText = match.result
-                  ? `${summary.rubbersWon}–${summary.rubbersLost}`
-                  : 'Not logged'
+                const isAvailable = (match.availablePlayerIds ?? []).includes(playerId ?? '')
+                const isSelected = (match.assignedPlayerIds ?? []).includes(playerId ?? '')
 
                 return (
                   <tr key={match.id}>
@@ -84,38 +74,20 @@ export function DashboardPage() {
                     <td className="col-fixture">{match.teamDisplayName} vs {opponentName}</td>
                     <td>{match.location === 'home' ? 'Home' : 'Away'}</td>
                     <td>{formatMatchDateRange(match.startAt)}</td>
-                    <td className="col-venue">{venue ? [venue.venueName, venue.address].filter(Boolean).join(' · ') : 'Venue TBC'}</td>
-                    <td>{availablePlayers.length > 0 ? availablePlayers.join(', ') : '—'}</td>
-                    <td>{selectedPlayers.length > 0 ? selectedPlayers.join(', ') : '—'}</td>
-                    <td>{resultText}</td>
-                    <td>
-                      <Button
-                        variant="ghost"
-                        onClick={() =>
-                          downloadIcs(
-                            `${match.id}.ics`,
-                            createMatchesCalendarIcs([
-                              {
-                                id: match.id,
-                                title: `${match.teamDisplayName} vs ${opponentName}`,
-                                startAt: match.startAt,
-                                endAt: match.endAt,
-                                venueName: venue?.venueName ?? 'Venue TBC',
-                                venueAddress: [venue?.address, venue?.notes].filter(Boolean).join(' · '),
-                                description: [match.notes?.trim(), match.result?.notes?.trim()]
-                                  .filter(Boolean)
-                                  .join('\n'),
-                              },
-                            ]),
-                          )
-                        }
-                      >
-                        Export
-                      </Button>
-                    </td>
+                    <td>{isAvailable ? 'Yes' : 'No'}</td>
+                    <td>{isSelected ? 'Yes' : 'No'}</td>
                   </tr>
                 )
               })}
+              {playerMatches.length === 0 && (
+                <tr>
+                  <td colSpan={6} className="muted">
+                    {playerId
+                      ? 'You are not currently available for or selected for any matches.'
+                      : 'This account is not linked to a player.'}
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
