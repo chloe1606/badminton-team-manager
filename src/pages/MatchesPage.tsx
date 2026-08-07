@@ -4,6 +4,7 @@ import { useAuth } from '../auth/hooks/useAuth'
 import { Button } from '../components/ui/Button'
 import { Card } from '../components/ui/Card'
 import { clubDirectory } from '../data/clubContacts'
+import { samplePlayers } from '../data/players'
 import type { MatchFormatConfig, MatchGameScore, MatchRecord, MatchResult } from '../types/matches'
 import { createMatchesCalendarIcs, downloadIcs, type CalendarFixture } from '../utils/calendar'
 import {
@@ -267,9 +268,82 @@ function MatchResultEditor({
   )
 }
 
+function getPlayerName(playerId: string): string {
+  return samplePlayers.find((player) => player.id === playerId)?.name ?? 'Unknown player'
+}
+
+function MatchPlayerSelectionEditor({
+  match,
+  onSave,
+}: {
+  match: MatchRecord
+  onSave: (matchId: string, playerIds: string[]) => void
+}) {
+  const availablePlayers = useMemo(
+    () => samplePlayers.filter((player) => (match.availablePlayerIds ?? []).includes(player.id)),
+    [match.availablePlayerIds],
+  )
+  const [selectedPlayerIds, setSelectedPlayerIds] = useState(match.assignedPlayerIds ?? [])
+  const [status, setStatus] = useState('')
+
+  useEffect(() => {
+    setSelectedPlayerIds((match.assignedPlayerIds ?? []).filter((playerId) =>
+      availablePlayers.some((player) => player.id === playerId),
+    ))
+    setStatus('')
+  }, [availablePlayers, match.assignedPlayerIds])
+
+  function togglePlayer(playerId: string, checked: boolean) {
+    setSelectedPlayerIds((currentIds) =>
+      checked ? [...currentIds, playerId] : currentIds.filter((id) => id !== playerId),
+    )
+  }
+
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    onSave(match.id, selectedPlayerIds)
+    setStatus('Players linked to match.')
+  }
+
+  if (availablePlayers.length === 0) {
+    return <p className="muted">No players have marked themselves available yet.</p>
+  }
+
+  return (
+    <form className="stack stack-tight" onSubmit={handleSubmit}>
+      {availablePlayers.map((player) => {
+        const checked = selectedPlayerIds.includes(player.id)
+        return (
+          <label className="checkbox-row" key={player.id}>
+            <input
+              checked={checked}
+              type="checkbox"
+              onChange={(event) => togglePlayer(player.id, event.target.checked)}
+            />
+            <span>{player.name}</span>
+          </label>
+        )
+      })}
+
+      {status ? <p className="muted">{status}</p> : null}
+
+      <div className="form-actions">
+        <Button type="submit">Save player links</Button>
+      </div>
+    </form>
+  )
+}
+
 export function MatchesPage() {
-  const { isAdmin } = useAuth()
-  const { addMatch, matches, teamSettings, updateMatchResult } = useAppData()
+  const { isAdmin, user } = useAuth()
+  const {
+    addMatch,
+    assignMatchPlayers,
+    matches,
+    teamSettings,
+    updateMatchAvailability,
+    updateMatchResult,
+  } = useAppData()
   const [opponentClubId, setOpponentClubId] = useState('')
   const [opponentTeamNumber, setOpponentTeamNumber] = useState('')
   const [venueId, setVenueId] = useState('')
@@ -496,6 +570,11 @@ export function MatchesPage() {
           const opponentName = formatOpponentName(match, club)
           const resultSummary = summarizeMatchResult(match.result, match.format)
           const pendingRubbers = match.format.numberOfRubbers - resultSummary.completedRubbers
+          const availablePlayerIds = match.availablePlayerIds ?? []
+          const assignedPlayerIds = match.assignedPlayerIds ?? []
+          const isCurrentPlayerAvailable = user?.playerId
+            ? availablePlayerIds.includes(user.playerId)
+            : false
 
           return (
             <Card key={match.id}>
@@ -533,6 +612,71 @@ export function MatchesPage() {
               </div>
 
               {match.notes ? <p>{match.notes}</p> : null}
+
+              <section className="stack stack-tight">
+                <div className="card-heading">
+                  <h3>Players</h3>
+                  <p className="muted">
+                    {assignedPlayerIds.length > 0
+                      ? `${assignedPlayerIds.length} linked`
+                      : 'No players linked yet.'}
+                  </p>
+                </div>
+
+                {user?.playerId ? (
+                  <div className="form-actions">
+                    <Button
+                      type="button"
+                      variant={isCurrentPlayerAvailable ? 'secondary' : 'primary'}
+                      onClick={() =>
+                        updateMatchAvailability(match.id, user.playerId!, !isCurrentPlayerAvailable)
+                      }
+                    >
+                      {isCurrentPlayerAvailable ? 'Mark unavailable' : 'Mark available'}
+                    </Button>
+                    {assignedPlayerIds.includes(user.playerId) ? (
+                      <span className="muted">Selected by admin.</span>
+                    ) : null}
+                  </div>
+                ) : null}
+
+                <div className="responsive-columns">
+                  <div>
+                    <h4>Available players</h4>
+                    {availablePlayerIds.length > 0 ? (
+                      <ul className="detail-list">
+                        {availablePlayerIds.map((playerId) => (
+                          <li key={`${match.id}-available-${playerId}`}>{getPlayerName(playerId)}</li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="muted">No availability recorded yet.</p>
+                    )}
+                  </div>
+
+                  <div>
+                    <h4>Linked players</h4>
+                    {assignedPlayerIds.length > 0 ? (
+                      <ul className="detail-list">
+                        {assignedPlayerIds.map((playerId) => (
+                          <li key={`${match.id}-assigned-${playerId}`}>{getPlayerName(playerId)}</li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="muted">Admin has not linked players to this match yet.</p>
+                    )}
+                  </div>
+                </div>
+
+                {isAdmin ? (
+                  <details>
+                    <summary>Link players</summary>
+                    <div className="details-panel">
+                      <MatchPlayerSelectionEditor match={match} onSave={assignMatchPlayers} />
+                    </div>
+                  </details>
+                ) : null}
+              </section>
 
               <section className="stack stack-tight">
                 <div className="card-heading">

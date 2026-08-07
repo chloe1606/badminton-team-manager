@@ -70,6 +70,8 @@ export interface MatchRecord {
   endAt?: string
   venueId: string
   notes?: string
+  availablePlayerIds?: string[]
+  assignedPlayerIds?: string[]
   result?: MatchResult
   createdAt: string
   teamDisplayName: string

@@ -6,6 +6,7 @@ import { DashboardPage } from '../pages/DashboardPage'
 import { FeaturePage } from '../pages/FeaturePage'
 import { LoginPage } from '../pages/LoginPage'
 import { MatchesPage } from '../pages/MatchesPage'
+import { MembersPage } from '../pages/MembersPage'
 import { NotFoundPage } from '../pages/NotFoundPage'
 import { SettingsPage } from '../pages/SettingsPage'
 
@@ -26,12 +27,7 @@ export const appRouter = createBrowserRouter([
           },
           {
             path: '/members',
-            element: (
-              <FeaturePage
-                title="Members"
-                description="Manage club members, skill profiles, and contact details."
-              />
-            ),
+            element: <MembersPage />,
           },
           {
             path: '/teams',

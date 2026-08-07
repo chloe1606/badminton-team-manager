@@ -16,6 +16,8 @@ interface AppDataContextValue {
   matches: MatchRecord[]
   teamSettings: TeamSettings
   addMatch: (match: NewMatchInput) => void
+  updateMatchAvailability: (matchId: string, playerId: string, isAvailable: boolean) => void
+  assignMatchPlayers: (matchId: string, playerIds: string[]) => void
   updateMatchResult: (matchId: string, result?: MatchResult) => void
   updateTeamSettings: (settings: TeamSettings) => void
 }
@@ -65,10 +67,57 @@ export function AppDataProvider({ children }: AppDataProviderProps) {
           ...currentMatches,
           {
             ...match,
+            availablePlayerIds: [],
+            assignedPlayerIds: [],
             id: crypto.randomUUID(),
             createdAt: new Date().toISOString(),
           },
         ])
+      },
+      updateMatchAvailability: (matchId, playerId, isAvailable) => {
+        setMatches((currentMatches) =>
+          currentMatches.map((match) => {
+            if (match.id !== matchId) {
+              return match
+            }
+
+            const availablePlayerIds = new Set(match.availablePlayerIds ?? [])
+            if (isAvailable) {
+              availablePlayerIds.add(playerId)
+            } else {
+              availablePlayerIds.delete(playerId)
+            }
+
+            const nextAvailablePlayerIds = [...availablePlayerIds]
+
+            return {
+              ...match,
+              availablePlayerIds: nextAvailablePlayerIds,
+              assignedPlayerIds: (match.assignedPlayerIds ?? []).filter((id) =>
+                nextAvailablePlayerIds.includes(id),
+              ),
+            }
+          }),
+        )
+      },
+      assignMatchPlayers: (matchId, playerIds) => {
+        setMatches((currentMatches) =>
+          currentMatches.map((match) => {
+            if (match.id !== matchId) {
+              return match
+            }
+
+            const availablePlayerIds = new Set(match.availablePlayerIds ?? [])
+            const assignedPlayerIds = [...new Set(playerIds)].filter((playerId) =>
+              availablePlayerIds.has(playerId),
+            )
+
+            return {
+              ...match,
+              assignedPlayerIds,
+            }
+          }),
+        )
       },
       updateMatchResult: (matchId, result) => {
         setMatches((currentMatches) =>
