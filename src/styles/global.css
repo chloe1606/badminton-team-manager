@@ -410,6 +410,46 @@ a {
   gap: var(--space-2);
 }
 
+.overview-table-wrap {
+  overflow-x: auto;
+}
+
+.overview-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.overview-table th,
+.overview-table td {
+  text-align: left;
+  vertical-align: top;
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+  font-size: 0.8125rem;
+  word-break: break-word;
+  overflow-wrap: break-word;
+}
+
+.overview-table th {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-muted);
+}
+
+.overview-table .col-num {
+  width: 2rem;
+}
+
+.overview-table .col-fixture {
+  width: 14rem;
+}
+
+.overview-table .col-venue {
+  width: 10rem;
+}
+
 @media (min-width: 48rem) {
   .match-info-grid {
     grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -463,4 +503,49 @@ a {
   .match-player-columns {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
+}
+
+.pair-assignment-grid {
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+/* Player pills (drag-and-drop) */
+.pill-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.player-pill {
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-4);
+  font: inherit;
+  font-weight: 600;
+  font-size: 0.9375rem;
+  cursor: grab;
+  line-height: 1.4;
+}
+
+.player-pill--man {
+  background: #dbeafe;
+  color: #1e40af;
+  border-color: #93c5fd;
+}
+
+.player-pill--lady {
+  background: #fce7f3;
+  color: #9d174d;
+  border-color: #f9a8d4;
+}
+
+/* Gender indicator for checkbox lists and pair slot display */
+.player-gender-indicator--man {
+  color: #1e40af;
+}
+
+.player-gender-indicator--lady {
+  color: #9d174d;
 }

@@ -25,6 +25,8 @@ export interface TeamProfile {
   teamNumber: number
   teamLabel: string
   leagueName: string
+  homeClubId: string
+  homeVenueId: string
 }
 
 export type PlayerGender = 'lady' | 'man'
@@ -81,6 +83,7 @@ export interface MatchPairAssignment {
 }
 
 export interface MatchDetailsInput {
+  location: MatchLocation
   opponentClubId: string
   opponentTeamNumber?: number
   startAt: string
@@ -89,7 +92,10 @@ export interface MatchDetailsInput {
   notes?: string
 }
 
+export type MatchLocation = 'home' | 'away'
+
 export interface MatchRecord {
+  location: MatchLocation
   id: string
   opponentClubId: string
   opponentTeamNumber?: number
@@ -100,6 +106,7 @@ export interface MatchRecord {
   availablePlayerIds?: string[]
   assignedPlayerIds?: string[]
   assignedPairs?: MatchPairAssignment[]
+  isIncompleteTeam?: boolean
   result?: MatchResult
   createdAt: string
   teamDisplayName: string

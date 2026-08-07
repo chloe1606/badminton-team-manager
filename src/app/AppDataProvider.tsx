@@ -112,6 +112,7 @@ function normalizeMatchRecord(match: MatchRecord): MatchRecord {
 
   return {
     ...match,
+    location: match.location ?? 'away',
     availablePlayerIds,
     assignedPlayerIds,
     assignedPairs: normalizeAssignedPairs(assignedPairsSource, format).map((pair) => ({
@@ -125,6 +126,11 @@ function normalizeMatchRecord(match: MatchRecord): MatchRecord {
 function normalizeTeamSettings(settings: TeamSettings): TeamSettings {
   return {
     ...settings,
+    profile: {
+      ...settings.profile,
+      homeClubId: settings.profile.homeClubId ?? defaultTeamSettings.profile.homeClubId,
+      homeVenueId: settings.profile.homeVenueId ?? defaultTeamSettings.profile.homeVenueId,
+    },
     matchFormat: normalizeFormat(settings.matchFormat),
   }
 }
@@ -222,20 +228,26 @@ export function AppDataProvider({ children }: AppDataProviderProps) {
         const assignedPlayerIds = [...new Set(playerIds)].filter((playerId) =>
           (match.availablePlayerIds ?? []).includes(playerId),
         )
+
+        const isIncompleteTeam = assignedPlayerIds.length < match.format.squad.squadSize
+
         const nextAssignedPairs = normalizeAssignedPairs(assignedPairs, match.format).map((pair) => ({
           ...pair,
           playerIds: pair.playerIds.filter((playerId) => assignedPlayerIds.includes(playerId)),
         }))
-        const error = validateMatchSelection({
-          assignedPairs: nextAssignedPairs,
-          availablePlayerIds: match.availablePlayerIds ?? [],
-          format: match.format,
-          playersById: samplePlayersById,
-          selectedPlayerIds: assignedPlayerIds,
-        })
 
-        if (error) {
-          return error
+        if (!isIncompleteTeam) {
+          const error = validateMatchSelection({
+            assignedPairs: nextAssignedPairs,
+            availablePlayerIds: match.availablePlayerIds ?? [],
+            format: match.format,
+            playersById: samplePlayersById,
+            selectedPlayerIds: assignedPlayerIds,
+          })
+
+          if (error) {
+            return error
+          }
         }
 
         setMatches((currentMatches: MatchRecord[]) =>
@@ -245,6 +257,7 @@ export function AppDataProvider({ children }: AppDataProviderProps) {
                   ...currentMatch,
                   assignedPlayerIds,
                   assignedPairs: nextAssignedPairs,
+                  isIncompleteTeam,
                 }
               : currentMatch,
           ),

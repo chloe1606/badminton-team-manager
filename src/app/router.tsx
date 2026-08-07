@@ -1,5 +1,6 @@
 import { createBrowserRouter } from 'react-router-dom'
 import { AppShell } from '../components/layout/AppShell'
+import { AdminRoute } from '../components/routing/AdminRoute'
 import { ProtectedRoute } from '../components/routing/ProtectedRoute'
 import { ClubContactsPage } from '../pages/ClubContactsPage'
 import { DashboardPage } from '../pages/DashboardPage'
@@ -30,15 +31,6 @@ export const appRouter = createBrowserRouter([
             element: <MembersPage />,
           },
           {
-            path: '/teams',
-            element: (
-              <FeaturePage
-                title="Teams"
-                description="Build teams and assign players for training rotations."
-              />
-            ),
-          },
-          {
             path: '/attendance',
             element: (
               <FeaturePage
@@ -56,8 +48,13 @@ export const appRouter = createBrowserRouter([
             element: <ClubContactsPage />,
           },
           {
-            path: '/settings',
-            element: <SettingsPage />,
+            element: <AdminRoute />,
+            children: [
+              {
+                path: '/settings',
+                element: <SettingsPage />,
+              },
+            ],
           },
         ],
       },

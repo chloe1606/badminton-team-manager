@@ -24,6 +24,7 @@ function getVenueClub(match: MatchRecord, homeClubId: string) {
   if (match.location === 'home') {
     return getClubById(clubDirectory, homeClubId)
   }
+
   return getClubById(clubDirectory, match.opponentClubId)
 }
 
@@ -35,18 +36,15 @@ function formatMatchDateRange(startAt: string): string {
   return formatter.format(new Date(startAt))
 }
 
-export function DashboardPage() {
+export function OverviewPage() {
   const { matches, teamSettings } = useAppData()
   const sortedMatches = useMemo(() => sortMatchesChronologically(matches), [matches])
 
   return (
     <div className="stack">
       <Card>
-        <h1>Team Dashboard</h1>
-        <p>
-          Welcome to your badminton team workspace. This dashboard is protected and only
-          visible to authenticated users.
-        </p>
+        <h1>Overview</h1>
+        <p>Read-only table of all matches, player availability, and selections.</p>
       </Card>
 
       <Card>
@@ -54,8 +52,8 @@ export function DashboardPage() {
           <table className="overview-table">
             <thead>
               <tr>
-                <th className="col-num">#</th>
-                <th className="col-fixture">Fixture</th>
+                <th>#</th>
+                <th>Fixture</th>
                 <th>Location</th>
                 <th>Date &amp; Time</th>
                 <th>Venue</th>
@@ -80,8 +78,8 @@ export function DashboardPage() {
 
                 return (
                   <tr key={match.id}>
-                    <td className="col-num">{index + 1}</td>
-                    <td className="col-fixture">{match.teamDisplayName} vs {opponentName}</td>
+                    <td>{index + 1}</td>
+                    <td>{match.teamDisplayName} vs {opponentName}</td>
                     <td>{match.location === 'home' ? 'Home' : 'Away'}</td>
                     <td>{formatMatchDateRange(match.startAt)}</td>
                     <td className="col-venue">{venue ? [venue.venueName, venue.address].filter(Boolean).join(' · ') : 'Venue TBC'}</td>

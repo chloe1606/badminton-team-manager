@@ -15,7 +15,9 @@ export const defaultTeamSettings: TeamSettings = {
     teamName: 'Parklangley',
     teamNumber: 3,
     teamLabel: 'Mixed',
-    leagueName: 'Current League',
+    leagueName: 'NWKBA',
+    homeClubId: 'park-langley',
+    homeVenueId: 'park-langley-the-parklangley-club',
   },
   matchFormat: {
     numberOfRubbers: 6,
@@ -41,6 +43,7 @@ export const defaultTeamSettings: TeamSettings = {
 export const defaultMatchFixtures: MatchRecord[] = [
   {
     id: 'match-bexley-2026-08-17',
+    location: 'away',
     opponentClubId: 'bexley',
     startAt: '2026-08-17T20:00:00',
     endAt: '2026-08-17T22:00:00',
@@ -48,11 +51,12 @@ export const defaultMatchFixtures: MatchRecord[] = [
     notes: 'Please arrive 20 minutes early for warm-up.',
     createdAt: '2026-08-01T09:00:00.000Z',
     teamDisplayName: 'Parklangley 3 Mixed',
-    leagueName: 'Current League',
+    leagueName: 'NWKBA',
     format: cloneFormat(defaultTeamSettings.matchFormat),
   },
   {
     id: 'match-orpington-2026-08-24',
+    location: 'away',
     opponentClubId: 'orpington',
     opponentTeamNumber: 2,
     startAt: '2026-08-24T20:00:00',
@@ -60,7 +64,7 @@ export const defaultMatchFixtures: MatchRecord[] = [
     venueId: 'orpington-darrick-wood-sports-centre',
     createdAt: '2026-08-02T09:00:00.000Z',
     teamDisplayName: 'Parklangley 3 Mixed',
-    leagueName: 'Current League',
+    leagueName: 'NWKBA',
     format: cloneFormat(defaultTeamSettings.matchFormat),
   },
 ]
