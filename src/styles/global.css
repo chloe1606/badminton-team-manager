@@ -301,8 +301,15 @@ a {
   letter-spacing: 0.04em;
 }
 
-.details-panel {
-  margin-top: var(--space-3);
+.details-summary {
+  font-weight: 600;
+  font-size: 0.9375rem;
+  color: var(--color-primary-strong);
+  cursor: pointer;
+  padding: var(--space-2) 0;
+  border-top: 1px solid var(--color-border);
+  margin-top: var(--space-1);
+  list-style: none;
 }
 
 .result-editor {
@@ -371,6 +378,10 @@ a {
   gap: var(--space-2);
   align-items: center;
   justify-content: space-between;
+}
+
+.details-panel {
+  margin-top: var(--space-3);
 }
 
 @media (min-width: 48rem) {

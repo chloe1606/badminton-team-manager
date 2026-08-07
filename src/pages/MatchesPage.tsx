@@ -124,19 +124,12 @@ function validateMatchDetailsInput(draft: MatchDetailsDraft): {
   }
 }
 
-function formatMatchDateRange(startAt: string, endAt?: string): string {
+function formatMatchDateRange(startAt: string): string {
   const formatter = new Intl.DateTimeFormat(undefined, {
     dateStyle: 'full',
     timeStyle: 'short',
   })
-  const startDate = new Date(startAt)
-
-  if (!endAt) {
-    return formatter.format(startDate)
-  }
-
-  const endDate = new Date(endAt)
-  return `${formatter.format(startDate)} – ${formatter.format(endDate)}`
+  return formatter.format(new Date(startAt))
 }
 
 function createCalendarFixture(match: MatchRecord): CalendarFixture {
@@ -785,21 +778,6 @@ function MatchDetailsEditor({
             }
           />
         </label>
-
-        <label className="field">
-          <span>End date and time</span>
-          <input
-            className="input"
-            type="datetime-local"
-            value={draft.endAt}
-            onChange={(event) =>
-              setDraft((currentDraft) => ({
-                ...currentDraft,
-                endAt: event.target.value,
-              }))
-            }
-          />
-        </label>
       </div>
 
       <label className="field">
@@ -974,7 +952,7 @@ export function MatchesPage() {
               <div className="match-table" aria-label={`Match ${index + 1} details`}>
                 <div className="match-table-row">
                   <span className="match-table-label">Date</span>
-                  <div>{formatMatchDateRange(match.startAt, match.endAt)}</div>
+                  <div>{formatMatchDateRange(match.startAt)}</div>
                 </div>
                 <div className="match-table-row">
                   <span className="match-table-label">Venue</span>
@@ -1026,7 +1004,7 @@ export function MatchesPage() {
 
                 {isAdmin ? (
                   <details>
-                    <summary>Manage availability</summary>
+                    <summary className="details-summary">Manage availability</summary>
                     <div className="details-panel stack stack-tight">
                       <p className="muted">Mark players available for this match.</p>
                       {samplePlayers.map((player) => (
@@ -1090,7 +1068,7 @@ export function MatchesPage() {
 
                 {isAdmin ? (
                   <details>
-                    <summary>Edit match</summary>
+                    <summary className="details-summary">Edit match</summary>
                     <div className="details-panel">
                       <MatchDetailsEditor
                         match={match}
@@ -1103,7 +1081,7 @@ export function MatchesPage() {
 
                 {isAdmin ? (
                   <details>
-                    <summary>Select squad and pairs</summary>
+                    <summary className="details-summary">Select squad and pairs</summary>
                     <div className="details-panel">
                       <MatchPlayerSelectionEditor match={match} onSave={assignMatchPlayers} />
                     </div>
@@ -1111,6 +1089,7 @@ export function MatchesPage() {
                 ) : null}
               </section>
 
+              {isAdmin ? (
               <section className="stack stack-tight">
                 <div className="card-heading">
                   <h3>Results</h3>
@@ -1156,15 +1135,14 @@ export function MatchesPage() {
                   </>
                 ) : null}
 
-                {isAdmin ? (
-                  <details>
-                    <summary>{match.result ? 'Edit results' : 'Log results'}</summary>
-                    <div className="details-panel">
-                      <MatchResultEditor match={match} onSave={updateMatchResult} />
-                    </div>
-                  </details>
-                ) : null}
+                <details>
+                  <summary className="details-summary">{match.result ? 'Edit results' : 'Log results'}</summary>
+                  <div className="details-panel">
+                    <MatchResultEditor match={match} onSave={updateMatchResult} />
+                  </div>
+                </details>
               </section>
+              ) : null}
             </Card>
           )
         })}
@@ -1231,16 +1209,6 @@ export function MatchesPage() {
                   type="datetime-local"
                   value={startAt}
                   onChange={(event) => setStartAt(event.target.value)}
-                />
-              </label>
-
-              <label className="field">
-                <span>End date and time</span>
-                <input
-                  className="input"
-                  type="datetime-local"
-                  value={endAt}
-                  onChange={(event) => setEndAt(event.target.value)}
                 />
               </label>
             </div>
