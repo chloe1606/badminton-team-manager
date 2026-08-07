@@ -153,8 +153,8 @@ export function AppDataProvider({ children }: AppDataProviderProps) {
     () => ({
       matches,
       teamSettings,
-      addMatch: (match) => {
-        setMatches((currentMatches) => [
+      addMatch: (match: NewMatchInput) => {
+        setMatches((currentMatches: MatchRecord[]) => [
           ...currentMatches,
           normalizeMatchRecord({
             ...match,
@@ -167,19 +167,21 @@ export function AppDataProvider({ children }: AppDataProviderProps) {
           }),
         ])
       },
-      updateMatch: (matchId, nextMatch) => {
-        setMatches((currentMatches) =>
-          currentMatches.map((match) =>
+      updateMatch: (matchId: string, nextMatch: MatchDetailsInput) => {
+        setMatches((currentMatches: MatchRecord[]) =>
+          currentMatches.map((match: MatchRecord) =>
             match.id === matchId ? { ...match, ...nextMatch } : match,
           ),
         )
       },
-      removeMatch: (matchId) => {
-        setMatches((currentMatches) => currentMatches.filter((match) => match.id !== matchId))
+      removeMatch: (matchId: string) => {
+        setMatches((currentMatches: MatchRecord[]) =>
+          currentMatches.filter((match: MatchRecord) => match.id !== matchId),
+        )
       },
-      updateMatchAvailability: (matchId, playerId, isAvailable) => {
-        setMatches((currentMatches) =>
-          currentMatches.map((match) => {
+      updateMatchAvailability: (matchId: string, playerId: string, isAvailable: boolean) => {
+        setMatches((currentMatches: MatchRecord[]) =>
+          currentMatches.map((match: MatchRecord) => {
             if (match.id !== matchId) {
               return match
             }
@@ -207,8 +209,12 @@ export function AppDataProvider({ children }: AppDataProviderProps) {
           }),
         )
       },
-      assignMatchPlayers: (matchId, playerIds, assignedPairs) => {
-        const match = matches.find((fixture) => fixture.id === matchId)
+      assignMatchPlayers: (
+        matchId: string,
+        playerIds: string[],
+        assignedPairs: MatchPairAssignment[],
+      ) => {
+        const match = matches.find((fixture: MatchRecord) => fixture.id === matchId)
         if (!match) {
           return 'Match not found.'
         }
@@ -232,8 +238,8 @@ export function AppDataProvider({ children }: AppDataProviderProps) {
           return error
         }
 
-        setMatches((currentMatches) =>
-          currentMatches.map((currentMatch) =>
+        setMatches((currentMatches: MatchRecord[]) =>
+          currentMatches.map((currentMatch: MatchRecord) =>
             currentMatch.id === matchId
               ? {
                   ...currentMatch,
@@ -246,12 +252,14 @@ export function AppDataProvider({ children }: AppDataProviderProps) {
 
         return undefined
       },
-      updateMatchResult: (matchId, result) => {
-        setMatches((currentMatches) =>
-          currentMatches.map((match) => (match.id === matchId ? { ...match, result } : match)),
+      updateMatchResult: (matchId: string, result?: MatchResult) => {
+        setMatches((currentMatches: MatchRecord[]) =>
+          currentMatches.map((match: MatchRecord) =>
+            match.id === matchId ? { ...match, result } : match,
+          ),
         )
       },
-      updateTeamSettings: (settings) => {
+      updateTeamSettings: (settings: TeamSettings) => {
         setTeamSettings(normalizeTeamSettings(settings))
       },
     }),

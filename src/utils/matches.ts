@@ -23,132 +23,131 @@ export function sortMatchesChronologically(matches: MatchRecord[]): MatchRecord[
       return dateComparison
     }
 
-    export function createEmptyAssignedPairs(format: MatchFormatConfig): MatchPairAssignment[] {
-      return format.pairingSlots.map((pairSlot) => ({ pairSlot, playerIds: [] }))
-    }
-
-    export function normalizeAssignedPairs(
-      assignedPairs: MatchPairAssignment[] | undefined,
-      format: MatchFormatConfig,
-    ): MatchPairAssignment[] {
-      const pairMap = new Map(
-        (assignedPairs ?? []).map((pair) => [pair.pairSlot, [...new Set(pair.playerIds)].slice(0, 2)]),
-      )
-
-      return format.pairingSlots.map((pairSlot) => ({
-        pairSlot,
-        playerIds: pairMap.get(pairSlot) ?? [],
-      }))
-    }
-
-    export function suggestAssignedPairs(
-      selectedPlayerIds: string[],
-      format: MatchFormatConfig,
-      playersById: Map<string, { gender: PlayerGender }>,
-    ): MatchPairAssignment[] {
-      const normalizedPairs = createEmptyAssignedPairs(format)
-      const uniqueSelectedPlayerIds = [...new Set(selectedPlayerIds)].filter((playerId) =>
-        playersById.has(playerId),
-      )
-
-      if (format.squad.pairingRule === 'mixed') {
-        const ladies = uniqueSelectedPlayerIds.filter((playerId) => playersById.get(playerId)?.gender === 'lady')
-        const men = uniqueSelectedPlayerIds.filter((playerId) => playersById.get(playerId)?.gender === 'man')
-
-        return normalizedPairs.map((pair, index) => ({
-          ...pair,
-          playerIds: [ladies[index], men[index]].filter(Boolean) as string[],
-        }))
-      }
-
-      return normalizedPairs.map((pair, index) => ({
-        ...pair,
-        playerIds: uniqueSelectedPlayerIds.slice(index * 2, index * 2 + 2),
-      }))
-    }
-
-    export function validateMatchSelection({
-      assignedPairs,
-      availablePlayerIds,
-      format,
-      playersById,
-      selectedPlayerIds,
-    }: {
-      assignedPairs: MatchPairAssignment[] | undefined
-      availablePlayerIds: string[]
-      format: MatchFormatConfig
-      playersById: Map<string, { gender: PlayerGender }>
-      selectedPlayerIds: string[]
-    }): string | null {
-      const availablePlayerIdSet = new Set(availablePlayerIds)
-      const uniqueSelectedPlayerIds = [...new Set(selectedPlayerIds)].filter((playerId) =>
-        availablePlayerIdSet.has(playerId),
-      )
-
-      if (uniqueSelectedPlayerIds.length !== format.squad.squadSize) {
-        return `Select exactly ${format.squad.squadSize} players.`
-      }
-
-      const selectedPlayers = uniqueSelectedPlayerIds.map((playerId) => playersById.get(playerId))
-
-      if (selectedPlayers.some((player) => !player)) {
-        return 'Every selected player must have a recorded gender.'
-      }
-
-      const ladiesCount = selectedPlayers.filter((player) => player?.gender === 'lady').length
-      const menCount = selectedPlayers.filter((player) => player?.gender === 'man').length
-
-      if (
-        ladiesCount !== format.squad.ladiesRequired ||
-        menCount !== format.squad.menRequired
-      ) {
-        return `Select exactly ${format.squad.ladiesRequired} ladies and ${format.squad.menRequired} men.`
-      }
-
-      const usageCounts = new Map<string, number>()
-
-      for (const pair of normalizeAssignedPairs(assignedPairs, format)) {
-        if (pair.playerIds.length !== 2) {
-          return `Complete ${pair.pairSlot} before saving.`
-        }
-
-        if (new Set(pair.playerIds).size !== pair.playerIds.length) {
-          return `${pair.pairSlot} cannot include the same player twice.`
-        }
-
-        if (pair.playerIds.some((playerId) => !uniqueSelectedPlayerIds.includes(playerId))) {
-          return `${pair.pairSlot} must only use selected players.`
-        }
-
-        if (format.squad.pairingRule === 'mixed') {
-          const genders = pair.playerIds.map((playerId) => playersById.get(playerId)?.gender)
-          if (!(genders.includes('lady') && genders.includes('man'))) {
-            return `${pair.pairSlot} must contain one lady and one man.`
-          }
-        }
-
-        for (const playerId of pair.playerIds) {
-          usageCounts.set(playerId, (usageCounts.get(playerId) ?? 0) + 1)
-        }
-      }
-
-      if (!format.squad.allowPlayerReuseAcrossPairs) {
-        for (const [playerId, count] of usageCounts.entries()) {
-          if (count > 1) {
-            return `${playersById.has(playerId) ? 'Each selected player' : 'A selected player'} can only be used in one pair.`
-          }
-        }
-      }
-
-      if (uniqueSelectedPlayerIds.some((playerId) => !usageCounts.has(playerId))) {
-        return 'Assign every selected player to at least one pair.'
-      }
-
-      return null
-    }
-
     return left.createdAt.localeCompare(right.createdAt)
   })
+}
+
+export function createEmptyAssignedPairs(format: MatchFormatConfig): MatchPairAssignment[] {
+  return format.pairingSlots.map((pairSlot) => ({ pairSlot, playerIds: [] }))
+}
+
+export function normalizeAssignedPairs(
+  assignedPairs: MatchPairAssignment[] | undefined,
+  format: MatchFormatConfig,
+): MatchPairAssignment[] {
+  const pairMap = new Map(
+    (assignedPairs ?? []).map((pair) => [pair.pairSlot, [...new Set(pair.playerIds)].slice(0, 2)]),
+  )
+
+  return format.pairingSlots.map((pairSlot) => ({
+    pairSlot,
+    playerIds: pairMap.get(pairSlot) ?? [],
+  }))
+}
+
+export function suggestAssignedPairs(
+  selectedPlayerIds: string[],
+  format: MatchFormatConfig,
+  playersById: Map<string, { gender: PlayerGender }>,
+): MatchPairAssignment[] {
+  const normalizedPairs = createEmptyAssignedPairs(format)
+  const uniqueSelectedPlayerIds = [...new Set(selectedPlayerIds)].filter((playerId) =>
+    playersById.has(playerId),
+  )
+
+  if (format.squad.pairingRule === 'mixed') {
+    const ladies = uniqueSelectedPlayerIds.filter(
+      (playerId) => playersById.get(playerId)?.gender === 'lady',
+    )
+    const men = uniqueSelectedPlayerIds.filter((playerId) => playersById.get(playerId)?.gender === 'man')
+
+    return normalizedPairs.map((pair, index) => ({
+      ...pair,
+      playerIds: [ladies[index], men[index]].filter(Boolean) as string[],
+    }))
+  }
+
+  return normalizedPairs.map((pair, index) => ({
+    ...pair,
+    playerIds: uniqueSelectedPlayerIds.slice(index * 2, index * 2 + 2),
+  }))
+}
+
+export function validateMatchSelection({
+  assignedPairs,
+  availablePlayerIds,
+  format,
+  playersById,
+  selectedPlayerIds,
+}: {
+  assignedPairs: MatchPairAssignment[] | undefined
+  availablePlayerIds: string[]
+  format: MatchFormatConfig
+  playersById: Map<string, { gender: PlayerGender }>
+  selectedPlayerIds: string[]
+}): string | null {
+  const availablePlayerIdSet = new Set(availablePlayerIds)
+  const uniqueSelectedPlayerIds = [...new Set(selectedPlayerIds)].filter((playerId) =>
+    availablePlayerIdSet.has(playerId),
+  )
+
+  if (uniqueSelectedPlayerIds.length !== format.squad.squadSize) {
+    return `Select exactly ${format.squad.squadSize} players.`
+  }
+
+  const selectedPlayers = uniqueSelectedPlayerIds.map((playerId) => playersById.get(playerId))
+
+  if (selectedPlayers.some((player) => !player)) {
+    return 'Every selected player must have a recorded gender.'
+  }
+
+  const ladiesCount = selectedPlayers.filter((player) => player?.gender === 'lady').length
+  const menCount = selectedPlayers.filter((player) => player?.gender === 'man').length
+
+  if (ladiesCount !== format.squad.ladiesRequired || menCount !== format.squad.menRequired) {
+    return `Select exactly ${format.squad.ladiesRequired} ladies and ${format.squad.menRequired} men.`
+  }
+
+  const usageCounts = new Map<string, number>()
+
+  for (const pair of normalizeAssignedPairs(assignedPairs, format)) {
+    if (pair.playerIds.length !== 2) {
+      return `Complete ${pair.pairSlot} before saving.`
+    }
+
+    if (new Set(pair.playerIds).size !== pair.playerIds.length) {
+      return `${pair.pairSlot} cannot include the same player twice.`
+    }
+
+    if (pair.playerIds.some((playerId) => !uniqueSelectedPlayerIds.includes(playerId))) {
+      return `${pair.pairSlot} must only use selected players.`
+    }
+
+    if (format.squad.pairingRule === 'mixed') {
+      const genders = pair.playerIds.map((playerId) => playersById.get(playerId)?.gender)
+      if (!(genders.includes('lady') && genders.includes('man'))) {
+        return `${pair.pairSlot} must contain one lady and one man.`
+      }
+    }
+
+    for (const playerId of pair.playerIds) {
+      usageCounts.set(playerId, (usageCounts.get(playerId) ?? 0) + 1)
+    }
+  }
+
+  if (!format.squad.allowPlayerReuseAcrossPairs) {
+    for (const count of usageCounts.values()) {
+      if (count > 1) {
+        return 'Each selected player can only be used in one pair.'
+      }
+    }
+  }
+
+  if (uniqueSelectedPlayerIds.some((playerId) => !usageCounts.has(playerId))) {
+    return 'Assign every selected player to at least one pair.'
+  }
+
+  return null
 }
 
 export function getClubById(
