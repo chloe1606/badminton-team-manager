@@ -25,7 +25,7 @@ export function ClubContactsPage() {
 
             <div className="responsive-columns">
               <section>
-                <h3>Match secretaries</h3>
+                <h3>Match secretary</h3>
                 <ul className="detail-list">
                   {club.contacts.map((contact) => (
                     <li key={contact.id}>
@@ -40,7 +40,7 @@ export function ClubContactsPage() {
               </section>
 
               <section>
-                <h3>Venues</h3>
+                <h3>Venue</h3>
                 <ul className="detail-list">
                   {club.addresses.map((address) => (
                     <li key={address.id}>

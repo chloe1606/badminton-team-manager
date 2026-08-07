@@ -39,15 +39,6 @@ export const appRouter = createBrowserRouter([
             ),
           },
           {
-            path: '/sessions',
-            element: (
-              <FeaturePage
-                title="Sessions"
-                description="Create and organize upcoming practice sessions."
-              />
-            ),
-          },
-          {
             path: '/attendance',
             element: (
               <FeaturePage

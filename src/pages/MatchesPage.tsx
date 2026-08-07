@@ -507,16 +507,8 @@ function MatchPlayerSelectionEditor({
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    setError('')
-    setStatus('')
-
-    const saveError = onSave(match.id, selectedPlayerIds, assignedPairs)
-    if (saveError) {
-      setError(saveError)
-      return
-    }
-
-    setStatus('Squad and pairs saved.')
+    onSave(match.id, selectedPlayerIds)
+    setStatus('Players selected for match.')
   }
 
   if (availablePlayers.length === 0) {
@@ -628,7 +620,7 @@ function MatchPlayerSelectionEditor({
       {status ? <p className="muted">{status}</p> : null}
 
       <div className="form-actions">
-        <Button type="submit">Save squad and pairs</Button>
+        <Button type="submit">Save player selections</Button>
       </div>
     </form>
   )
@@ -940,53 +932,67 @@ export function MatchesPage() {
             <Card key={match.id} className="match-card">
               <div className="card-heading">
                 <div>
-                  <p className="eyebrow">Match {index + 1}</p>
+                  <p className="eyebrow">Match {index + 1} · {match.leagueName}</p>
                   <h2>{match.teamDisplayName} vs {opponentName}</h2>
-                  <p className="muted">{match.leagueName}</p>
                 </div>
                 <Button onClick={() => exportMatch(match.id)} variant="ghost">
                   Export to calendar
                 </Button>
               </div>
 
-              <div className="match-table" aria-label={`Match ${index + 1} details`}>
-                <div className="match-table-row">
-                  <span className="match-table-label">Date</span>
-                  <div>{formatMatchDateRange(match.startAt)}</div>
+              <dl className="match-info-grid">
+                <div>
+                  <dt>Date &amp; Time</dt>
+                  <dd>{formatMatchDateRange(match.startAt, match.endAt)}</dd>
                 </div>
-                <div className="match-table-row">
-                  <span className="match-table-label">Venue</span>
-                  <div>
+                <div>
+                  <dt>Venue</dt>
+                  <dd>
                     <strong>{address?.venueName ?? 'Venue TBC'}</strong>
-                    <br />
-                    {address?.address ?? 'Select a venue for this fixture.'}
-                    {address?.notes ? <p className="muted venue-note">Notes: {address.notes}</p> : null}
-                  </div>
+                    {address?.address ? <><br />{address.address}</> : null}
+                    {address?.notes ? <><br /><span className="muted">{address.notes}</span></> : null}
+                  </dd>
                 </div>
-                <div className="match-table-row">
-                  <span className="match-table-label">Format</span>
-                  <div>{match.format.rubbersPerPlayer} rubbers per player</div>
+                <div>
+                  <dt>Format</dt>
+                  <dd>
+                    {match.format.numberOfRubbers} rubbers · {match.format.pairingSlots.join(', ')} ·{' '}
+                    {match.format.scoring.presetName}
+                  </dd>
                 </div>
-                {match.notes ? (
-                  <div className="match-table-row">
-                    <span className="match-table-label">Notes</span>
-                    <div>{match.notes}</div>
-                  </div>
-                ) : null}
-              </div>
+                <div>
+                  <dt>Result</dt>
+                  <dd>
+                    {match.result
+                      ? `${resultSummary.rubbersWon}–${resultSummary.rubbersLost}${pendingRubbers > 0 ? ` (${pendingRubbers} pending)` : ''}`
+                      : <span className="muted">Not yet logged</span>}
+                  </dd>
+                </div>
+              </dl>
 
-              <section className="stack stack-tight">
-                <div className="card-heading">
-                  <h3>Players</h3>
-                  <p className="muted">
-                    {assignedPlayerIds.length > 0
-                      ? `${assignedPlayerIds.length} selected`
-                      : 'No squad selected yet.'}
-                  </p>
-                </div>
+              {match.notes ? <p className="muted match-notes">{match.notes}</p> : null}
 
+              <div className="match-players-row">
+                <dl className="match-players-grid">
+                  <div>
+                    <dt>Available</dt>
+                    <dd>
+                      {availablePlayerIds.length > 0
+                        ? availablePlayerIds.map(getPlayerName).join(', ')
+                        : <span className="muted">None recorded</span>}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Selected</dt>
+                    <dd>
+                      {assignedPlayerIds.length > 0
+                        ? assignedPlayerIds.map(getPlayerName).join(', ')
+                        : <span className="muted">None selected</span>}
+                    </dd>
+                  </div>
+                </dl>
                 {user?.playerId ? (
-                  <div className="form-actions">
+                  <div className="match-availability">
                     <Button
                       type="button"
                       variant={isCurrentPlayerAvailable ? 'secondary' : 'primary'}
@@ -1001,72 +1007,38 @@ export function MatchesPage() {
                     ) : null}
                   </div>
                 ) : null}
+              </div>
 
-                {isAdmin ? (
-                  <details>
-                    <summary className="details-summary">Manage availability</summary>
-                    <div className="details-panel stack stack-tight">
-                      <p className="muted">Mark players available for this match.</p>
-                      {samplePlayers.map((player) => (
-                        <label className="checkbox-row" key={`${match.id}-availability-${player.id}`}>
-                          <input
-                            checked={availablePlayerIds.includes(player.id)}
-                            type="checkbox"
-                            onChange={(event) =>
-                              updateMatchAvailability(match.id, player.id, event.target.checked)
-                            }
-                          />
-                          <span>
-                            {player.name} · {formatGenderLabel(player.id)}
+              {match.result ? (
+                <dl className="match-rubbers-grid">
+                  {match.result.rubbers.map((rubber, rubberIndex) => {
+                    const rubberWinner = deriveRubberWinner(rubber.games, match.format)
+                    return (
+                      <div key={rubber.id}>
+                        <dt>R{rubberIndex + 1} · {rubber.pairSlot}</dt>
+                        <dd>
+                          {rubber.games.length > 0
+                            ? rubber.games.map((game) => `${game.ourScore}–${game.theirScore}`).join(', ')
+                            : '—'}
+                          {' '}
+                          <span className="muted">
+                            {rubberWinner === 'us' ? '· Won' : rubberWinner === 'them' ? '· Lost' : '· In progress'}
                           </span>
-                        </label>
-                      ))}
+                        </dd>
+                      </div>
+                    )
+                  })}
+                  {match.result.notes ? (
+                    <div className="match-rubbers-notes">
+                      <dt>Notes</dt>
+                      <dd>{match.result.notes}</dd>
                     </div>
-                  </details>
-                ) : null}
+                  ) : null}
+                </dl>
+              ) : null}
 
-                <div className="match-player-columns">
-                  <div>
-                    <h4>Available players</h4>
-                    {availablePlayerIds.length > 0 ? (
-                      <ul className="detail-list">
-                        {availablePlayerIds.map((playerId) => (
-                          <li key={`${match.id}-available-${playerId}`}>{getPlayerSummary(playerId)}</li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <p className="muted">No availability recorded yet.</p>
-                    )}
-                  </div>
-
-                  <div>
-                    <h4>Selected players</h4>
-                    {assignedPlayerIds.length > 0 ? (
-                      <ul className="detail-list">
-                        {assignedPlayerIds.map((playerId) => (
-                          <li key={`${match.id}-assigned-${playerId}`}>{getPlayerSummary(playerId)}</li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <p className="muted">Admin has not selected a squad for this match yet.</p>
-                    )}
-                  </div>
-
-                  <div>
-                    <h4>Pairings</h4>
-                    <ul className="detail-list">
-                      {normalizeAssignedPairs(match.assignedPairs, match.format).map((pair) => (
-                        <li key={`${match.id}-${pair.pairSlot}`}>
-                          <strong>{pair.pairSlot}</strong>
-                          <br />
-                          {formatPairSummary(pair)}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
-
-                {isAdmin ? (
+              {isAdmin ? (
+                <div className="match-admin-panels">
                   <details>
                     <summary className="details-summary">Edit match</summary>
                     <div className="details-panel">
@@ -1077,71 +1049,19 @@ export function MatchesPage() {
                       />
                     </div>
                   </details>
-                ) : null}
-
-                {isAdmin ? (
                   <details>
-                    <summary className="details-summary">Select squad and pairs</summary>
+                    <summary>Select players</summary>
                     <div className="details-panel">
                       <MatchPlayerSelectionEditor match={match} onSave={assignMatchPlayers} />
                     </div>
                   </details>
-                ) : null}
-              </section>
-
-              {isAdmin ? (
-              <section className="stack stack-tight">
-                <div className="card-heading">
-                  <h3>Results</h3>
-                  {match.result ? (
-                    <p className="muted">
-                      {resultSummary.rubbersWon} won / {resultSummary.rubbersLost} lost
-                      {pendingRubbers > 0 ? ` · ${pendingRubbers} pending` : ''}
-                    </p>
-                  ) : (
-                    <p className="muted">No results logged yet.</p>
-                  )}
+                  <details>
+                    <summary>{match.result ? 'Edit results' : 'Log results'}</summary>
+                    <div className="details-panel">
+                      <MatchResultEditor match={match} onSave={updateMatchResult} />
+                    </div>
+                  </details>
                 </div>
-
-                {match.result ? (
-                  <>
-                    <ul className="detail-list">
-                      {match.result.rubbers.map((rubber, rubberIndex) => {
-                        const rubberWinner = deriveRubberWinner(rubber.games, match.format)
-                        return (
-                          <li key={rubber.id}>
-                            <strong>
-                              Rubber {rubberIndex + 1} · {rubber.pairSlot}
-                            </strong>
-                            <br />
-                            {rubber.games.length > 0
-                              ? rubber.games
-                                  .map((game) => `${game.ourScore}-${game.theirScore}`)
-                                  .join(', ')
-                              : 'No scores yet'}
-                            <br />
-                            <span className="muted">
-                              {rubberWinner === 'us'
-                                ? 'Won'
-                                : rubberWinner === 'them'
-                                  ? 'Lost'
-                                  : 'In progress'}
-                            </span>
-                          </li>
-                        )
-                      })}
-                    </ul>
-                    {match.result.notes ? <p>{match.result.notes}</p> : null}
-                  </>
-                ) : null}
-
-                <details>
-                  <summary className="details-summary">{match.result ? 'Edit results' : 'Log results'}</summary>
-                  <div className="details-panel">
-                    <MatchResultEditor match={match} onSave={updateMatchResult} />
-                  </div>
-                </details>
-              </section>
               ) : null}
             </Card>
           )
