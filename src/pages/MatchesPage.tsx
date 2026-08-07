@@ -1024,6 +1024,29 @@ export function MatchesPage() {
                   </div>
                 ) : null}
 
+                {isAdmin ? (
+                  <details>
+                    <summary>Manage availability</summary>
+                    <div className="details-panel stack stack-tight">
+                      <p className="muted">Mark players available for this match.</p>
+                      {samplePlayers.map((player) => (
+                        <label className="checkbox-row" key={`${match.id}-availability-${player.id}`}>
+                          <input
+                            checked={availablePlayerIds.includes(player.id)}
+                            type="checkbox"
+                            onChange={(event) =>
+                              updateMatchAvailability(match.id, player.id, event.target.checked)
+                            }
+                          />
+                          <span>
+                            {player.name} · {formatGenderLabel(player.id)}
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                  </details>
+                ) : null}
+
                 <div className="responsive-columns">
                   <div>
                     <h4>Available players</h4>
