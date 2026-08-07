@@ -2,17 +2,18 @@ import { Link, NavLink, Outlet } from 'react-router-dom'
 import { useAuth } from '../../auth/hooks/useAuth'
 import { Button } from '../ui/Button'
 
-const navItems = [
-  { to: '/', label: 'Dashboard' },
-  { to: '/members', label: 'Members' },
-  { to: '/teams', label: 'Teams' },
-  { to: '/matches', label: 'Matches' },
-  { to: '/club-contacts', label: 'Club Contacts' },
-  { to: '/settings', label: 'Settings' },
+const baseNavItems = [
+  { to: '/', label: 'Dashboard', adminOnly: false },
+  { to: '/members', label: 'Members', adminOnly: false },
+  { to: '/teams', label: 'Teams', adminOnly: false },
+  { to: '/matches', label: 'Matches', adminOnly: false },
+  { to: '/club-contacts', label: 'Club Contacts', adminOnly: false },
+  { to: '/settings', label: 'Settings', adminOnly: true },
 ]
 
 export function AppShell() {
-  const { user, logout } = useAuth()
+  const { user, logout, isAdmin } = useAuth()
+  const navItems = baseNavItems.filter((item) => !item.adminOnly || isAdmin)
 
   return (
     <div className="app-shell">

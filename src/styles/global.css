@@ -464,3 +464,42 @@ a {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
+
+/* Player pills (drag-and-drop) */
+.pill-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.player-pill {
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-4);
+  font: inherit;
+  font-weight: 600;
+  font-size: 0.9375rem;
+  cursor: grab;
+  line-height: 1.4;
+}
+
+.player-pill--man {
+  background: #dbeafe;
+  color: #1e40af;
+  border-color: #93c5fd;
+}
+
+.player-pill--lady {
+  background: #fce7f3;
+  color: #9d174d;
+  border-color: #f9a8d4;
+}
+
+/* Gender indicator for checkbox lists and pair slot display */
+.player-gender-indicator--man {
+  color: #1e40af;
+}
+
+.player-gender-indicator--lady {
+  color: #9d174d;
+}

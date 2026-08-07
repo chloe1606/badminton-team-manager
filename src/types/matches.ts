@@ -100,6 +100,7 @@ export interface MatchRecord {
   availablePlayerIds?: string[]
   assignedPlayerIds?: string[]
   assignedPairs?: MatchPairAssignment[]
+  isIncompleteTeam?: boolean
   result?: MatchResult
   createdAt: string
   teamDisplayName: string

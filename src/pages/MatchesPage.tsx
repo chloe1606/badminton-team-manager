@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useMemo, useState } from 'react'
+import { FormEvent, useEffect, useMemo, useRef, useState } from 'react'
 import { useAppData } from '../app/AppDataProvider'
 import { useAuth } from '../auth/hooks/useAuth'
 import { Button } from '../components/ui/Button'
@@ -63,9 +63,8 @@ function getPlayer(playerId: string) {
   return playersById.get(playerId)
 }
 
-function formatGenderLabel(playerId: string): string {
-  const gender = getPlayer(playerId)?.gender
-  return gender ? gender.charAt(0).toUpperCase() + gender.slice(1) : 'Unknown'
+function getPlayerGender(playerId: string): string | undefined {
+  return getPlayer(playerId)?.gender
 }
 
 function toDateTimeLocalValue(value?: string): string {
@@ -353,12 +352,13 @@ function getPlayerName(playerId: string): string {
 }
 
 function getPlayerSummary(playerId: string): string {
-  return `${getPlayerName(playerId)} · ${formatGenderLabel(playerId)}`
+  return getPlayerName(playerId)
 }
 
 function MatchPlayerSelectionEditor({
   match,
   onSave,
+  onSaveSuccess,
 }: {
   match: MatchRecord
   onSave: (
@@ -366,6 +366,7 @@ function MatchPlayerSelectionEditor({
     playerIds: string[],
     assignedPairs: MatchPairAssignment[],
   ) => string | undefined
+  onSaveSuccess?: () => void
 }) {
   const availablePlayers = useMemo(
     () => samplePlayers.filter((player) => (match.availablePlayerIds ?? []).includes(player.id)),
@@ -509,6 +510,7 @@ function MatchPlayerSelectionEditor({
     }
 
     setStatus('Players selected for match.')
+    onSaveSuccess?.()
   }
 
   if (availablePlayers.length === 0) {
@@ -518,8 +520,9 @@ function MatchPlayerSelectionEditor({
   return (
     <form className="stack stack-tight" onSubmit={handleSubmit}>
       <p className="muted">
-        Select exactly {match.format.squad.squadSize} players: {match.format.squad.ladiesRequired}{' '}
-        ladies and {match.format.squad.menRequired} men.
+        Select up to {match.format.squad.squadSize} players ({match.format.squad.ladiesRequired}{' '}
+        ladies and {match.format.squad.menRequired} men for a complete team). Saving with fewer
+        marks the selection as an incomplete team.
       </p>
 
       {availablePlayers.map((player) => {
@@ -531,8 +534,8 @@ function MatchPlayerSelectionEditor({
               type="checkbox"
               onChange={(event) => togglePlayer(player.id, event.target.checked)}
             />
-            <span>
-              {player.name} · {formatGenderLabel(player.id)}
+            <span className={`player-gender-indicator player-gender-indicator--${player.gender}`}>
+              {player.name}
             </span>
           </label>
         )
@@ -554,13 +557,13 @@ function MatchPlayerSelectionEditor({
             {selectedPlayers.map((player) => (
               <button
                 key={player.id}
-                className="player-pill"
+                className={`player-pill player-pill--${player.gender}`}
                 draggable
                 type="button"
                 onDragStart={() => setDraggedPlayerId(player.id)}
                 onDragEnd={() => setDraggedPlayerId(null)}
               >
-                {player.name} · {formatGenderLabel(player.id)}
+                {player.name}
               </button>
             ))}
           </div>
@@ -595,13 +598,19 @@ function MatchPlayerSelectionEditor({
                       <span className="muted">{getSlotLabel(positionIndex)}</span>
                       {playerId ? (
                         <div className="pair-drop-zone-content">
-                          <span>{getPlayerSummary(playerId)}</span>
+                          <span className={`player-gender-indicator player-gender-indicator--${getPlayerGender(playerId) ?? ''}`}>{getPlayerSummary(playerId)}</span>
                           <Button type="button" variant="ghost" onClick={() => clearSlot(pair.pairSlot, positionIndex)}>
                             Clear
                           </Button>
                         </div>
                       ) : (
-                        <span className="muted">Drop player here</span>
+                        <span className="muted">
+                          {match.format.squad.pairingRule === 'mixed'
+                            ? positionIndex === 0
+                              ? 'Drop lady player here'
+                              : 'Drop man player here'
+                            : 'Drop player here'}
+                        </span>
                       )}
                     </div>
                   )
@@ -623,6 +632,35 @@ function MatchPlayerSelectionEditor({
         <Button type="submit">Save player selections</Button>
       </div>
     </form>
+  )
+}
+
+function SelectPlayersPanel({
+  match,
+  onSave,
+}: {
+  match: MatchRecord
+  onSave: (
+    matchId: string,
+    playerIds: string[],
+    assignedPairs: MatchPairAssignment[],
+  ) => string | undefined
+}) {
+  const detailsRef = useRef<HTMLDetailsElement>(null)
+
+  function handleSaveSuccess() {
+    if (detailsRef.current) {
+      detailsRef.current.open = false
+    }
+  }
+
+  return (
+    <details ref={detailsRef}>
+      <summary className="details-summary">Select players</summary>
+      <div className="details-panel">
+        <MatchPlayerSelectionEditor match={match} onSave={onSave} onSaveSuccess={handleSaveSuccess} />
+      </div>
+    </details>
   )
 }
 
@@ -956,8 +994,7 @@ export function MatchesPage() {
                 <div>
                   <dt>Format</dt>
                   <dd>
-                    {match.format.numberOfRubbers} rubbers · {match.format.pairingSlots.join(', ')} ·{' '}
-                    {match.format.scoring.presetName}
+                    {match.format.numberOfRubbers} rubbers
                   </dd>
                 </div>
                 {isAdmin ? (
@@ -990,6 +1027,9 @@ export function MatchesPage() {
                       {assignedPlayerIds.length > 0
                         ? assignedPlayerIds.map(getPlayerName).join(', ')
                         : <span className="muted">None selected</span>}
+                      {match.isIncompleteTeam ? (
+                        <span className="muted"> · Incomplete team</span>
+                      ) : null}
                     </dd>
                   </div>
                 </dl>
@@ -1051,12 +1091,7 @@ export function MatchesPage() {
                       />
                     </div>
                   </details>
-                  <details>
-                    <summary className="details-summary">Select players</summary>
-                    <div className="details-panel">
-                      <MatchPlayerSelectionEditor match={match} onSave={assignMatchPlayers} />
-                    </div>
-                  </details>
+                  <SelectPlayersPanel match={match} onSave={assignMatchPlayers} />
                   <details>
                     <summary className="details-summary">{match.result ? 'Edit results' : 'Log results'}</summary>
                     <div className="details-panel">
