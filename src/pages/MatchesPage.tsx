@@ -411,6 +411,17 @@ function MatchPlayerSelectionEditor({
     () => availablePlayers.filter((player) => selectedPlayerIdSet.has(player.id)),
     [availablePlayers, selectedPlayerIdSet],
   )
+  const assignedPlayerIdSet = useMemo(
+    () => new Set(assignedPairs.flatMap((pair) => pair.playerIds.filter(Boolean))),
+    [assignedPairs],
+  )
+  const unassignedSelectedPlayers = useMemo(
+    () =>
+      match.format.squad.allowPlayerReuseAcrossPairs
+        ? selectedPlayers
+        : selectedPlayers.filter((player) => !assignedPlayerIdSet.has(player.id)),
+    [selectedPlayers, assignedPlayerIdSet, match.format.squad.allowPlayerReuseAcrossPairs],
+  )
 
   useEffect(() => {
     const nextSelectedPlayerIds = (match.assignedPlayerIds ?? []).filter((playerId) =>
@@ -574,9 +585,9 @@ function MatchPlayerSelectionEditor({
           </p>
         </div>
 
-        {selectedPlayers.length > 0 ? (
+        {unassignedSelectedPlayers.length > 0 ? (
           <div className="pill-list">
-            {selectedPlayers.map((player) => (
+            {unassignedSelectedPlayers.map((player) => (
               <button
                 key={player.id}
                 className={`player-pill player-pill--${player.gender}`}

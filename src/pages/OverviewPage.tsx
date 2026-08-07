@@ -82,7 +82,7 @@ export function OverviewPage() {
                     <td>{match.teamDisplayName} vs {opponentName}</td>
                     <td>{match.location === 'home' ? 'Home' : 'Away'}</td>
                     <td>{formatMatchDateRange(match.startAt)}</td>
-                    <td>{venue ? [venue.venueName, venue.address].filter(Boolean).join(' · ') : 'Venue TBC'}</td>
+                    <td className="col-venue">{venue ? [venue.venueName, venue.address].filter(Boolean).join(' · ') : 'Venue TBC'}</td>
                     <td>{availablePlayers.length > 0 ? availablePlayers.join(', ') : '—'}</td>
                     <td>{selectedPlayers.length > 0 ? selectedPlayers.join(', ') : '—'}</td>
                     <td>{resultText}</td>
