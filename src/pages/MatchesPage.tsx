@@ -9,9 +9,11 @@ import type {
   MatchDetailsInput,
   MatchFormatConfig,
   MatchGameScore,
+  MatchLocation,
   MatchPairAssignment,
   MatchRecord,
   MatchResult,
+  TeamSettings,
 } from '../types/matches'
 import { createMatchesCalendarIcs, downloadIcs, type CalendarFixture } from '../utils/calendar'
 import {
@@ -39,6 +41,7 @@ interface RubberDraft {
 }
 
 interface MatchDetailsDraft {
+  location: MatchLocation
   opponentClubId: string
   opponentTeamNumber: string
   venueId: string
@@ -73,6 +76,7 @@ function toDateTimeLocalValue(value?: string): string {
 
 function createMatchDetailsDraft(match: MatchRecord): MatchDetailsDraft {
   return {
+    location: match.location,
     opponentClubId: match.opponentClubId,
     opponentTeamNumber: match.opponentTeamNumber?.toString() ?? '',
     venueId: match.venueId,
@@ -82,7 +86,7 @@ function createMatchDetailsDraft(match: MatchRecord): MatchDetailsDraft {
   }
 }
 
-function validateMatchDetailsInput(draft: MatchDetailsDraft): {
+function validateMatchDetailsInput(draft: MatchDetailsDraft, teamSettings: TeamSettings): {
   data?: MatchDetailsInput
   error?: string
 } {
@@ -92,12 +96,16 @@ function validateMatchDetailsInput(draft: MatchDetailsDraft): {
     return { error: 'Select an opponent club.' }
   }
 
-  if (!draft.venueId) {
+  if (draft.location === 'away' && !draft.venueId) {
     return { error: 'Select a venue.' }
   }
 
   if (!draft.startAt) {
     return { error: 'Select a match date and time.' }
+  }
+
+  if (draft.location === 'home' && !teamSettings.profile.homeVenueId) {
+    return { error: 'Set a home venue in Settings before creating a home match.' }
   }
 
   if (
@@ -113,11 +121,13 @@ function validateMatchDetailsInput(draft: MatchDetailsDraft): {
 
   return {
     data: {
+      location: draft.location,
       opponentClubId: draft.opponentClubId,
       opponentTeamNumber: parsedTeamNumber,
       startAt: draft.startAt,
       endAt: draft.endAt || undefined,
-      venueId: draft.venueId,
+      venueId:
+        draft.location === 'home' ? teamSettings.profile.homeVenueId : draft.venueId,
       notes: draft.notes.trim() || undefined,
     },
   }
@@ -131,9 +141,18 @@ function formatMatchDateRange(startAt: string): string {
   return formatter.format(new Date(startAt))
 }
 
-function createCalendarFixture(match: MatchRecord): CalendarFixture {
+function getVenueClub(match: MatchRecord, teamSettings: TeamSettings) {
+  if (match.location === 'home') {
+    return getClubById(clubDirectory, teamSettings.profile.homeClubId)
+  }
+
+  return getClubById(clubDirectory, match.opponentClubId)
+}
+
+function createCalendarFixture(match: MatchRecord, teamSettings: TeamSettings): CalendarFixture {
+  const venueClub = getVenueClub(match, teamSettings)
+  const address = getAddressById(venueClub, match.venueId)
   const club = getClubById(clubDirectory, match.opponentClubId)
-  const address = getAddressById(club, match.venueId)
   const opponentName = formatOpponentName(match, club)
   const summary = summarizeMatchResult(match.result, match.format)
   const descriptionParts = [match.notes?.trim(), match.result?.notes?.trim()]
@@ -172,9 +191,11 @@ function createRubberDrafts(existingResult: MatchResult | undefined, format: Mat
 function MatchResultEditor({
   match,
   onSave,
+  onSaveSuccess,
 }: {
   match: MatchRecord
   onSave: (matchId: string, result?: MatchResult) => void
+  onSaveSuccess: () => void
 }) {
   const [rubbers, setRubbers] = useState(() => createRubberDrafts(match.result, match.format))
   const [notes, setNotes] = useState(match.result?.notes ?? '')
@@ -274,6 +295,7 @@ function MatchResultEditor({
         : undefined,
     )
     setStatus('Results saved.')
+    onSaveSuccess()
   }
 
   return (
@@ -704,14 +726,78 @@ function AdminAvailabilityPanel({
   )
 }
 
-function MatchDetailsEditor({
+function MatchDetailsPanel({
   match,
   onDelete,
   onSave,
+  teamSettings,
 }: {
   match: MatchRecord
   onDelete: (matchId: string) => void
   onSave: (matchId: string, match: MatchDetailsInput) => void
+  teamSettings: TeamSettings
+}) {
+  const detailsRef = useRef<HTMLDetailsElement>(null)
+
+  function handleSaveSuccess() {
+    if (detailsRef.current) {
+      detailsRef.current.open = false
+    }
+  }
+
+  return (
+    <details ref={detailsRef}>
+      <summary className="details-summary">Edit match</summary>
+      <div className="details-panel">
+        <MatchDetailsEditor
+          match={match}
+          onDelete={onDelete}
+          onSave={onSave}
+          onSaveSuccess={handleSaveSuccess}
+          teamSettings={teamSettings}
+        />
+      </div>
+    </details>
+  )
+}
+
+function MatchResultPanel({
+  match,
+  onSave,
+}: {
+  match: MatchRecord
+  onSave: (matchId: string, result?: MatchResult) => void
+}) {
+  const detailsRef = useRef<HTMLDetailsElement>(null)
+
+  function handleSaveSuccess() {
+    if (detailsRef.current) {
+      detailsRef.current.open = false
+    }
+  }
+
+  return (
+    <details ref={detailsRef}>
+      <summary className="details-summary">{match.result ? 'Edit results' : 'Log results'}</summary>
+      <div className="details-panel">
+        <MatchResultEditor match={match} onSave={onSave} onSaveSuccess={handleSaveSuccess} />
+      </div>
+    </details>
+  )
+}
+
+function MatchDetailsEditor({
+  match,
+  onDelete,
+  onSave,
+  onSaveSuccess,
+  teamSettings,
+}: {
+  match: MatchRecord
+  onDelete: (matchId: string) => void
+  onSave: (matchId: string, match: MatchDetailsInput) => void
+  onSaveSuccess: () => void
+  teamSettings: TeamSettings
 }) {
   const [draft, setDraft] = useState(() => createMatchDetailsDraft(match))
   const [error, setError] = useState('')
@@ -720,7 +806,15 @@ function MatchDetailsEditor({
     () => getClubById(clubDirectory, draft.opponentClubId),
     [draft.opponentClubId],
   )
-  const availableVenues = selectedClub?.addresses ?? []
+  const selectedHomeClub = useMemo(
+    () => getClubById(clubDirectory, teamSettings.profile.homeClubId),
+    [teamSettings.profile.homeClubId],
+  )
+  const homeVenue = useMemo(
+    () => getAddressById(selectedHomeClub, teamSettings.profile.homeVenueId),
+    [selectedHomeClub, teamSettings.profile.homeVenueId],
+  )
+  const availableAwayVenues = selectedClub?.addresses ?? []
 
   useEffect(() => {
     setDraft(createMatchDetailsDraft(match))
@@ -729,26 +823,35 @@ function MatchDetailsEditor({
   }, [match])
 
   useEffect(() => {
-    if (availableVenues.length === 1) {
+    if (draft.location === 'home') {
       setDraft((currentDraft) =>
-        currentDraft.venueId === availableVenues[0].id
+        currentDraft.venueId === teamSettings.profile.homeVenueId
           ? currentDraft
-          : { ...currentDraft, venueId: availableVenues[0].id },
+          : { ...currentDraft, venueId: teamSettings.profile.homeVenueId },
       )
       return
     }
 
-    if (!availableVenues.some((address) => address.id === draft.venueId)) {
+    if (availableAwayVenues.length === 1) {
+      setDraft((currentDraft) =>
+        currentDraft.venueId === availableAwayVenues[0].id
+          ? currentDraft
+          : { ...currentDraft, venueId: availableAwayVenues[0].id },
+      )
+      return
+    }
+
+    if (!availableAwayVenues.some((address) => address.id === draft.venueId)) {
       setDraft((currentDraft) => ({ ...currentDraft, venueId: '' }))
     }
-  }, [availableVenues, draft.venueId])
+  }, [availableAwayVenues, draft.location, draft.venueId, teamSettings.profile.homeVenueId])
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setError('')
     setStatus('')
 
-    const { data, error: nextError } = validateMatchDetailsInput(draft)
+    const { data, error: nextError } = validateMatchDetailsInput(draft, teamSettings)
 
     if (nextError || !data) {
       setError(nextError ?? 'Unable to save match.')
@@ -757,6 +860,7 @@ function MatchDetailsEditor({
 
     onSave(match.id, data)
     setStatus('Match updated.')
+    onSaveSuccess()
   }
 
   function handleRemove() {
@@ -792,6 +896,35 @@ function MatchDetailsEditor({
         </label>
 
         <label className="field">
+          <span>Location</span>
+          <select
+            className="input"
+            value={draft.location}
+            onChange={(event) =>
+              setDraft((currentDraft) => ({
+                ...currentDraft,
+                location: event.target.value as MatchLocation,
+              }))
+            }
+          >
+            <option value="home">Home</option>
+            <option value="away">Away</option>
+          </select>
+        </label>
+
+        <label className="field">
+          <span>Location</span>
+          <select
+            className="input"
+            value={location}
+            onChange={(event) => setLocation(event.target.value as MatchLocation)}
+          >
+            <option value="home">Home</option>
+            <option value="away">Away</option>
+          </select>
+        </label>
+
+        <label className="field">
           <span>Opponent team number</span>
           <select
             className="input"
@@ -814,24 +947,36 @@ function MatchDetailsEditor({
 
         <label className="field field-span-2">
           <span>Venue</span>
-          <select
-            className="input"
-            disabled={!selectedClub}
-            value={draft.venueId}
-            onChange={(event) =>
-              setDraft((currentDraft) => ({
-                ...currentDraft,
-                venueId: event.target.value,
-              }))
-            }
-          >
-            <option value="">{selectedClub ? 'Select a venue' : 'Choose a club first'}</option>
-            {availableVenues.map((venue) => (
-              <option key={venue.id} value={venue.id}>
-                {[venue.venueName, venue.address, venue.notes].filter(Boolean).join(' · ')}
-              </option>
-            ))}
-          </select>
+          {draft.location === 'home' ? (
+            <input
+              className="input"
+              disabled
+              value={
+                homeVenue
+                  ? [homeVenue.venueName, homeVenue.address, homeVenue.notes].filter(Boolean).join(' · ')
+                  : 'Set a home venue in Settings'
+              }
+            />
+          ) : (
+            <select
+              className="input"
+              disabled={!selectedClub}
+              value={draft.venueId}
+              onChange={(event) =>
+                setDraft((currentDraft) => ({
+                  ...currentDraft,
+                  venueId: event.target.value,
+                }))
+              }
+            >
+              <option value="">{selectedClub ? 'Select a venue' : 'Choose a club first'}</option>
+              {availableAwayVenues.map((venue) => (
+                <option key={venue.id} value={venue.id}>
+                  {[venue.venueName, venue.address, venue.notes].filter(Boolean).join(' · ')}
+                </option>
+              ))}
+            </select>
+          )}
         </label>
 
         <label className="field">
@@ -895,6 +1040,7 @@ export function MatchesPage() {
     updateMatchResult,
   } = useAppData()
   const [opponentClubId, setOpponentClubId] = useState('')
+  const [location, setLocation] = useState<MatchLocation>('away')
   const [opponentTeamNumber, setOpponentTeamNumber] = useState('')
   const [venueId, setVenueId] = useState('')
   const [startAt, setStartAt] = useState('')
@@ -912,18 +1058,31 @@ export function MatchesPage() {
     () => getClubById(clubDirectory, opponentClubId),
     [opponentClubId],
   )
-  const availableVenues = selectedClub?.addresses ?? []
+  const selectedHomeClub = useMemo(
+    () => getClubById(clubDirectory, teamSettings.profile.homeClubId),
+    [teamSettings.profile.homeClubId],
+  )
+  const homeVenue = useMemo(
+    () => getAddressById(selectedHomeClub, teamSettings.profile.homeVenueId),
+    [selectedHomeClub, teamSettings.profile.homeVenueId],
+  )
+  const availableAwayVenues = selectedClub?.addresses ?? []
 
   useEffect(() => {
-    if (availableVenues.length === 1) {
-      setVenueId(availableVenues[0].id)
+    if (location === 'home') {
+      setVenueId(teamSettings.profile.homeVenueId)
       return
     }
 
-    if (!availableVenues.some((address) => address.id === venueId)) {
+    if (availableAwayVenues.length === 1) {
+      setVenueId(availableAwayVenues[0].id)
+      return
+    }
+
+    if (!availableAwayVenues.some((address) => address.id === venueId)) {
       setVenueId('')
     }
-  }, [availableVenues, venueId])
+  }, [availableAwayVenues, location, teamSettings.profile.homeVenueId, venueId])
 
   function exportMatch(matchId: string) {
     const match = sortedMatches.find((fixture) => fixture.id === matchId)
@@ -931,13 +1090,13 @@ export function MatchesPage() {
       return
     }
 
-    downloadIcs(`${match.id}.ics`, createMatchesCalendarIcs([createCalendarFixture(match)]))
+    downloadIcs(`${match.id}.ics`, createMatchesCalendarIcs([createCalendarFixture(match, teamSettings)]))
   }
 
   function exportAllMatches() {
     downloadIcs(
       'badminton-match-fixtures.ics',
-      createMatchesCalendarIcs(sortedMatches.map(createCalendarFixture)),
+      createMatchesCalendarIcs(sortedMatches.map((match) => createCalendarFixture(match, teamSettings))),
     )
   }
 
@@ -947,13 +1106,14 @@ export function MatchesPage() {
     setStatus('')
 
     const { data, error: nextError } = validateMatchDetailsInput({
+      location,
       opponentClubId,
       opponentTeamNumber,
       venueId,
       startAt,
       endAt,
       notes,
-    })
+    }, teamSettings)
 
     if (nextError || !data) {
       setError(nextError ?? 'Unable to add match.')
@@ -968,6 +1128,7 @@ export function MatchesPage() {
     })
 
     setOpponentClubId('')
+    setLocation('away')
     setOpponentTeamNumber('')
     setVenueId('')
     setStartAt('')
@@ -996,7 +1157,8 @@ export function MatchesPage() {
       <section className="stack" aria-label="Match list">
         {sortedMatches.map((match, index) => {
           const club = getClubById(clubDirectory, match.opponentClubId)
-          const address = getAddressById(club, match.venueId)
+          const venueClub = getVenueClub(match, teamSettings)
+          const address = getAddressById(venueClub, match.venueId)
           const opponentName = formatOpponentName(match, club)
           const resultSummary = summarizeMatchResult(match.result, match.format)
           const pendingRubbers = match.format.numberOfRubbers - resultSummary.completedRubbers
@@ -1022,6 +1184,10 @@ export function MatchesPage() {
                 <div>
                   <dt>Date &amp; Time</dt>
                   <dd>{formatMatchDateRange(match.startAt)}</dd>
+                </div>
+                <div>
+                  <dt>Location</dt>
+                  <dd>{match.location === 'home' ? 'Home' : 'Away'}</dd>
                 </div>
                 <div>
                   <dt>Venue</dt>
@@ -1121,27 +1287,18 @@ export function MatchesPage() {
 
               {isAdmin ? (
                 <div className="match-admin-panels">
-                  <details>
-                    <summary className="details-summary">Edit match</summary>
-                    <div className="details-panel">
-                      <MatchDetailsEditor
-                        match={match}
-                        onDelete={removeMatch}
-                        onSave={updateMatch}
-                      />
-                    </div>
-                  </details>
+                  <MatchDetailsPanel
+                    match={match}
+                    onDelete={removeMatch}
+                    onSave={updateMatch}
+                    teamSettings={teamSettings}
+                  />
                   <AdminAvailabilityPanel
                     match={match}
                     onToggleAvailability={updateMatchAvailability}
                   />
                   <SelectPlayersPanel match={match} onSave={assignMatchPlayers} />
-                  <details>
-                    <summary className="details-summary">{match.result ? 'Edit results' : 'Log results'}</summary>
-                    <div className="details-panel">
-                      <MatchResultEditor match={match} onSave={updateMatchResult} />
-                    </div>
-                  </details>
+                  <MatchResultPanel match={match} onSave={updateMatchResult} />
                 </div>
               ) : null}
             </Card>
@@ -1188,19 +1345,31 @@ export function MatchesPage() {
 
               <label className="field field-span-2">
                 <span>Venue</span>
-                <select
-                  className="input"
-                  disabled={!selectedClub}
-                  value={venueId}
-                  onChange={(event) => setVenueId(event.target.value)}
-                >
-                  <option value="">{selectedClub ? 'Select a venue' : 'Choose a club first'}</option>
-                  {availableVenues.map((venue) => (
-                    <option key={venue.id} value={venue.id}>
-                      {[venue.venueName, venue.address, venue.notes].filter(Boolean).join(' · ')}
-                    </option>
-                  ))}
-                </select>
+                {location === 'home' ? (
+                  <input
+                    className="input"
+                    disabled
+                    value={
+                      homeVenue
+                        ? [homeVenue.venueName, homeVenue.address, homeVenue.notes].filter(Boolean).join(' · ')
+                        : 'Set a home venue in Settings'
+                    }
+                  />
+                ) : (
+                  <select
+                    className="input"
+                    disabled={!selectedClub}
+                    value={venueId}
+                    onChange={(event) => setVenueId(event.target.value)}
+                  >
+                    <option value="">{selectedClub ? 'Select a venue' : 'Choose a club first'}</option>
+                    {availableAwayVenues.map((venue) => (
+                      <option key={venue.id} value={venue.id}>
+                        {[venue.venueName, venue.address, venue.notes].filter(Boolean).join(' · ')}
+                      </option>
+                    ))}
+                  </select>
+                )}
               </label>
 
               <label className="field">

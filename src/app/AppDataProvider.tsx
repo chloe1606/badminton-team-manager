@@ -112,6 +112,7 @@ function normalizeMatchRecord(match: MatchRecord): MatchRecord {
 
   return {
     ...match,
+    location: match.location ?? 'away',
     availablePlayerIds,
     assignedPlayerIds,
     assignedPairs: normalizeAssignedPairs(assignedPairsSource, format).map((pair) => ({
@@ -125,6 +126,11 @@ function normalizeMatchRecord(match: MatchRecord): MatchRecord {
 function normalizeTeamSettings(settings: TeamSettings): TeamSettings {
   return {
     ...settings,
+    profile: {
+      ...settings.profile,
+      homeClubId: settings.profile.homeClubId ?? defaultTeamSettings.profile.homeClubId,
+      homeVenueId: settings.profile.homeVenueId ?? defaultTeamSettings.profile.homeVenueId,
+    },
     matchFormat: normalizeFormat(settings.matchFormat),
   }
 }

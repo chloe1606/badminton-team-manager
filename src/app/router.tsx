@@ -9,6 +9,7 @@ import { LoginPage } from '../pages/LoginPage'
 import { MatchesPage } from '../pages/MatchesPage'
 import { MembersPage } from '../pages/MembersPage'
 import { NotFoundPage } from '../pages/NotFoundPage'
+import { OverviewPage } from '../pages/OverviewPage'
 import { SettingsPage } from '../pages/SettingsPage'
 
 export const appRouter = createBrowserRouter([
@@ -51,6 +52,10 @@ export const appRouter = createBrowserRouter([
           {
             path: '/matches',
             element: <MatchesPage />,
+          },
+          {
+            path: '/overview',
+            element: <OverviewPage />,
           },
           {
             path: '/club-contacts',

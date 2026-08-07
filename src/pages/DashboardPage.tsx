@@ -1,6 +1,6 @@
 import { Card } from '../components/ui/Card'
 
-const modules = ['Members', 'Teams', 'Matches', 'Club Contacts', 'Settings']
+const modules = ['Members', 'Teams', 'Matches', 'Overview', 'Club Contacts', 'Settings']
 
 export function DashboardPage() {
   return (

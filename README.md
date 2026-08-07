@@ -7,8 +7,10 @@ React + TypeScript foundation for a badminton team management system.
 - Protected app with mock admin/player accounts for local testing
 - **Club Contacts** page with curated league contact details, venue addresses, and structured venue notes
 - **Matches** page with chronological numbering (`Match 1`, `Match 2`, …), calendar export, and admin-only match creation
+- Home/away match entry with home venue managed in Settings and away venue selection from opponent club venues
 - Add Match opponent selection from the curated club list, including filtered venue choices and optional opponent team number (`1` to `5`)
 - Sample player logins with self-serve match availability, plus admin availability updates, squad selection, and pair assignment for each fixture
+- **Overview** page with a read-only match table, player availability/selection snapshots, and per-match calendar export
 - Match result logging for configurable league formats, with configurable squad rules, pair slots, rubbers per player, and best-of-3 game scoring to 21 with a 30-point cap
 - **Settings** page for editing the current team profile and default league/match-format configuration
 
@@ -83,6 +85,7 @@ Use the **Settings** page to edit:
 - team number
 - team label
 - league name
+- home club and venue
 - number of rubbers
 - rubbers per player
 - squad size and gender split

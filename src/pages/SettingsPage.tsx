@@ -2,7 +2,8 @@ import { FormEvent, useEffect, useMemo, useState } from 'react'
 import { useAppData } from '../app/AppDataProvider'
 import { Button } from '../components/ui/Button'
 import { Card } from '../components/ui/Card'
-import { formatTeamDisplayName } from '../utils/matches'
+import { clubDirectory } from '../data/clubContacts'
+import { formatTeamDisplayName, getClubById } from '../utils/matches'
 
 function parsePositiveInteger(value: string): number | null {
   const parsedValue = Number(value)
@@ -28,6 +29,8 @@ export function SettingsPage() {
   const [teamNumber, setTeamNumber] = useState(String(teamSettings.profile.teamNumber))
   const [teamLabel, setTeamLabel] = useState(teamSettings.profile.teamLabel)
   const [leagueName, setLeagueName] = useState(teamSettings.profile.leagueName)
+  const [homeClubId, setHomeClubId] = useState(teamSettings.profile.homeClubId)
+  const [homeVenueId, setHomeVenueId] = useState(teamSettings.profile.homeVenueId)
   const [numberOfRubbers, setNumberOfRubbers] = useState(
     String(teamSettings.matchFormat.numberOfRubbers),
   )
@@ -59,6 +62,8 @@ export function SettingsPage() {
     setTeamNumber(String(teamSettings.profile.teamNumber))
     setTeamLabel(teamSettings.profile.teamLabel)
     setLeagueName(teamSettings.profile.leagueName)
+    setHomeClubId(teamSettings.profile.homeClubId)
+    setHomeVenueId(teamSettings.profile.homeVenueId)
     setNumberOfRubbers(String(teamSettings.matchFormat.numberOfRubbers))
     setRubbersPerPlayer(String(teamSettings.matchFormat.rubbersPerPlayer))
     setPairingSlotsText(teamSettings.matchFormat.pairingSlots.join('\n'))
@@ -73,6 +78,20 @@ export function SettingsPage() {
     setWinBy(String(teamSettings.matchFormat.scoring.winBy))
     setCapScore(String(teamSettings.matchFormat.scoring.capScore))
   }, [teamSettings])
+
+  const selectedHomeClub = useMemo(() => getClubById(clubDirectory, homeClubId), [homeClubId])
+  const homeVenues = selectedHomeClub?.addresses ?? []
+
+  useEffect(() => {
+    if (homeVenues.length === 1) {
+      setHomeVenueId(homeVenues[0].id)
+      return
+    }
+
+    if (!homeVenues.some((address) => address.id === homeVenueId)) {
+      setHomeVenueId('')
+    }
+  }, [homeVenueId, homeVenues])
 
   const currentTeamName = useMemo(
     () => formatTeamDisplayName(teamSettings.profile),
@@ -99,7 +118,14 @@ export function SettingsPage() {
       .map((slot) => slot.trim())
       .filter(Boolean)
 
-    if (!teamName.trim() || !teamLabel.trim() || !leagueName.trim() || !presetName.trim()) {
+    if (
+      !teamName.trim() ||
+      !teamLabel.trim() ||
+      !leagueName.trim() ||
+      !presetName.trim() ||
+      !homeClubId ||
+      !homeVenueId
+    ) {
       setError('Team, league, and scoring preset details are required.')
       return
     }
@@ -146,6 +172,8 @@ export function SettingsPage() {
         teamNumber: parsedTeamNumber,
         teamLabel: teamLabel.trim(),
         leagueName: leagueName.trim(),
+        homeClubId,
+        homeVenueId,
       },
       matchFormat: {
         numberOfRubbers: parsedRubbers,
@@ -220,6 +248,38 @@ export function SettingsPage() {
                 value={leagueName}
                 onChange={(event) => setLeagueName(event.target.value)}
               />
+            </label>
+
+            <label className="field">
+              <span>Home club</span>
+              <select
+                className="input"
+                value={homeClubId}
+                onChange={(event) => setHomeClubId(event.target.value)}
+              >
+                <option value="">Select a club</option>
+                {clubDirectory.map((club) => (
+                  <option key={club.id} value={club.id}>
+                    {club.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className="field">
+              <span>Home venue</span>
+              <select
+                className="input"
+                value={homeVenueId}
+                onChange={(event) => setHomeVenueId(event.target.value)}
+              >
+                <option value="">Select a venue</option>
+                {homeVenues.map((venue) => (
+                  <option key={venue.id} value={venue.id}>
+                    {venue.venueName}
+                  </option>
+                ))}
+              </select>
             </label>
           </div>
 
