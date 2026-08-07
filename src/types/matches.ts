@@ -27,6 +27,9 @@ export interface TeamProfile {
   leagueName: string
 }
 
+export type PlayerGender = 'lady' | 'man'
+export type PairingRule = 'mixed' | 'open'
+
 export interface ScoringRules {
   presetName: string
   bestOf: number
@@ -35,9 +38,19 @@ export interface ScoringRules {
   capScore: number
 }
 
+export interface MatchSquadConfig {
+  squadSize: number
+  ladiesRequired: number
+  menRequired: number
+  pairingRule: PairingRule
+  allowPlayerReuseAcrossPairs: boolean
+}
+
 export interface MatchFormatConfig {
   numberOfRubbers: number
+  rubbersPerPlayer: number
   pairingSlots: string[]
+  squad: MatchSquadConfig
   scoring: ScoringRules
 }
 
@@ -62,6 +75,11 @@ export interface MatchResult {
   notes?: string
 }
 
+export interface MatchPairAssignment {
+  pairSlot: string
+  playerIds: string[]
+}
+
 export interface MatchDetailsInput {
   opponentClubId: string
   opponentTeamNumber?: number
@@ -81,6 +99,7 @@ export interface MatchRecord {
   notes?: string
   availablePlayerIds?: string[]
   assignedPlayerIds?: string[]
+  assignedPairs?: MatchPairAssignment[]
   result?: MatchResult
   createdAt: string
   teamDisplayName: string

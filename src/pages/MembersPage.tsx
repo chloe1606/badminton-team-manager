@@ -18,7 +18,7 @@ export function MembersPage() {
           <li>
             <strong>Admin</strong>
             <br />
-            admin@badminton.local / admin123
+            admin / admin123
           </li>
         </ul>
       </Card>
@@ -30,7 +30,7 @@ export function MembersPage() {
             <li key={player.id}>
               <strong>{player.name}</strong>
               <br />
-              {player.email} / {player.password}
+              {player.username} / {player.password} · {player.gender}
             </li>
           ))}
         </ul>

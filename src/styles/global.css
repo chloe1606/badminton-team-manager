@@ -247,6 +247,11 @@ a {
   gap: var(--space-4);
 }
 
+.match-player-columns {
+  display: grid;
+  gap: var(--space-4);
+}
+
 .detail-list {
   margin: 0;
   padding-left: 1.25rem;
@@ -267,8 +272,48 @@ a {
   margin-bottom: 0;
 }
 
+.match-card {
+  padding: var(--space-4);
+}
+
+.match-table {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.match-table-row {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border-top: 1px solid var(--color-border);
+}
+
+.match-table-row:first-child {
+  border-top: 0;
+}
+
+.match-table-label {
+  color: var(--color-muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.details-summary {
+  font-weight: 600;
+  font-size: 0.9375rem;
+  color: var(--color-primary-strong);
+  cursor: pointer;
+  padding: var(--space-2) 0;
+  border-top: 1px solid var(--color-border);
+  margin-top: var(--space-1);
+  list-style: none;
+}
+
 .details-panel {
-  margin-top: var(--space-3);
+  padding-top: var(--space-3);
 }
 
 .result-editor {
@@ -392,6 +437,19 @@ a {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .match-player-columns {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .match-table-row {
+    grid-template-columns: 10rem minmax(0, 1fr);
+    align-items: start;
+  }
+
+  .pair-slot-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .game-row {
     grid-template-columns: minmax(0, 1fr) 8rem 8rem;
   }
@@ -399,6 +457,10 @@ a {
 
 @media (min-width: 64rem) {
   .module-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .match-player-columns {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }

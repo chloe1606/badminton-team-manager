@@ -8,8 +8,8 @@ React + TypeScript foundation for a badminton team management system.
 - **Club Contacts** page with curated league contact details, venue addresses, and structured venue notes
 - **Matches** page with chronological numbering (`Match 1`, `Match 2`, …), calendar export, and admin-only match creation
 - Add Match opponent selection from the curated club list, including filtered venue choices and optional opponent team number (`1` to `5`)
-- Sample player logins with self-serve match availability and admin player linking for each fixture
-- Match result logging for configurable league formats, with default support for 6 rubbers, 3 repeated pair slots, and best-of-3 game scoring to 21 with a 30-point cap
+- Sample player logins with self-serve match availability plus admin squad and pair assignment for each fixture
+- Match result logging for configurable league formats, with configurable squad rules, pair slots, rubbers per player, and best-of-3 game scoring to 21 with a 30-point cap
 - **Settings** page for editing the current team profile and default league/match-format configuration
 
 ## Setup
@@ -45,28 +45,30 @@ npm run preview
 
 Sample accounts are available for testing with the mock auth service:
 
-| Role   | Email                  | Password  | Capabilities                                             |
-|--------|------------------------|-----------|----------------------------------------------------------|
-| Admin  | admin@badminton.local  | admin123  | Create fixtures, link available players, and log results |
-| Player | alice@badminton.local  | alice123  | Mark availability for matches                            |
-| Player | ben@badminton.local    | ben123    | Mark availability for matches                            |
-| Player | chloe@badminton.local  | chloe123  | Mark availability for matches                            |
-| Player | daniel@badminton.local | daniel123 | Mark availability for matches                            |
-| Player | emily@badminton.local  | emily123  | Mark availability for matches                            |
-| Player | farah@badminton.local  | farah123  | Mark availability for matches                            |
+| Role   | Username | Password  | Capabilities                                             |
+|--------|----------|-----------|----------------------------------------------------------|
+| Admin  | admin    | admin123  | Create fixtures, link available players, and log results |
+| Player | alice    | alice123  | Mark availability for matches                            |
+| Player | ben      | ben123    | Mark availability for matches                            |
+| Player | chloe    | chloe123  | Mark availability for matches                            |
+| Player | daniel   | daniel123 | Mark availability for matches                            |
+| Player | emily    | emily123  | Mark availability for matches                            |
+| Player | farah    | farah123  | Mark availability for matches                            |
 
 Admins see an **Add Match** form on the Matches page and can create new fixtures.  
 When an opponent club has multiple venues, the venue picker is filtered to that club and displays any venue notes such as day/time details or parking restrictions.  
 Optional opponent team numbers let you record fixtures such as **Orpington 2** while enforcing the supported range of **1 to 5**.
 
-Player accounts can mark themselves available on each match, and admins can link available players to the fixture squad. Linked players remain visible on the match card.
+Player accounts can mark themselves available on each match, and admins can build a fixture squad from the available list, assign configured pairs, and keep both visible on the match card.
 
 ## Match results
 
 Each match stores a configurable format. The default setup matches the current league format:
 
 - 6 rubbers
-- 3 pair slots reused twice
+- 3 rubbers per player
+- 6-player squad with 3 ladies and 3 men
+- 3 configured pair slots
 - best of 3 games per rubber
 - rally scoring to 21, win by 2, capped at 30
 
@@ -82,7 +84,10 @@ Use the **Settings** page to edit:
 - team label
 - league name
 - number of rubbers
+- rubbers per player
+- squad size and gender split
 - pairing slots
+- pairing rule and player reuse across pairs
 - scoring preset/rules
 
 New matches snapshot the current settings so future configuration changes do not overwrite existing fixture formats.

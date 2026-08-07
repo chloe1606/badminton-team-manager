@@ -8,7 +8,7 @@ import { samplePlayerLogins } from '../data/players'
 
 export function LoginPage() {
   const { isAuthenticated, login, isLoading } = useAuth()
-  const [email, setEmail] = useState('')
+  const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const navigate = useNavigate()
@@ -23,13 +23,13 @@ export function LoginPage() {
     event.preventDefault()
     setError('')
 
-    if (!email.trim() || !password.trim()) {
-      setError('Email and password are required.')
+    if (!username.trim() || !password.trim()) {
+      setError('Username and password are required.')
       return
     }
 
     try {
-      await login({ email: email.trim(), password })
+      await login({ username: username.trim(), password })
       navigate(from, { replace: true })
     } catch {
       setError('Unable to log in. Please try again.')
@@ -43,28 +43,28 @@ export function LoginPage() {
         <p className="muted">Sign in to access team planning and attendance tools.</p>
         <div className="stack stack-tight muted" style={{ fontSize: '0.85em' }}>
           <p style={{ margin: 0 }}>
-            <strong>Admin:</strong> admin@badminton.local / admin123
+            <strong>Admin:</strong> admin / admin123
           </p>
           <div>
             <strong>Sample players:</strong>
             <ul className="detail-list">
               {samplePlayerLogins.map((player) => (
                 <li key={player.id}>
-                  {player.name}: {player.email} / {player.password}
+                  {player.name}: {player.username} / {player.password}
                 </li>
               ))}
             </ul>
           </div>
         </div>
         <form className="stack" onSubmit={handleSubmit} noValidate>
-          <label htmlFor="email">Email</label>
+          <label htmlFor="username">Username</label>
           <Input
-            autoComplete="email"
-            id="email"
-            onChange={(event) => setEmail(event.target.value)}
+            autoComplete="username"
+            id="username"
+            onChange={(event) => setUsername(event.target.value)}
             required
-            type="email"
-            value={email}
+            type="text"
+            value={username}
           />
 
           <label htmlFor="password">Password</label>

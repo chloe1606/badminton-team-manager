@@ -3,13 +3,13 @@ export type UserRole = 'admin' | 'player'
 export interface AuthUser {
   id: string
   name: string
-  email: string
+  username: string
   role: UserRole
   playerId?: string
 }
 
 export interface LoginCredentials {
-  email: string
+  username: string
   password: string
 }
 

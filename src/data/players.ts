@@ -1,9 +1,12 @@
 import type { AuthUser } from '../types/auth'
+import type { PlayerGender } from '../types/matches'
 
 export interface SamplePlayerLogin {
   id: string
   name: string
-  email: string
+  firstName: string
+  username: string
+  gender: PlayerGender
   password: string
 }
 
@@ -11,62 +14,74 @@ export const samplePlayerLogins: SamplePlayerLogin[] = [
   {
     id: 'alice-morgan',
     name: 'Alice Morgan',
-    email: 'alice@badminton.local',
+    firstName: 'Alice',
+    username: 'alice',
+    gender: 'lady',
     password: 'alice123',
   },
   {
     id: 'ben-carter',
     name: 'Ben Carter',
-    email: 'ben@badminton.local',
+    firstName: 'Ben',
+    username: 'ben',
+    gender: 'man',
     password: 'ben123',
   },
   {
     id: 'chloe-evans',
     name: 'Chloe Evans',
-    email: 'chloe@badminton.local',
+    firstName: 'Chloe',
+    username: 'chloe',
+    gender: 'lady',
     password: 'chloe123',
   },
   {
     id: 'daniel-shah',
     name: 'Daniel Shah',
-    email: 'daniel@badminton.local',
+    firstName: 'Daniel',
+    username: 'daniel',
+    gender: 'man',
     password: 'daniel123',
   },
   {
     id: 'emily-wright',
     name: 'Emily Wright',
-    email: 'emily@badminton.local',
+    firstName: 'Emily',
+    username: 'emily',
+    gender: 'lady',
     password: 'emily123',
   },
   {
     id: 'farah-khan',
     name: 'Farah Khan',
-    email: 'farah@badminton.local',
+    firstName: 'Farah',
+    username: 'farah',
+    gender: 'man',
     password: 'farah123',
   },
 ]
 
 export const samplePlayers = samplePlayerLogins.map(({ password: _password, ...player }) => player)
 
-export const mockAuthAccounts: Array<{ email: string; password: string; user: AuthUser }> = [
+export const mockAuthAccounts: Array<{ username: string; password: string; user: AuthUser }> = [
   {
-    email: 'admin@badminton.local',
+    username: 'admin',
     password: 'admin123',
     user: {
       id: 'admin',
       name: 'Admin',
-      email: 'admin@badminton.local',
+      username: 'admin',
       role: 'admin',
     },
   },
   ...samplePlayerLogins.map((player) => ({
-    email: player.email,
+    username: player.username,
     password: player.password,
     user: {
       id: player.id,
       playerId: player.id,
       name: player.name,
-      email: player.email,
+      username: player.username,
       role: 'player' as const,
     },
   })),
