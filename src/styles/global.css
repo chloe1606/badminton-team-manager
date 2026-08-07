@@ -312,6 +312,10 @@ a {
   list-style: none;
 }
 
+.details-panel {
+  padding-top: var(--space-3);
+}
+
 .result-editor {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);

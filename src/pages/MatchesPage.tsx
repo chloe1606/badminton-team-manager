@@ -356,14 +356,6 @@ function getPlayerSummary(playerId: string): string {
   return `${getPlayerName(playerId)} · ${formatGenderLabel(playerId)}`
 }
 
-function formatPairSummary(pair: MatchPairAssignment): string {
-  if (pair.playerIds.length === 0) {
-    return 'Not assigned'
-  }
-
-  return pair.playerIds.map(getPlayerName).join(' + ')
-}
-
 function MatchPlayerSelectionEditor({
   match,
   onSave,
@@ -507,7 +499,15 @@ function MatchPlayerSelectionEditor({
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    onSave(match.id, selectedPlayerIds)
+    setError('')
+    setStatus('')
+
+    const nextError = onSave(match.id, selectedPlayerIds, assignedPairs)
+    if (nextError) {
+      setError(nextError)
+      return
+    }
+
     setStatus('Players selected for match.')
   }
 
@@ -943,7 +943,7 @@ export function MatchesPage() {
               <dl className="match-info-grid">
                 <div>
                   <dt>Date &amp; Time</dt>
-                  <dd>{formatMatchDateRange(match.startAt, match.endAt)}</dd>
+                  <dd>{formatMatchDateRange(match.startAt)}</dd>
                 </div>
                 <div>
                   <dt>Venue</dt>
@@ -960,14 +960,16 @@ export function MatchesPage() {
                     {match.format.scoring.presetName}
                   </dd>
                 </div>
-                <div>
-                  <dt>Result</dt>
-                  <dd>
-                    {match.result
-                      ? `${resultSummary.rubbersWon}–${resultSummary.rubbersLost}${pendingRubbers > 0 ? ` (${pendingRubbers} pending)` : ''}`
-                      : <span className="muted">Not yet logged</span>}
-                  </dd>
-                </div>
+                {isAdmin ? (
+                  <div>
+                    <dt>Result</dt>
+                    <dd>
+                      {match.result
+                        ? `${resultSummary.rubbersWon}–${resultSummary.rubbersLost}${pendingRubbers > 0 ? ` (${pendingRubbers} pending)` : ''}`
+                        : <span className="muted">Not yet logged</span>}
+                    </dd>
+                  </div>
+                ) : null}
               </dl>
 
               {match.notes ? <p className="muted match-notes">{match.notes}</p> : null}
@@ -1009,7 +1011,7 @@ export function MatchesPage() {
                 ) : null}
               </div>
 
-              {match.result ? (
+              {isAdmin && match.result ? (
                 <dl className="match-rubbers-grid">
                   {match.result.rubbers.map((rubber, rubberIndex) => {
                     const rubberWinner = deriveRubberWinner(rubber.games, match.format)
@@ -1050,13 +1052,13 @@ export function MatchesPage() {
                     </div>
                   </details>
                   <details>
-                    <summary>Select players</summary>
+                    <summary className="details-summary">Select players</summary>
                     <div className="details-panel">
                       <MatchPlayerSelectionEditor match={match} onSave={assignMatchPlayers} />
                     </div>
                   </details>
                   <details>
-                    <summary>{match.result ? 'Edit results' : 'Log results'}</summary>
+                    <summary className="details-summary">{match.result ? 'Edit results' : 'Log results'}</summary>
                     <div className="details-panel">
                       <MatchResultEditor match={match} onSave={updateMatchResult} />
                     </div>
