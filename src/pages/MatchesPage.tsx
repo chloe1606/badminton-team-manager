@@ -1047,7 +1047,7 @@ export function MatchesPage() {
                   </details>
                 ) : null}
 
-                <div className="responsive-columns">
+                <div className="match-player-columns">
                   <div>
                     <h4>Available players</h4>
                     {availablePlayerIds.length > 0 ? (
@@ -1073,19 +1073,19 @@ export function MatchesPage() {
                       <p className="muted">Admin has not selected a squad for this match yet.</p>
                     )}
                   </div>
-                </div>
 
-                <div>
-                  <h4>Pairings</h4>
-                  <ul className="detail-list">
-                    {normalizeAssignedPairs(match.assignedPairs, match.format).map((pair) => (
-                      <li key={`${match.id}-${pair.pairSlot}`}>
-                        <strong>{pair.pairSlot}</strong>
-                        <br />
-                        {formatPairSummary(pair)}
-                      </li>
-                    ))}
-                  </ul>
+                  <div>
+                    <h4>Pairings</h4>
+                    <ul className="detail-list">
+                      {normalizeAssignedPairs(match.assignedPairs, match.format).map((pair) => (
+                        <li key={`${match.id}-${pair.pairSlot}`}>
+                          <strong>{pair.pairSlot}</strong>
+                          <br />
+                          {formatPairSummary(pair)}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
                 </div>
 
                 {isAdmin ? (
