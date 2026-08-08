@@ -1187,6 +1187,7 @@ export function MatchesPage() {
                 <div>
                   <dt>Location</dt>
                   <dd>{match.location === 'home' ? 'Home' : 'Away'}</dd>
+                  <dd>{match.notes ? <p className="muted match-notes">{match.notes}</p> : null}</dd>
                 </div>
                 <div>
                   <dt>Venue</dt>
@@ -1200,12 +1201,6 @@ export function MatchesPage() {
                   <dt>Format</dt>
                   <dd>
                     {match.format.numberOfRubbers} rubbers
-                  </dd>
-                </div>
-                <div>
-                  <dt>Notes</dt>
-                  <dd>
-                    {match.notes ? <p className="muted match-notes">{match.notes}</p> : null}
                   </dd>
                 </div>
               </dl>
