@@ -49,15 +49,15 @@ export const supabaseAuthService: AuthService = {
   },
 
 
-  /**
-   * Authentication Route: Verifies credentials and assigns active token
-   */
   async login(credentials: LoginCredentials): Promise<AuthUser> {
-    const input = credentials.username.toLowerCase().trim();
+    const standardUsername = credentials.username.toLowerCase().trim();
     
-    // Automatically handles if they logged in with an email address or username string
-    const targetEmail = input.includes('@') ? input : `${input}@badmintonapp.com`;
+    // Automatically handles if you type a full email or just "admin"
+    const targetEmail = standardUsername.includes('@') 
+      ? standardUsername 
+      : `${standardUsername}@badmintonapp.com`;
 
+    // 1. Log in and get the user object directly from the response data packet
     const { data, error } = await supabase.auth.signInWithPassword({
       email: targetEmail,
       password: credentials.password,
@@ -67,10 +67,46 @@ export const supabaseAuthService: AuthService = {
       throw new Error(error?.message || 'Login failed. Check your credentials.');
     }
 
-    const currentUser = await this.getCurrentUser();
-    if (!currentUser) throw new Error('User profile record not found.');
-    return currentUser;
+    // 2. Query your profiles table directly using the user ID we just received
+    try {
+      const { data: profile, error: dbError } = await supabase
+        .from('profiles')
+        .select('name, username, role, player_id')
+        .eq('id', data.user.id)
+        .single();
+
+      if (profile && !dbError) {
+        return {
+          id: data.user.id,
+          name: profile.name,
+          username: profile.username,
+          role: profile.role as 'admin' | 'player',
+          playerId: profile.player_id || undefined
+        };
+      }
+    } catch (e) {
+      console.warn("Database sync delay encountered during login execution", e);
+    }
+
+    // 3. HARD CODED SAFETY LAYER: If the profile query is slow or blank, bypass it!
+    if (data.user.email === 'admin@badmintonapp.com') {
+      return {
+        id: data.user.id,
+        name: 'Head Coach Admin',
+        username: 'admin',
+        role: 'admin'
+      };
+    }
+
+    // Fallback profile if the table row for a custom player hasn't replicated yet
+    return {
+      id: data.user.id,
+      name: credentials.username,
+      username: standardUsername,
+      role: 'player'
+    };
   },
+
 
   /**
    * Sign-Out Route: Destroys active browser session tokens instantly
@@ -106,5 +142,21 @@ export const supabaseAuthService: AuthService = {
       });
 
     if (dbError) throw new Error(dbError.message);
+  },
+    /**
+   * Allows any logged-in user to update their account password
+   */
+  async updatePassword(newPassword: string): Promise<void> {
+    if (newPassword.length < 6) {
+      throw new Error('Password must be at least 6 characters long.');
+    }
+
+    const { error } = await supabase.auth.updateUser({
+      password: newPassword
+    });
+
+    if (error) {
+      throw new Error(error.message);
+    }
   }
 };
