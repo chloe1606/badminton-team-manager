@@ -1186,8 +1186,10 @@ export function MatchesPage() {
                 </div>
                 <div>
                   <dt>Location</dt>
-                  <dd>{match.location === 'home' ? 'Home' : 'Away'}</dd>
-                  <dd>{match.notes ? <p className="muted match-notes">{match.notes}</p> : null}</dd>
+                  <dd>
+                  {match.location === 'home' ? 'Home' : 'Away'}
+                  {match.notes ? <p className="muted match-notes">{match.notes}</p> : null}
+                  </dd>
                 </div>
                 <div>
                   <dt>Venue</dt>
