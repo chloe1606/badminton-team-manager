@@ -39,7 +39,7 @@ export function LoginPage() {
   return (
     <main className="auth-layout">
       <Card className="auth-card" aria-labelledby="login-heading">
-        <h1 id="login-heading">Badminton Team Manager</h1>
+        <h1 id="login-heading">🏸 Badminton Team Manager</h1>
         <p className="muted">Sign in to access team planning and attendance tools.</p>
         <div className="stack stack-tight muted" style={{ fontSize: '0.85em' }}>
           <p style={{ margin: 0 }}>
