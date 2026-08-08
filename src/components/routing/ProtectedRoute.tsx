@@ -1,17 +1,29 @@
-import { Navigate, Outlet, useLocation } from 'react-router-dom'
-import { useAuth } from '../../auth/hooks/useAuth'
+import React from 'react';
+import { Navigate, Outlet } from 'react-router-dom'; // Assumes react-router-dom v6
+import { useAuth } from '../../auth/AuthContext.tsx';
 
-export function ProtectedRoute() {
-  const { isAuthenticated, isLoading } = useAuth()
-  const location = useLocation()
-
-  if (isLoading) {
-    return <p className="status-message">Checking authentication…</p>
-  }
-
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace state={{ from: location }} />
-  }
-
-  return <Outlet />
+interface ProtectedRouteProps {
+  allowedRoles?: ('admin' | 'player')[];
 }
+
+export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ allowedRoles }) => {
+  const { user, loading } = useAuth();
+
+  // Show a clean loading state while checking Supabase credentials
+  if (loading) {
+    return <div className="loading-screen">🏸 Loading team manager dashboard...</div>;
+  }
+
+  // Redirect to login if user is unauthenticated
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  // Block access if user role is unauthorized
+  if (allowedRoles && !allowedRoles.includes(user.role)) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  // Render children components securely
+  return <Outlet />;
+};

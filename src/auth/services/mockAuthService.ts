@@ -46,4 +46,10 @@ export const mockAuthService: AuthService = {
   async logout() {
     writeStoredUser(null)
   },
+  async registerNewPlayer(name: string, username: string): Promise<void> {
+    const delay = (ms: number) => new Promise((res) => setTimeout(res, ms));
+    await delay(500); // Simulate network lag
+    console.log(`Mock registration complete for: ${name} (@${username})`);
+    return Promise.resolve();
+  }
 }

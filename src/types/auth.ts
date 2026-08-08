@@ -17,4 +17,5 @@ export interface AuthService {
   getCurrentUser(): Promise<AuthUser | null>
   login(credentials: LoginCredentials): Promise<AuthUser>
   logout(): Promise<void>
+  registerNewPlayer(name: string, username: string, email: string): Promise<void>;
 }
