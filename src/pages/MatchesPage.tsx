@@ -1202,20 +1202,8 @@ export function MatchesPage() {
                     {match.format.numberOfRubbers} rubbers
                   </dd>
                 </div>
-                {isAdmin ? (
-                  <div>
-                    <dt>Result</dt>
-                    <dd>
-                      {match.result
-                        ? `${resultSummary.rubbersWon}–${resultSummary.rubbersLost}${pendingRubbers > 0 ? ` (${pendingRubbers} pending)` : ''}`
-                        : <span className="muted">Not yet logged</span>}
-                    </dd>
-                  </div>
-                ) : null}
+                {match.notes ? <p className="muted match-notes">{match.notes}</p> : null}
               </dl>
-
-              {match.notes ? <p className="muted match-notes">{match.notes}</p> : null}
-
               <div className="match-players-row">
                 <dl className="match-players-grid">
                   <div>
@@ -1237,6 +1225,16 @@ export function MatchesPage() {
                       ) : null}
                     </dd>
                   </div>
+                  {isAdmin ? (
+                  <div>
+                    <dt>Result</dt>
+                    <dd>
+                      {match.result
+                        ? `${resultSummary.rubbersWon}–${resultSummary.rubbersLost}${pendingRubbers > 0 ? ` (${pendingRubbers} pending)` : ''}`
+                        : <span className="muted">Not yet logged</span>}
+                    </dd>
+                  </div>
+                ) : null}
                 </dl>
                 {user?.playerId ? (
                   <div className="match-availability">
