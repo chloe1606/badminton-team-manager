@@ -4,7 +4,6 @@ import { useAuth } from '../auth/hooks/useAuth'
 import { Button } from '../components/ui/Button'
 import { Card } from '../components/ui/Card'
 import { Input } from '../components/ui/Input'
-import { samplePlayerLogins } from '../data/players'
 
 export function LoginPage() {
   const { isAuthenticated, login, isLoading } = useAuth()
