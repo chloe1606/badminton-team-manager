@@ -344,6 +344,7 @@ a {
 
 .match-notes {
   margin: 0;
+  padding-bottom: var(--space-3);
 }
 
 .match-info-grid,
