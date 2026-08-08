@@ -1202,7 +1202,12 @@ export function MatchesPage() {
                     {match.format.numberOfRubbers} rubbers
                   </dd>
                 </div>
-                {match.notes ? <p className="muted match-notes">{match.notes}</p> : null}
+                <div>
+                  <dt>Notes</dt>
+                  <dd>
+                    {match.notes ? <p className="muted match-notes">{match.notes}</p> : null}
+                  </dd>
+                </div>
               </dl>
               <div className="match-players-row">
                 <dl className="match-players-grid">
