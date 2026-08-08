@@ -41,21 +41,6 @@ export function LoginPage() {
       <Card className="auth-card" aria-labelledby="login-heading">
         <h2 id="login-heading">🏸 Badminton Team Manager</h2>
         <p className="muted">Sign in to access team planning and attendance tools.</p>
-        <div className="stack stack-tight muted" style={{ fontSize: '0.85em' }}>
-          <p style={{ margin: 0 }}>
-            <strong>Admin:</strong> admin / admin123
-          </p>
-          <div>
-            <strong>Sample players:</strong>
-            <ul className="detail-list">
-              {samplePlayerLogins.map((player) => (
-                <li key={player.id}>
-                  {player.name}: {player.username} / {player.password}
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
         <form className="stack" onSubmit={handleSubmit} noValidate>
           <label htmlFor="username">Username</label>
           <Input
