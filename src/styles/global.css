@@ -344,7 +344,6 @@ a {
 
 .match-notes {
   margin: 0;
-  padding-bottom: var(--space-3);
 }
 
 .match-info-grid,
@@ -390,7 +389,7 @@ a {
 .match-info-grid dd,
 .match-players-grid dd,
 .match-rubbers-grid dd {
-  margin: 0;
+  margin: 0 0 var(--space-3) 0;
 }
 
 .match-players-row {
