@@ -299,6 +299,7 @@ a {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.04em;
+  padding-bottom: var(--space-3);
 }
 
 .details-summary {
