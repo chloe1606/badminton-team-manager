@@ -101,7 +101,9 @@ function normalizeFormat(format: MatchFormatConfig | undefined): MatchFormatConf
 
 function normalizeMatchRecord(match: MatchRecord): MatchRecord {
   const format = normalizeFormat(match.format)
-  const availablePlayerIds = [...new Set(match.availablePlayerIds ?? [])]
+  const availablePlayerIds = [...new Set(match.availablePlayerIds ?? [])].filter((playerId) =>
+    samplePlayersById.has(playerId),
+  )
   const assignedPlayerIds = [...new Set(match.assignedPlayerIds ?? [])].filter((playerId) =>
     availablePlayerIds.includes(playerId),
   )
@@ -146,6 +148,14 @@ export function AppDataProvider({ children }: AppDataProviderProps) {
   const [teamSettings, setTeamSettings] = useState<TeamSettings>(() =>
     normalizeTeamSettings(readStoredValue(SETTINGS_STORAGE_KEY, defaultTeamSettings)),
   )
+
+  useEffect(() => {
+    setMatches((currentMatches) => {
+      const normalizedMatches = currentMatches.map(normalizeMatchRecord)
+      const hasChanges = JSON.stringify(normalizedMatches) !== JSON.stringify(currentMatches)
+      return hasChanges ? normalizedMatches : currentMatches
+    })
+  }, [])
 
   useEffect(() => {
     window.localStorage.setItem(MATCH_STORAGE_KEY, JSON.stringify(matches))
