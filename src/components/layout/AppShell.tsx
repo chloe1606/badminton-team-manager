@@ -1,10 +1,12 @@
 import { Link, NavLink, Outlet } from 'react-router-dom'
 import { useAuth } from '../../auth/hooks/useAuth'
 import { Button } from '../ui/Button'
+import { NotificationBell } from '../ui/NotificationBell'
 
 const baseNavItems = [
   { to: '/', label: 'Dashboard', adminOnly: false },
   { to: '/matches', label: 'Matches', adminOnly: false },
+  { to: '/results', label: 'Results', adminOnly: false },
   { to: '/club-contacts', label: 'Club Contacts', adminOnly: false },
   { to: '/user-settings', label: 'User Settings', adminOnly: false },
   { to: '/admin/users', label: 'Users', adminOnly: true },
@@ -40,6 +42,7 @@ export function AppShell() {
             </ul>
           </nav>
           <div className="auth-actions" aria-live="polite">
+            <NotificationBell />
             <span className="user-chip">{user?.name}</span>
             <Button onClick={() => void logout()} variant="secondary">
               Log out

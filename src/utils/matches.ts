@@ -302,3 +302,83 @@ export function summarizeMatchResult(result: MatchResult | undefined, format: Ma
     { rubbersWon: 0, rubbersLost: 0, completedRubbers: 0 },
   )
 }
+
+export function getSeasonYear(date: Date): string {
+  const year = date.getFullYear()
+  const month = date.getMonth()
+
+  if (month >= 8) {
+    return `${year}/${year + 1}`
+  }
+
+  return `${year - 1}/${year}`
+}
+
+export function getCurrentSeason(): string {
+  return getSeasonYear(new Date())
+}
+
+export function filterMatchesBySeason(matches: MatchRecord[], season: string): MatchRecord[] {
+  return matches.filter((match) => getSeasonYear(new Date(match.startAt)) === season)
+}
+
+export function isMatchExpired(match: MatchRecord): boolean {
+  return new Date(match.startAt) < new Date()
+}
+
+export function separateMatchesByStatus(
+  matches: MatchRecord[],
+): { current: MatchRecord[]; finished: MatchRecord[] } {
+  const current: MatchRecord[] = []
+  const finished: MatchRecord[] = []
+
+  for (const match of matches) {
+    if (isMatchExpired(match)) {
+      finished.push(match)
+    } else {
+      current.push(match)
+    }
+  }
+
+  return { current, finished }
+}
+
+export interface MatchAvailabilityStats {
+  availableCount: number
+  menRequired: number
+  ladiesRequired: number
+}
+
+export interface AdminDashboardStats {
+  played: number
+  toPlay: number
+  matchStats: MatchAvailabilityStats[]
+}
+
+export function calculateAdminStats(
+  matches: MatchRecord[],
+): AdminDashboardStats {
+  let played = 0
+  let toPlay = 0
+  const now = new Date()
+
+  const matchStats: MatchAvailabilityStats[] = matches.map((match) => {
+    if (new Date(match.startAt) < now) {
+      played++
+    } else {
+      toPlay++
+    }
+
+    return {
+      availableCount: match.availablePlayerIds?.length ?? 0,
+      menRequired: match.format.squad.menRequired,
+      ladiesRequired: match.format.squad.ladiesRequired,
+    }
+  })
+
+  return {
+    played,
+    toPlay,
+    matchStats,
+  }
+}
