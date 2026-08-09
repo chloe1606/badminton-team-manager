@@ -1177,22 +1177,33 @@ export function MatchesPage() {
       {isAdmin ? (
         <Card>
           <div className="admin-summary">
-            <div>
+            <div className="summary-header">
               <p className="summary-label">Total Matches (This Season)</p>
               <p className="summary-value">{adminStats.totalMatches}</p>
             </div>
-            <div>
-              <p className="summary-label">Available Players</p>
-              <p className="summary-value">{adminStats.availablePlayersCount}</p>
-            </div>
-            <div>
-              <p className="summary-label">Players Required</p>
-              <p className="summary-value">
-                {adminStats.menRequired > 0 && `${adminStats.menRequired} ${adminStats.menRequired === 1 ? 'man' : 'men'}`}
-                {adminStats.menRequired > 0 && adminStats.ladiesRequired > 0 && ', '}
-                {adminStats.ladiesRequired > 0 && `${adminStats.ladiesRequired} ${adminStats.ladiesRequired === 1 ? 'lady' : 'ladies'}`}
-              </p>
-            </div>
+            {adminStats.matchStats.length > 0 && (
+              <div className="summary-matches">
+                <p className="summary-label">Per Match Availability</p>
+                <div className="match-stats-grid">
+                  {adminStats.matchStats.map((stats, idx) => (
+                    <div key={idx} className="match-stat-item">
+                      <div className="stat-available">
+                        <span className="stat-value">{stats.availableCount}</span>
+                        <span className="stat-label">Available</span>
+                      </div>
+                      <div className="stat-required">
+                        <span className="stat-value">
+                          {stats.menRequired > 0 && `${stats.menRequired}M`}
+                          {stats.menRequired > 0 && stats.ladiesRequired > 0 && ' '}
+                          {stats.ladiesRequired > 0 && `${stats.ladiesRequired}L`}
+                        </span>
+                        <span className="stat-label">Required</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </Card>
       ) : null}

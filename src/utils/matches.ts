@@ -343,37 +343,28 @@ export function separateMatchesByStatus(
   return { current, finished }
 }
 
-export interface AdminDashboardStats {
-  totalMatches: number
-  availablePlayers: Set<string>
-  availablePlayersCount: number
+export interface MatchAvailabilityStats {
+  availableCount: number
   menRequired: number
   ladiesRequired: number
+}
+
+export interface AdminDashboardStats {
+  totalMatches: number
+  matchStats: MatchAvailabilityStats[]
 }
 
 export function calculateAdminStats(
   matches: MatchRecord[],
 ): AdminDashboardStats {
-  const availablePlayers = new Set<string>()
-  let menRequired = 0
-  let ladiesRequired = 0
-
-  for (const match of matches) {
-    if (match.availablePlayerIds) {
-      match.availablePlayerIds.forEach((id) => availablePlayers.add(id))
-    }
-
-    if (matches.length > 0) {
-      menRequired = match.format.squad.menRequired
-      ladiesRequired = match.format.squad.ladiesRequired
-    }
-  }
+  const matchStats: MatchAvailabilityStats[] = matches.map((match) => ({
+    availableCount: match.availablePlayerIds?.length ?? 0,
+    menRequired: match.format.squad.menRequired,
+    ladiesRequired: match.format.squad.ladiesRequired,
+  }))
 
   return {
     totalMatches: matches.length,
-    availablePlayers,
-    availablePlayersCount: availablePlayers.size,
-    menRequired,
-    ladiesRequired,
+    matchStats,
   }
 }
