@@ -1177,13 +1177,19 @@ export function MatchesPage() {
       {isAdmin ? (
         <Card>
           <div className="admin-summary">
-            <div className="summary-header">
-              <p className="summary-label">Total Matches (This Season)</p>
-              <p className="summary-value">{adminStats.totalMatches}</p>
+            <div className="summary-row">
+              <div className="summary-stat">
+                <p className="summary-label">Matches Played</p>
+                <p className="summary-value">{adminStats.played}</p>
+              </div>
+              <div className="summary-stat">
+                <p className="summary-label">Matches to Play</p>
+                <p className="summary-value">{adminStats.toPlay}</p>
+              </div>
             </div>
             {adminStats.matchStats.length > 0 && (
               <div className="summary-matches">
-                <p className="summary-label">Per Match Availability</p>
+                <p className="summary-label">Player Availability per Match</p>
                 <div className="match-stats-grid">
                   {adminStats.matchStats.map((stats, idx) => (
                     <div key={idx} className="match-stat-item">

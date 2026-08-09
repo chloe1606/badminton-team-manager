@@ -350,21 +350,35 @@ export interface MatchAvailabilityStats {
 }
 
 export interface AdminDashboardStats {
-  totalMatches: number
+  played: number
+  toPlay: number
   matchStats: MatchAvailabilityStats[]
 }
 
 export function calculateAdminStats(
   matches: MatchRecord[],
 ): AdminDashboardStats {
-  const matchStats: MatchAvailabilityStats[] = matches.map((match) => ({
-    availableCount: match.availablePlayerIds?.length ?? 0,
-    menRequired: match.format.squad.menRequired,
-    ladiesRequired: match.format.squad.ladiesRequired,
-  }))
+  let played = 0
+  let toPlay = 0
+  const now = new Date()
+
+  const matchStats: MatchAvailabilityStats[] = matches.map((match) => {
+    if (new Date(match.startAt) < now) {
+      played++
+    } else {
+      toPlay++
+    }
+
+    return {
+      availableCount: match.availablePlayerIds?.length ?? 0,
+      menRequired: match.format.squad.menRequired,
+      ladiesRequired: match.format.squad.ladiesRequired,
+    }
+  })
 
   return {
-    totalMatches: matches.length,
+    played,
+    toPlay,
     matchStats,
   }
 }

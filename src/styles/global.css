@@ -678,10 +678,22 @@ a {
 .admin-summary {
   display: grid;
   gap: var(--space-6);
-  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
   padding: var(--space-4);
   background: var(--color-primary-soft);
   border-radius: var(--radius-md);
+}
+
+.summary-row {
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.summary-stat {
+  padding: var(--space-3);
+  background: rgba(255, 255, 255, 0.6);
+  border-radius: var(--radius-sm);
+  text-align: center;
 }
 
 .summary-label {
