@@ -1,5 +1,9 @@
 import type { Session } from '@supabase/supabase-js'
-import { supabase } from '../../lib/supabase'
+import {
+  isSupabaseConfigured,
+  requireSupabase,
+  supabaseConfigError,
+} from '../../lib/supabase'
 import { mapAuthUser } from '../../lib/playerProfile'
 import type { AuthService, AuthUser, LoginCredentials } from '../../types/auth'
 import { getPlayerProfile } from '../../services/playerService'
@@ -20,6 +24,11 @@ async function loadUserFromSession(session: Session | null): Promise<AuthUser | 
 
 export const supabaseAuthService: AuthService = {
   async getCurrentUser() {
+    if (!isSupabaseConfigured) {
+      return null
+    }
+
+    const supabase = requireSupabase()
     const {
       data: { session },
       error,
@@ -32,6 +41,11 @@ export const supabaseAuthService: AuthService = {
     return loadUserFromSession(session)
   },
   async login(credentials: LoginCredentials) {
+    if (!isSupabaseConfigured) {
+      throw new Error(supabaseConfigError ?? 'Supabase is not configured.')
+    }
+
+    const supabase = requireSupabase()
     const { data, error } = await supabase.auth.signInWithPassword({
       email: credentials.email,
       password: credentials.password,
@@ -49,6 +63,11 @@ export const supabaseAuthService: AuthService = {
     return user
   },
   async logout() {
+    if (!isSupabaseConfigured) {
+      return
+    }
+
+    const supabase = requireSupabase()
     const { error } = await supabase.auth.signOut()
 
     if (error) {
@@ -56,6 +75,11 @@ export const supabaseAuthService: AuthService = {
     }
   },
   onAuthStateChange(callback) {
+    if (!isSupabaseConfigured) {
+      return { unsubscribe: () => undefined }
+    }
+
+    const supabase = requireSupabase()
     return supabase.auth.onAuthStateChange((_event, session) => {
       void loadUserFromSession(session)
         .then(callback)

@@ -4,6 +4,7 @@ import { useAuth } from '../auth/hooks/useAuth'
 import { Button } from '../components/ui/Button'
 import { Card } from '../components/ui/Card'
 import { Input } from '../components/ui/Input'
+import { isSupabaseConfigured, supabaseConfigError } from '../lib/supabase'
 
 export function LoginPage() {
   const { isAuthenticated, login, isLoading } = useAuth()
@@ -40,6 +41,11 @@ export function LoginPage() {
       <Card className="auth-card" aria-labelledby="login-heading">
         <h1 id="login-heading">Badminton Team Manager</h1>
         <p className="muted">Sign in with your Supabase email address and password.</p>
+        {!isSupabaseConfigured && (
+          <p role="alert" className="error-text">
+            Supabase is not configured. {supabaseConfigError}
+          </p>
+        )}
         <form className="stack" onSubmit={handleSubmit} noValidate>
           <label htmlFor="email">Email address</label>
           <Input
@@ -67,7 +73,7 @@ export function LoginPage() {
             </p>
           )}
 
-          <Button disabled={isLoading} type="submit">
+          <Button disabled={isLoading || !isSupabaseConfigured} type="submit">
             {isLoading ? 'Loading…' : 'Log in'}
           </Button>
         </form>

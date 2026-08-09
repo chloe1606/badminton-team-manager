@@ -1,4 +1,4 @@
-import { supabase } from '../lib/supabase'
+import { isSupabaseConfigured, requireSupabase, supabaseConfigError } from '../lib/supabase'
 import { mapPlayerProfile } from '../lib/playerProfile'
 import type { PlayerProfile } from '../types/players'
 
@@ -11,6 +11,11 @@ export interface CreatePlayerInput {
 }
 
 export async function listPlayerProfiles(): Promise<PlayerProfile[]> {
+  if (!isSupabaseConfigured) {
+    return []
+  }
+
+  const supabase = requireSupabase()
   const { data, error } = await supabase
     .from('player_profiles')
     .select('id, email, full_name, first_name, role, gender')
@@ -24,6 +29,11 @@ export async function listPlayerProfiles(): Promise<PlayerProfile[]> {
 }
 
 export async function getPlayerProfile(userId: string): Promise<PlayerProfile | null> {
+  if (!isSupabaseConfigured) {
+    return null
+  }
+
+  const supabase = requireSupabase()
   const { data, error } = await supabase
     .from('player_profiles')
     .select('id, email, full_name, first_name, role, gender')
@@ -38,6 +48,11 @@ export async function getPlayerProfile(userId: string): Promise<PlayerProfile | 
 }
 
 export async function createInvitedPlayer(input: CreatePlayerInput): Promise<void> {
+  if (!isSupabaseConfigured) {
+    throw new Error(supabaseConfigError ?? 'Supabase is not configured.')
+  }
+
+  const supabase = requireSupabase()
   const { error } = await supabase.functions.invoke('invite-user', {
     body: {
       email: input.email,
