@@ -32,6 +32,6 @@ export function mapAuthUser(profile: PlayerProfile): AuthUser {
     email: profile.email,
     name: profile.fullName,
     role: profile.role,
-    playerId: profile.role === 'player' ? profile.playerId ?? profile.id : undefined,
+    playerId: profile.playerId ?? (profile.role === 'player' ? profile.id : undefined),
   }
 }

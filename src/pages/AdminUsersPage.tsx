@@ -11,6 +11,7 @@ export function AdminUsersPage() {
   const [email, setEmail] = useState('')
   const [fullName, setFullName] = useState('')
   const [firstName, setFirstName] = useState('')
+  const [temporaryPassword, setTemporaryPassword] = useState('')
   const [role, setRole] = useState<UserRole>('player')
   const [gender, setGender] = useState<PlayerGender>('lady')
   const [error, setError] = useState('')
@@ -22,8 +23,13 @@ export function AdminUsersPage() {
     setError('')
     setStatus('')
 
-    if (!email.trim() || !fullName.trim() || !firstName.trim()) {
-      setError('Email address, full name, and first name are required.')
+    if (!email.trim() || !fullName.trim() || !firstName.trim() || !temporaryPassword.trim()) {
+      setError('Email address, full name, first name, and temporary password are required.')
+      return
+    }
+
+    if (temporaryPassword.trim().length < 8) {
+      setError('Temporary password must be at least 8 characters.')
       return
     }
 
@@ -33,17 +39,19 @@ export function AdminUsersPage() {
         email: email.trim(),
         fullName: fullName.trim(),
         firstName: firstName.trim(),
+        temporaryPassword: temporaryPassword.trim(),
         role,
         gender: role === 'player' ? gender : undefined,
       })
-      setStatus('Invite sent. The new user can finish account setup from their email.')
+      setStatus('User created. Share the temporary password so they can log in and change it.')
       setEmail('')
       setFullName('')
       setFirstName('')
+      setTemporaryPassword('')
       setRole('player')
       setGender('lady')
     } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : 'Unable to invite user.')
+      setError(nextError instanceof Error ? nextError.message : 'Unable to create user.')
     } finally {
       setIsSubmitting(false)
     }
@@ -53,7 +61,7 @@ export function AdminUsersPage() {
     <div className="stack">
       <Card>
         <h1>User management</h1>
-        <p>Invite new admins and players with real email addresses. Supabase handles password setup securely.</p>
+        <p>Create new admins and players with a temporary password. Ask each user to change their password after first login.</p>
       </Card>
 
       <Card>
@@ -82,6 +90,17 @@ export function AdminUsersPage() {
               </select>
             </label>
 
+            <label className="field">
+              <span>Temporary password</span>
+              <input
+                className="input"
+                minLength={8}
+                type="password"
+                value={temporaryPassword}
+                onChange={(event) => setTemporaryPassword(event.target.value)}
+              />
+            </label>
+
             {role === 'player' ? (
               <label className="field">
                 <span>Gender</span>
@@ -98,7 +117,7 @@ export function AdminUsersPage() {
 
           <div className="form-actions">
             <Button disabled={isSubmitting} type="submit">
-              {isSubmitting ? 'Sending invite…' : 'Invite user'}
+              {isSubmitting ? 'Creating user…' : 'Create user'}
             </Button>
           </div>
         </form>

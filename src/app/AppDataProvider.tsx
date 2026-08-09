@@ -140,6 +140,13 @@ function normalizeTeamSettings(settings: TeamSettings): TeamSettings {
   }
 }
 
+function normalizePlayersForMatchContext(players: PlayerProfile[]): PlayerProfile[] {
+  return players.map((player) => ({
+    ...player,
+    id: player.playerId ?? player.id,
+  }))
+}
+
 interface AppDataProviderProps {
   children: ReactNode
 }
@@ -168,7 +175,7 @@ export function AppDataProvider({ children }: AppDataProviderProps) {
     listPlayerProfiles()
       .then((profiles) => {
         if (isActive) {
-          setPlayers(profiles)
+          setPlayers(normalizePlayersForMatchContext(profiles))
         }
       })
       .catch(() => {

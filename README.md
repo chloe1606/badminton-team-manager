@@ -66,9 +66,9 @@ The app expects a `profiles` table with these columns:
 
 The app also expects a Supabase Edge Function named `invite-user` that:
 
-1. creates or invites the auth user by email,
+1. creates the auth user by email with a temporary password,
 2. creates the related `profiles` row,
-3. triggers secure account setup so the user chooses their own password.
+3. supports first-login password change.
 
 Admins see an **Add Match** form on the Matches page and can create new fixtures.  
 When an opponent club has multiple venues, the venue picker is filtered to that club and displays any venue notes such as day/time details or parking restrictions.  

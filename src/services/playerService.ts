@@ -73,6 +73,7 @@ export interface CreatePlayerInput {
   fullName: string
   firstName: string
   role: 'admin' | 'player'
+  temporaryPassword: string
   gender?: 'lady' | 'man'
 }
 
@@ -129,10 +130,12 @@ export async function createInvitedPlayer(input: CreatePlayerInput): Promise<voi
   const supabase = requireSupabase()
   const { error } = await supabase.functions.invoke('invite-user', {
     body: {
+      setupMode: 'temporary_password',
       email: input.email,
       fullName: input.fullName,
       firstName: input.firstName,
       role: input.role,
+      temporaryPassword: input.temporaryPassword,
       gender: input.gender ?? null,
     },
   })
