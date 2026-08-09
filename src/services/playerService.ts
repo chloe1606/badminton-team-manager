@@ -2,6 +2,60 @@ import { isSupabaseConfigured, requireSupabase, supabaseConfigError } from '../l
 import { mapPlayerProfile } from '../lib/playerProfile'
 import type { PlayerProfile } from '../types/players'
 
+async function mapInviteFunctionError(error: unknown): Promise<string> {
+  const message = error instanceof Error ? error.message : 'Unable to call invite-user function.'
+  const normalized = message.toLowerCase()
+
+  const maybeContext =
+    typeof error === 'object' && error !== null && 'context' in error
+      ? (error as { context?: unknown }).context
+      : undefined
+
+  if (maybeContext instanceof Response) {
+    const status = maybeContext.status
+
+    let details = ''
+    try {
+      const responseBody = await maybeContext.clone().json()
+      if (typeof responseBody === 'object' && responseBody !== null && 'error' in responseBody) {
+        const responseError = (responseBody as { error?: unknown }).error
+        details = typeof responseError === 'string' ? responseError : ''
+      }
+    } catch {
+      // Ignore payload parse failures and fall back to status-based messaging.
+    }
+
+    if (status === 401) {
+      return details || 'invite-user rejected the request: unauthorized (401). Log in again and retry.'
+    }
+
+    if (status === 403) {
+      return details || 'invite-user rejected the request: forbidden (403). Confirm your account has admin role.'
+    }
+
+    if (status === 404) {
+      return details || 'invite-user function was not found (404). Deploy the function in Supabase.'
+    }
+
+    if (status >= 500) {
+      return details || `invite-user failed in Supabase (${status}). Check Edge Function logs for details.`
+    }
+
+    if (details) {
+      return details
+    }
+  }
+
+  if (
+    normalized.includes('failed to send a request to the edge function') ||
+    normalized.includes('failed to fetch')
+  ) {
+    return 'Could not reach Supabase Edge Function invite-user. Check that the function is deployed, enabled, and your project URL/keys are correct.'
+  }
+
+  return message
+}
+
 function isMissingPlayerProfilesTable(message: string): boolean {
   const normalized = message.toLowerCase()
   return (
@@ -84,6 +138,6 @@ export async function createInvitedPlayer(input: CreatePlayerInput): Promise<voi
   })
 
   if (error) {
-    throw new Error(error.message)
+    throw new Error(await mapInviteFunctionError(error))
   }
 }
