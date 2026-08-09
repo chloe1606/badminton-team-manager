@@ -163,6 +163,14 @@ export function AppDataProvider({ children }: AppDataProviderProps) {
   )
 
   useEffect(() => {
+    setMatches((currentMatches) => {
+      const normalizedMatches = currentMatches.map(normalizeMatchRecord)
+      const hasChanges = JSON.stringify(normalizedMatches) !== JSON.stringify(currentMatches)
+      return hasChanges ? normalizedMatches : currentMatches
+    })
+  }, [])
+
+  useEffect(() => {
     if (!isAuthenticated) {
       setPlayers([])
       setIsLoadingPlayers(false)
@@ -199,6 +207,37 @@ export function AppDataProvider({ children }: AppDataProviderProps) {
     [players],
   )
   const playerGenderLookup = useMemo(() => createPlayerGenderLookup(playersById), [playersById])
+
+  useEffect(() => {
+    if (!isAuthenticated || isLoadingPlayers) {
+      return
+    }
+
+    const validPlayerIds = new Set(playersById.keys())
+    setMatches((currentMatches) => {
+      const normalizedMatches = currentMatches.map((match) => {
+        const availablePlayerIds = (match.availablePlayerIds ?? []).filter((playerId) =>
+          validPlayerIds.has(playerId),
+        )
+        const assignedPlayerIds = (match.assignedPlayerIds ?? []).filter((playerId) =>
+          availablePlayerIds.includes(playerId),
+        )
+
+        return {
+          ...match,
+          availablePlayerIds,
+          assignedPlayerIds,
+          assignedPairs: normalizeAssignedPairs(match.assignedPairs, match.format).map((pair) => ({
+            ...pair,
+            playerIds: pair.playerIds.filter((playerId) => assignedPlayerIds.includes(playerId)),
+          })),
+        }
+      })
+
+      const hasChanges = JSON.stringify(normalizedMatches) !== JSON.stringify(currentMatches)
+      return hasChanges ? normalizedMatches : currentMatches
+    })
+  }, [isAuthenticated, isLoadingPlayers, playersById])
 
   useEffect(() => {
     window.localStorage.setItem(MATCH_STORAGE_KEY, JSON.stringify(matches))
