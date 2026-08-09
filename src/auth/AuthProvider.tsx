@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { AuthContext } from './AuthContext'
-import { mockAuthService } from './services/mockAuthService'
+import { supabaseAuthService } from './services/supabaseAuthService'
 import type { AuthService, AuthUser, LoginCredentials } from '../types/auth'
 
 interface AuthProviderProps {
@@ -8,7 +8,7 @@ interface AuthProviderProps {
   service?: AuthService
 }
 
-export function AuthProvider({ children, service = mockAuthService }: AuthProviderProps) {
+export function AuthProvider({ children, service = supabaseAuthService }: AuthProviderProps) {
   const [user, setUser] = useState<AuthUser | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
@@ -28,8 +28,16 @@ export function AuthProvider({ children, service = mockAuthService }: AuthProvid
         }
       })
 
+    const subscription = service.onAuthStateChange?.((currentUser) => {
+      if (isActive) {
+        setUser(currentUser)
+        setIsLoading(false)
+      }
+    })
+
     return () => {
       isActive = false
+      subscription?.unsubscribe()
     }
   }, [service])
 

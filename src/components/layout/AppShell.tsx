@@ -4,9 +4,10 @@ import { Button } from '../ui/Button'
 
 const baseNavItems = [
   { to: '/', label: 'Dashboard', adminOnly: false },
-  { to: '/members', label: 'Members', adminOnly: false },
   { to: '/matches', label: 'Matches', adminOnly: false },
   { to: '/club-contacts', label: 'Club Contacts', adminOnly: false },
+  { to: '/user-settings', label: 'User Settings', adminOnly: false },
+  { to: '/admin/users', label: 'Users', adminOnly: true },
   { to: '/settings', label: 'Settings', adminOnly: true },
 ]
 
@@ -19,7 +20,7 @@ export function AppShell() {
       <header className="app-header">
         <div className="container header-content">
           <Link className="brand" to="/">
-            Badminton Team Manager
+            🏸 Badminton Team Manager
           </Link>
           <nav aria-label="Primary" className="app-nav">
             <ul>

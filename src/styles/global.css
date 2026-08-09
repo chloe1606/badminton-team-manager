@@ -299,6 +299,7 @@ a {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.04em;
+  padding-bottom: var(--space-3);
 }
 
 .details-summary {
@@ -343,6 +344,7 @@ a {
 
 .match-notes {
   margin: 0;
+  padding-bottom: var(--space-3);
 }
 
 .match-info-grid,
@@ -388,7 +390,7 @@ a {
 .match-info-grid dd,
 .match-players-grid dd,
 .match-rubbers-grid dd {
-  margin: 0;
+  margin: 0 0 var(--space-3) 0;
 }
 
 .match-players-row {
@@ -408,6 +410,46 @@ a {
 .match-admin-panels {
   display: grid;
   gap: var(--space-2);
+}
+
+.dashboard-match-grid {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.dashboard-match-card {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  background: #fcfdfd;
+}
+
+.dashboard-match-title {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.dashboard-match-meta {
+  display: grid;
+  gap: var(--space-3);
+  margin: var(--space-3) 0 0;
+}
+
+.dashboard-match-meta > div {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.dashboard-match-meta dt {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-muted);
+}
+
+.dashboard-match-meta dd {
+  margin: 0;
 }
 
 .overview-table-wrap {
@@ -493,6 +535,14 @@ a {
   .game-row {
     grid-template-columns: minmax(0, 1fr) 8rem 8rem;
   }
+
+  .dashboard-match-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .dashboard-match-meta {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (min-width: 64rem) {
@@ -501,6 +551,10 @@ a {
   }
 
   .match-player-columns {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .dashboard-match-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }

@@ -4,12 +4,13 @@ React + TypeScript foundation for a badminton team management system.
 
 ## Features
 
-- Protected app with mock admin/player accounts for local testing
+- Protected app with Supabase email/password authentication
 - **Club Contacts** page with curated league contact details, venue addresses, and structured venue notes
 - **Matches** page with chronological numbering (`Match 1`, `Match 2`, …), calendar export, and admin-only match creation
 - Home/away match entry with home venue managed in Settings and away venue selection from opponent club venues
 - Add Match opponent selection from the curated club list, including filtered venue choices and optional opponent team number (`1` to `5`)
-- Sample player logins with self-serve match availability, plus admin availability updates, squad selection, and pair assignment for each fixture
+- Supabase-backed player accounts with self-serve match availability, plus admin availability updates, squad selection, and pair assignment for each fixture
+- Admin-only user management page for inviting new users into Supabase
 - **Overview** page with a read-only match table, player availability/selection snapshots, and per-match calendar export
 - Match result logging for configurable league formats, with configurable squad rules, pair slots, rubbers per player, and best-of-3 game scoring to 21 with a 30-point cap
 - **Settings** page for editing the current team profile and default league/match-format configuration
@@ -43,19 +44,31 @@ npm run preview
 - `/src/pages` - public login, protected dashboard, and domain placeholders
 - `/src/styles/global.css` - global design tokens, base styles, and responsive rules
 
-## Login accounts
+## Supabase setup
 
-Sample accounts are available for testing with the mock auth service:
+Create a `.env.local` file with:
 
-| Role   | Username | Password  | Capabilities                                             |
-|--------|----------|-----------|----------------------------------------------------------|
-| Admin  | admin    | admin123  | Create fixtures, link available players, and log results |
-| Player | alice    | alice123  | Mark availability for matches                            |
-| Player | ben      | ben123    | Mark availability for matches                            |
-| Player | chloe    | chloe123  | Mark availability for matches                            |
-| Player | daniel   | daniel123 | Mark availability for matches                            |
-| Player | emily    | emily123  | Mark availability for matches                            |
-| Player | farah    | farah123  | Mark availability for matches                            |
+```bash
+VITE_SUPABASE_URL=your-project-url
+VITE_SUPABASE_ANON_KEY=your-anon-key
+```
+
+The app expects a `profiles` table with these columns:
+
+| Column | Type | Notes |
+|--------|------|-------|
+| `id` | `uuid` | Matches `auth.users.id` |
+| `email` | `text` | User login email |
+| `full_name` | `text` | Display name |
+| `first_name` | `text` | Short display name |
+| `role` | `text` | `admin` or `player` |
+| `gender` | `text` | `lady` or `man`, nullable for admins |
+
+The app also expects a Supabase Edge Function named `invite-user` that:
+
+1. creates the auth user by email with a temporary password,
+2. creates the related `profiles` row,
+3. supports first-login password change.
 
 Admins see an **Add Match** form on the Matches page and can create new fixtures.  
 When an opponent club has multiple venues, the venue picker is filtered to that club and displays any venue notes such as day/time details or parking restrictions.  
@@ -94,10 +107,3 @@ Use the **Settings** page to edit:
 - scoring preset/rules
 
 New matches snapshot the current settings so future configuration changes do not overwrite existing fixture formats.
-
-
-
-The auth flow is intentionally provider-agnostic. Swap the default `mockAuthService`
-implementation in `/src/auth/services/mockAuthService.ts` with your real auth backend
-implementation (same `AuthService` interface in `/src/types/auth.ts`) and pass it to
-`AuthProvider`.

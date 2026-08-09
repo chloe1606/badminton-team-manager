@@ -211,7 +211,6 @@ export function SettingsPage() {
           <strong>{teamSettings.profile.leagueName}</strong>
         </p>
       </Card>
-
       <Card>
         <form className="stack" onSubmit={handleSubmit} noValidate>
           <div className="form-grid">

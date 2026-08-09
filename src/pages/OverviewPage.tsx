@@ -3,7 +3,6 @@ import { useAppData } from '../app/AppDataProvider'
 import { Button } from '../components/ui/Button'
 import { Card } from '../components/ui/Card'
 import { clubDirectory } from '../data/clubContacts'
-import { samplePlayers } from '../data/players'
 import type { MatchRecord } from '../types/matches'
 import { createMatchesCalendarIcs, downloadIcs } from '../utils/calendar'
 import {
@@ -13,12 +12,6 @@ import {
   sortMatchesChronologically,
   summarizeMatchResult,
 } from '../utils/matches'
-
-const playersById = new Map(samplePlayers.map((player) => [player.id, player.name] as const))
-
-function getPlayerName(playerId: string): string {
-  return playersById.get(playerId) ?? 'Unknown player'
-}
 
 function getVenueClub(match: MatchRecord, homeClubId: string) {
   if (match.location === 'home') {
@@ -37,8 +30,12 @@ function formatMatchDateRange(startAt: string): string {
 }
 
 export function OverviewPage() {
-  const { matches, teamSettings } = useAppData()
+  const { matches, playersById, teamSettings } = useAppData()
   const sortedMatches = useMemo(() => sortMatchesChronologically(matches), [matches])
+
+  function getPlayerName(playerId: string): string {
+    return playersById.get(playerId)?.fullName ?? 'Unknown player'
+  }
 
   return (
     <div className="stack">
