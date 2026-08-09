@@ -302,3 +302,78 @@ export function summarizeMatchResult(result: MatchResult | undefined, format: Ma
     { rubbersWon: 0, rubbersLost: 0, completedRubbers: 0 },
   )
 }
+
+export function getSeasonYear(date: Date): string {
+  const year = date.getFullYear()
+  const month = date.getMonth()
+
+  if (month >= 8) {
+    return `${year}/${year + 1}`
+  }
+
+  return `${year - 1}/${year}`
+}
+
+export function getCurrentSeason(): string {
+  return getSeasonYear(new Date())
+}
+
+export function filterMatchesBySeason(matches: MatchRecord[], season: string): MatchRecord[] {
+  return matches.filter((match) => getSeasonYear(new Date(match.startAt)) === season)
+}
+
+export function isMatchExpired(match: MatchRecord): boolean {
+  return new Date(match.startAt) < new Date()
+}
+
+export function separateMatchesByStatus(
+  matches: MatchRecord[],
+): { current: MatchRecord[]; finished: MatchRecord[] } {
+  const current: MatchRecord[] = []
+  const finished: MatchRecord[] = []
+
+  for (const match of matches) {
+    if (isMatchExpired(match)) {
+      finished.push(match)
+    } else {
+      current.push(match)
+    }
+  }
+
+  return { current, finished }
+}
+
+export interface AdminDashboardStats {
+  totalMatches: number
+  availablePlayers: Set<string>
+  availablePlayersCount: number
+  menRequired: number
+  ladiesRequired: number
+}
+
+export function calculateAdminStats(
+  matches: MatchRecord[],
+): AdminDashboardStats {
+  const availablePlayers = new Set<string>()
+  let menRequired = 0
+  let ladiesRequired = 0
+
+  for (const match of matches) {
+    if (match.availablePlayerIds) {
+      match.availablePlayerIds.forEach((id) => availablePlayers.add(id))
+    }
+
+    if (matches.length > 0) {
+      menRequired = match.format.squad.menRequired
+      ladiesRequired = match.format.squad.ladiesRequired
+    }
+  }
+
+  return {
+    totalMatches: matches.length,
+    availablePlayers,
+    availablePlayersCount: availablePlayers.size,
+    menRequired,
+    ladiesRequired,
+  }
+}

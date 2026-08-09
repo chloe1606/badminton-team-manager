@@ -13,6 +13,8 @@
   --color-primary-strong: #115e59;
   --color-primary-soft: #e0f2f1;
   --color-danger: #b42318;
+  --color-success: #22c55e;
+  --color-success-soft: rgba(34, 197, 94, 0.15);
 
   --space-1: 0.25rem;
   --space-2: 0.5rem;
@@ -602,4 +604,98 @@ a {
 
 .player-gender-indicator--lady {
   color: #9d174d;
+}
+
+/* Animations */
+@keyframes fadeOut {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0.5;
+  }
+}
+
+/* Match card selected state - transparent green box */
+.match-card--selected {
+  background: var(--color-success-soft);
+  border: 2px solid var(--color-success);
+  border-radius: var(--radius-md);
+}
+
+/* Match card expired state - fade out effect */
+.match-card--expired {
+  animation: fadeOut 0.6s ease-in-out forwards;
+  opacity: 0.5;
+}
+
+/* User name styling - bold and dark green */
+.user-name {
+  font-weight: 700;
+  color: var(--color-primary-strong);
+}
+
+/* Match player name styling */
+.match-player-name {
+  font-weight: 700;
+  color: var(--color-primary-strong);
+}
+
+/* Finished matches section */
+.finished-matches-section {
+  margin-top: var(--space-8);
+  padding-top: var(--space-6);
+  border-top: 2px solid var(--color-border);
+}
+
+.finished-matches-section h2 {
+  color: var(--color-muted);
+  font-size: 1.25rem;
+  margin-bottom: var(--space-4);
+}
+
+/* Match section heading */
+.match-section-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--color-text);
+  margin: var(--space-6) 0 var(--space-4) 0;
+}
+
+/* Season label */
+.season-label {
+  display: inline-block;
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-primary-soft);
+  color: var(--color-primary-strong);
+  border-radius: var(--radius-sm);
+  font-size: 0.875rem;
+  font-weight: 600;
+  margin-bottom: var(--space-4);
+}
+
+/* Admin Dashboard Summary */
+.admin-summary {
+  display: grid;
+  gap: var(--space-6);
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  padding: var(--space-4);
+  background: var(--color-primary-soft);
+  border-radius: var(--radius-md);
+}
+
+.summary-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-muted);
+  margin: 0 0 var(--space-2) 0;
+}
+
+.summary-value {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--color-primary-strong);
+  margin: 0;
 }

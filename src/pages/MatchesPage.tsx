@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useMemo, useRef, useState } from 'react'
+import { FormEvent, Fragment, useEffect, useMemo, useRef, useState } from 'react'
 import { useAppData } from '../app/AppDataProvider'
 import { useAuth } from '../auth/hooks/useAuth'
 import { Button } from '../components/ui/Button'
@@ -28,6 +28,10 @@ import {
   sortMatchesChronologically,
   summarizeMatchResult,
   validateRubberGames,
+  filterMatchesBySeason,
+  getCurrentSeason,
+  separateMatchesByStatus,
+  calculateAdminStats,
 } from '../utils/matches'
 
 interface GameDraft {
@@ -1052,7 +1056,19 @@ export function MatchesPage() {
   const [error, setError] = useState('')
   const [status, setStatus] = useState('')
 
+  const currentSeason = useMemo(() => getCurrentSeason(), [])
   const sortedMatches = useMemo(() => sortMatchesChronologically(matches), [matches])
+  const seasonMatches = useMemo(() => filterMatchesBySeason(sortedMatches, currentSeason), [sortedMatches, currentSeason])
+  const { current: currentMatches, finished: finishedMatches } = useMemo(
+    () => {
+      const separated = separateMatchesByStatus(seasonMatches)
+      return {
+        current: separated.current,
+        finished: separated.finished.sort((a, b) => new Date(b.startAt).getTime() - new Date(a.startAt).getTime()),
+      }
+    },
+    [seasonMatches],
+  )
   const teamDisplayName = useMemo(
     () => formatTeamDisplayName(teamSettings.profile),
     [teamSettings.profile],
@@ -1070,6 +1086,7 @@ export function MatchesPage() {
     [selectedHomeClub, teamSettings.profile.homeVenueId],
   )
   const availableAwayVenues = selectedClub?.addresses ?? []
+  const adminStats = useMemo(() => calculateAdminStats(currentMatches), [currentMatches])
 
   useEffect(() => {
     if (location === 'home') {
@@ -1088,7 +1105,7 @@ export function MatchesPage() {
   }, [availableAwayVenues, location, teamSettings.profile.homeVenueId, venueId])
 
   function exportMatch(matchId: string) {
-    const match = sortedMatches.find((fixture) => fixture.id === matchId)
+    const match = seasonMatches.find((fixture) => fixture.id === matchId)
     if (!match) {
       return
     }
@@ -1099,7 +1116,7 @@ export function MatchesPage() {
   function exportAllMatches() {
     downloadIcs(
       'badminton-match-fixtures.ics',
-      createMatchesCalendarIcs(sortedMatches.map((match) => createCalendarFixture(match, teamSettings))),
+      createMatchesCalendarIcs(seasonMatches.map((match) => createCalendarFixture(match, teamSettings))),
     )
   }
 
@@ -1157,8 +1174,34 @@ export function MatchesPage() {
         </div>
       </Card>
 
+      {isAdmin ? (
+        <Card>
+          <div className="admin-summary">
+            <div>
+              <p className="summary-label">Total Matches (This Season)</p>
+              <p className="summary-value">{adminStats.totalMatches}</p>
+            </div>
+            <div>
+              <p className="summary-label">Available Players</p>
+              <p className="summary-value">{adminStats.availablePlayersCount}</p>
+            </div>
+            <div>
+              <p className="summary-label">Players Required</p>
+              <p className="summary-value">
+                {adminStats.menRequired > 0 && `${adminStats.menRequired} ${adminStats.menRequired === 1 ? 'man' : 'men'}`}
+                {adminStats.menRequired > 0 && adminStats.ladiesRequired > 0 && ', '}
+                {adminStats.ladiesRequired > 0 && `${adminStats.ladiesRequired} ${adminStats.ladiesRequired === 1 ? 'lady' : 'ladies'}`}
+              </p>
+            </div>
+          </div>
+        </Card>
+      ) : null}
+
       <section className="stack" aria-label="Match list">
-        {sortedMatches.map((match, index) => {
+        {currentMatches.length > 0 ? (
+          <>
+            <div className="season-label">Season {currentSeason}</div>
+            {currentMatches.map((match, index) => {
           const club = getClubById(clubDirectory, match.opponentClubId)
           const venueClub = getVenueClub(match, teamSettings)
           const address = getAddressById(venueClub, match.venueId)
@@ -1215,20 +1258,40 @@ export function MatchesPage() {
                   <div>
                     <dt>Available</dt>
                     <dd>
-                      {availablePlayerIds.length > 0
-                        ? availablePlayerIds.map((playerId) => playersById.get(playerId)?.fullName ?? 'Unknown player').join(', ')
-                        : <span className="muted">None recorded</span>}
+                      {availablePlayerIds.length > 0 ? (
+                        availablePlayerIds.map((playerId, idx) => (
+                          <Fragment key={playerId}>
+                            {idx > 0 && ', '}
+                            <span className="user-name">
+                              {playersById.get(playerId)?.fullName ?? 'Unknown player'}
+                            </span>
+                          </Fragment>
+                        ))
+                      ) : (
+                        <span className="muted">None recorded</span>
+                      )}
                     </dd>
                   </div>
                   <div>
                     <dt>Selected</dt>
                     <dd>
-                      {assignedPlayerIds.length > 0
-                        ? assignedPlayerIds.map((playerId) => playersById.get(playerId)?.fullName ?? 'Unknown player').join(', ')
-                        : <span className="muted">None selected</span>}
-                      {match.isIncompleteTeam ? (
-                        <span className="muted"> · Incomplete team</span>
-                      ) : null}
+                      {assignedPlayerIds.length > 0 ? (
+                        <>
+                          {assignedPlayerIds.map((playerId, idx) => (
+                            <Fragment key={playerId}>
+                              {idx > 0 && ', '}
+                              <span className="user-name">
+                                {playersById.get(playerId)?.fullName ?? 'Unknown player'}
+                              </span>
+                            </Fragment>
+                          ))}
+                          {match.isIncompleteTeam ? (
+                            <span className="muted"> · Incomplete team</span>
+                          ) : null}
+                        </>
+                      ) : (
+                        <span className="muted">None selected</span>
+                      )}
                     </dd>
                   </div>
                   {isAdmin ? (
@@ -1308,7 +1371,76 @@ export function MatchesPage() {
             </Card>
           )
         })}
+          </>
+        ) : (
+          <p className="muted">No upcoming matches this season.</p>
+        )}
       </section>
+
+      {finishedMatches.length > 0 ? (
+        <section className="stack finished-matches-section" aria-label="Finished matches">
+          <h2>Finished Matches</h2>
+          {finishedMatches.map((match, index) => {
+          const club = getClubById(clubDirectory, match.opponentClubId)
+          const venueClub = getVenueClub(match, teamSettings)
+          const address = getAddressById(venueClub, match.venueId)
+          const opponentName = formatOpponentName(match, club)
+          const resultSummary = summarizeMatchResult(match.result, match.format)
+          const pendingRubbers = match.format.numberOfRubbers - resultSummary.completedRubbers
+
+          return (
+            <Card key={match.id} className="match-card match-card--expired">
+              <div className="card-heading">
+                <div>
+                  <p className="eyebrow">Match {index + 1} · {match.leagueName}</p>
+                  <h2>{match.teamDisplayName} vs {opponentName}</h2>
+                </div>
+              </div>
+
+              <dl className="match-info-grid">
+                <div>
+                  <dt>Date &amp; Time</dt>
+                  <dd>{formatMatchDateRange(match.startAt)}</dd>
+                </div>
+                <div>
+                  <dt>Location</dt>
+                  <dd>
+                    {match.location === 'home' ? 'Home' : 'Away'}
+                    {match.notes ? <p className="muted match-notes">{match.notes}</p> : null}
+                  </dd>
+                </div>
+                <div>
+                  <dt>Venue</dt>
+                  <dd>
+                    <strong>{address?.venueName ?? 'Venue TBC'}</strong>
+                    {address?.address ? <><br />{address.address}</> : null}
+                    {address?.notes ? <><br /><span className="muted">{address.notes}</span></> : null}
+                  </dd>
+                </div>
+                <div>
+                  <dt>Format</dt>
+                  <dd>
+                    {match.format.numberOfRubbers} rubbers
+                  </dd>
+                </div>
+              </dl>
+              <div className="match-players-row">
+                <dl className="match-players-grid">
+                  <div>
+                    <dt>Result</dt>
+                    <dd>
+                      {match.result
+                        ? `${resultSummary.rubbersWon}–${resultSummary.rubbersLost}${pendingRubbers > 0 ? ` (${pendingRubbers} pending)` : ''}`
+                        : <span className="muted">Not logged</span>}
+                    </dd>
+                  </div>
+                </dl>
+              </div>
+            </Card>
+          )
+          })}
+        </section>
+      ) : null}
 
       {isAdmin ? (
         <Card>
