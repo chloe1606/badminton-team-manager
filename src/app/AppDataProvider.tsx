@@ -6,6 +6,7 @@ import {
   useState,
   type ReactNode,
 } from 'react'
+import { useAuth } from '../auth/hooks/useAuth'
 import { listPlayerProfiles } from '../services/playerService'
 import { defaultMatchFixtures, defaultTeamSettings } from '../data/matches'
 import type {
@@ -144,6 +145,7 @@ interface AppDataProviderProps {
 }
 
 export function AppDataProvider({ children }: AppDataProviderProps) {
+  const { isAuthenticated } = useAuth()
   const [matches, setMatches] = useState<MatchRecord[]>(() =>
     readStoredValue(MATCH_STORAGE_KEY, defaultMatchFixtures).map(normalizeMatchRecord),
   )
@@ -154,12 +156,24 @@ export function AppDataProvider({ children }: AppDataProviderProps) {
   )
 
   useEffect(() => {
+    if (!isAuthenticated) {
+      setPlayers([])
+      setIsLoadingPlayers(false)
+      return
+    }
+
     let isActive = true
+    setIsLoadingPlayers(true)
 
     listPlayerProfiles()
       .then((profiles) => {
         if (isActive) {
           setPlayers(profiles)
+        }
+      })
+      .catch(() => {
+        if (isActive) {
+          setPlayers([])
         }
       })
       .finally(() => {
@@ -171,7 +185,7 @@ export function AppDataProvider({ children }: AppDataProviderProps) {
     return () => {
       isActive = false
     }
-  }, [])
+  }, [isAuthenticated])
 
   const playersById = useMemo(
     () => new Map(players.map((player) => [player.id, player] as const)),

@@ -53,7 +53,7 @@ VITE_SUPABASE_URL=your-project-url
 VITE_SUPABASE_ANON_KEY=your-anon-key
 ```
 
-The app expects a `player_profiles` table with these columns:
+The app expects a `profiles` table with these columns:
 
 | Column | Type | Notes |
 |--------|------|-------|
@@ -67,7 +67,7 @@ The app expects a `player_profiles` table with these columns:
 The app also expects a Supabase Edge Function named `invite-user` that:
 
 1. creates or invites the auth user by email,
-2. creates the related `player_profiles` row,
+2. creates the related `profiles` row,
 3. triggers secure account setup so the user chooses their own password.
 
 Admins see an **Add Match** form on the Matches page and can create new fixtures.  

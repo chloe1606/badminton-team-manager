@@ -5,8 +5,22 @@ import {
   supabaseConfigError,
 } from '../../lib/supabase'
 import { mapAuthUser } from '../../lib/playerProfile'
-import type { AuthService, AuthUser, LoginCredentials } from '../../types/auth'
+import type { AuthService, AuthUser } from '../../types/auth'
 import { getPlayerProfile } from '../../services/playerService'
+
+function mapAuthErrorMessage(message: string): string {
+  const normalizedMessage = message.toLowerCase()
+
+  if (normalizedMessage.includes('invalid login credentials')) {
+    return 'Incorrect email or password. If this is your first login, complete account setup from your invite email first.'
+  }
+
+  if (normalizedMessage.includes('email not confirmed')) {
+    return 'Your email is not confirmed yet. Use the confirmation link from your inbox, then try again.'
+  }
+
+  return message
+}
 
 async function loadUserFromSession(session: Session | null): Promise<AuthUser | null> {
   const userId = session?.user?.id
@@ -40,7 +54,7 @@ export const supabaseAuthService: AuthService = {
 
     return loadUserFromSession(session)
   },
-  async login(credentials: LoginCredentials) {
+  async login(credentials: { email: string; password: string }) {
     if (!isSupabaseConfigured) {
       throw new Error(supabaseConfigError ?? 'Supabase is not configured.')
     }
@@ -52,7 +66,7 @@ export const supabaseAuthService: AuthService = {
     })
 
     if (error) {
-      throw new Error(error.message)
+      throw new Error(mapAuthErrorMessage(error.message))
     }
 
     const user = await loadUserFromSession(data.session)

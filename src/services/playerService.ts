@@ -2,6 +2,18 @@ import { isSupabaseConfigured, requireSupabase, supabaseConfigError } from '../l
 import { mapPlayerProfile } from '../lib/playerProfile'
 import type { PlayerProfile } from '../types/players'
 
+function isMissingPlayerProfilesTable(message: string): boolean {
+  const normalized = message.toLowerCase()
+  return (
+    normalized.includes("could not find the table 'public.player_profiles'") ||
+    normalized.includes('relation "player_profiles" does not exist') ||
+    normalized.includes("could not find the table 'public.profile'") ||
+    normalized.includes('relation "profile" does not exist') ||
+    normalized.includes("could not find the table 'public.profiles'") ||
+    normalized.includes('relation "profiles" does not exist')
+  )
+}
+
 export interface CreatePlayerInput {
   email: string
   fullName: string
@@ -17,11 +29,15 @@ export async function listPlayerProfiles(): Promise<PlayerProfile[]> {
 
   const supabase = requireSupabase()
   const { data, error } = await supabase
-    .from('player_profiles')
-    .select('id, email, full_name, first_name, role, gender')
-    .order('full_name', { ascending: true })
+    .from('profiles')
+    .select('id, email, name, username, role, player_id, gender')
+    .order('name', { ascending: true })
 
   if (error) {
+    if (isMissingPlayerProfilesTable(error.message)) {
+      return []
+    }
+
     throw new Error(error.message)
   }
 
@@ -35,12 +51,16 @@ export async function getPlayerProfile(userId: string): Promise<PlayerProfile | 
 
   const supabase = requireSupabase()
   const { data, error } = await supabase
-    .from('player_profiles')
-    .select('id, email, full_name, first_name, role, gender')
+    .from('profiles')
+    .select('id, email, name, username, role, player_id, gender')
     .eq('id', userId)
     .maybeSingle()
 
   if (error) {
+    if (isMissingPlayerProfilesTable(error.message)) {
+      return null
+    }
+
     throw new Error(error.message)
   }
 

@@ -4,19 +4,24 @@ import type { PlayerProfile } from '../types/players'
 interface PlayerProfileRow {
   id: string
   email: string
-  full_name: string
-  first_name: string
+  name: string
+  username: string
   role: UserRole
+  player_id: string | null
   gender: 'lady' | 'man' | null
 }
 
 export function mapPlayerProfile(row: PlayerProfileRow): PlayerProfile {
+  const firstName = row.name.trim().split(/\s+/)[0] || row.name
+
   return {
     id: row.id,
     email: row.email,
-    fullName: row.full_name,
-    firstName: row.first_name,
+    username: row.username,
+    fullName: row.name,
+    firstName,
     role: row.role,
+    playerId: row.player_id ?? undefined,
     gender: row.gender ?? undefined,
   }
 }
@@ -27,6 +32,6 @@ export function mapAuthUser(profile: PlayerProfile): AuthUser {
     email: profile.email,
     name: profile.fullName,
     role: profile.role,
-    playerId: profile.role === 'player' ? profile.id : undefined,
+    playerId: profile.role === 'player' ? profile.playerId ?? profile.id : undefined,
   }
 }
