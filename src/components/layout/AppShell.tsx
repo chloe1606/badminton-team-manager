@@ -5,6 +5,7 @@ import { Button } from '../ui/Button'
 const baseNavItems = [
   { to: '/', label: 'Dashboard', adminOnly: false },
   { to: '/matches', label: 'Matches', adminOnly: false },
+  { to: '/results', label: 'Results', adminOnly: false },
   { to: '/club-contacts', label: 'Club Contacts', adminOnly: false },
   { to: '/user-settings', label: 'User Settings', adminOnly: false },
   { to: '/admin/users', label: 'Users', adminOnly: true },
