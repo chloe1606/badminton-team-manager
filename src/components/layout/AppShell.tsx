@@ -20,7 +20,7 @@ export function AppShell() {
       <header className="app-header">
         <div className="container header-content">
           <Link className="brand" to="/">
-            Badminton Team Manager
+            🏸 Badminton Team Manager
           </Link>
           <nav aria-label="Primary" className="app-nav">
             <ul>
