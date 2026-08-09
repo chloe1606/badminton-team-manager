@@ -4,7 +4,6 @@ import { useAuth } from '../auth/hooks/useAuth'
 import { Button } from '../components/ui/Button'
 import { Card } from '../components/ui/Card'
 import { clubDirectory } from '../data/clubContacts'
-import { samplePlayers } from '../data/players'
 import type {
   MatchDetailsInput,
   MatchFormatConfig,
@@ -15,6 +14,7 @@ import type {
   MatchResult,
   TeamSettings,
 } from '../types/matches'
+import type { PlayerProfile } from '../types/players'
 import { createMatchesCalendarIcs, downloadIcs, type CalendarFixture } from '../utils/calendar'
 import {
   deriveRubberWinner,
@@ -58,16 +58,6 @@ function cloneFormat(format: MatchFormatConfig): MatchFormatConfig {
     squad: { ...format.squad },
     scoring: { ...format.scoring },
   }
-}
-
-const playersById = new Map(samplePlayers.map((player) => [player.id, player] as const))
-
-function getPlayer(playerId: string) {
-  return playersById.get(playerId)
-}
-
-function getPlayerGender(playerId: string): string | undefined {
-  return getPlayer(playerId)?.gender
 }
 
 function toDateTimeLocalValue(value?: string): string {
@@ -369,20 +359,24 @@ function MatchResultEditor({
   )
 }
 
-function getPlayerName(playerId: string): string {
-  return getPlayer(playerId)?.name ?? 'Unknown player'
-}
+type PlayerLookup = Map<string, PlayerProfile>
 
-function getPlayerSummary(playerId: string): string {
-  return getPlayerName(playerId)
+function createPlayerGenderLookup(playersById: PlayerLookup): Map<string, { gender: 'lady' | 'man' }> {
+  return new Map(
+    [...playersById.entries()]
+      .filter(([, player]) => Boolean(player.gender))
+      .map(([playerId, player]) => [playerId, { gender: player.gender as 'lady' | 'man' }] as const),
+  )
 }
 
 function MatchPlayerSelectionEditor({
   match,
+  playersById,
   onSave,
   onSaveSuccess,
 }: {
   match: MatchRecord
+  playersById: PlayerLookup
   onSave: (
     matchId: string,
     playerIds: string[],
@@ -391,15 +385,19 @@ function MatchPlayerSelectionEditor({
   onSaveSuccess?: () => void
 }) {
   const availablePlayers = useMemo(
-    () => samplePlayers.filter((player) => (match.availablePlayerIds ?? []).includes(player.id)),
-    [match.availablePlayerIds],
+    () =>
+      (match.availablePlayerIds ?? [])
+        .map((playerId) => playersById.get(playerId))
+        .filter((player): player is PlayerProfile => Boolean(player)),
+    [match.availablePlayerIds, playersById],
   )
+  const playerGenderLookup = useMemo(() => createPlayerGenderLookup(playersById), [playersById])
   const [selectedPlayerIds, setSelectedPlayerIds] = useState(match.assignedPlayerIds ?? [])
   const [assignedPairs, setAssignedPairs] = useState<MatchPairAssignment[]>(() =>
     normalizeAssignedPairs(
       match.assignedPairs && match.assignedPairs.some((pair) => pair.playerIds.length > 0)
         ? match.assignedPairs
-        : suggestAssignedPairs(match.assignedPlayerIds ?? [], match.format, playersById),
+        : suggestAssignedPairs(match.assignedPlayerIds ?? [], match.format, playerGenderLookup),
       match.format,
     ),
   )
@@ -433,7 +431,7 @@ function MatchPlayerSelectionEditor({
       normalizeAssignedPairs(
         match.assignedPairs && match.assignedPairs.some((pair) => pair.playerIds.length > 0)
           ? match.assignedPairs
-          : suggestAssignedPairs(nextSelectedPlayerIds, match.format, playersById),
+          : suggestAssignedPairs(nextSelectedPlayerIds, match.format, playerGenderLookup),
         match.format,
       ).map((pair) => ({
         ...pair,
@@ -442,7 +440,7 @@ function MatchPlayerSelectionEditor({
     )
     setError('')
     setStatus('')
-  }, [availablePlayers, match.assignedPlayerIds])
+  }, [availablePlayers, match.assignedPlayerIds, match.assignedPairs, match.format, playerGenderLookup])
 
   function togglePlayer(playerId: string, checked: boolean) {
     setError('')
@@ -476,13 +474,13 @@ function MatchPlayerSelectionEditor({
       return true
     }
 
-    const player = getPlayer(playerId)
+    const player = playersById.get(playerId)
     return positionIndex === 0 ? player?.gender === 'lady' : player?.gender === 'man'
   }
 
   function assignPlayerToSlot(playerId: string, pairSlot: string, positionIndex: number) {
     if (!canDropPlayerIntoSlot(playerId, positionIndex)) {
-      setError(`Drop ${getPlayerName(playerId)} into a matching ${getSlotLabel(positionIndex).toLowerCase()} slot.`)
+      setError(`Drop ${playersById.get(playerId)?.fullName ?? 'this player'} into a matching ${getSlotLabel(positionIndex).toLowerCase()} slot.`)
       return
     }
 
@@ -503,7 +501,7 @@ function MatchPlayerSelectionEditor({
 
           const otherIndex = positionIndex === 0 ? 1 : 0
           if (nextPlayerIds[otherIndex] === playerId) {
-            nextPlayerIds[otherIndex] = undefined as unknown as string
+            nextPlayerIds.splice(otherIndex, 1)
           }
 
           return {
@@ -567,8 +565,8 @@ function MatchPlayerSelectionEditor({
               type="checkbox"
               onChange={(event) => togglePlayer(player.id, event.target.checked)}
             />
-            <span className={`player-gender-indicator player-gender-indicator--${player.gender}`}>
-              {player.name}
+            <span className={`player-gender-indicator player-gender-indicator--${player.gender ?? ''}`}>
+              {player.fullName}
             </span>
           </label>
         )
@@ -590,13 +588,13 @@ function MatchPlayerSelectionEditor({
             {unassignedSelectedPlayers.map((player) => (
               <button
                 key={player.id}
-                className={`player-pill player-pill--${player.gender}`}
+                className={`player-pill player-pill--${player.gender ?? 'lady'}`}
                 draggable
                 type="button"
                 onDragStart={() => setDraggedPlayerId(player.id)}
                 onDragEnd={() => setDraggedPlayerId(null)}
               >
-                {player.name}
+                {player.fullName}
               </button>
             ))}
           </div>
@@ -631,7 +629,7 @@ function MatchPlayerSelectionEditor({
                       <span className="muted">{getSlotLabel(positionIndex)}</span>
                       {playerId ? (
                         <div className="pair-drop-zone-content">
-                          <span className={`player-gender-indicator player-gender-indicator--${getPlayerGender(playerId) ?? ''}`}>{getPlayerSummary(playerId)}</span>
+                          <span className={`player-gender-indicator player-gender-indicator--${playersById.get(playerId)?.gender ?? ''}`}>{playersById.get(playerId)?.fullName ?? 'Unknown player'}</span>
                           <Button type="button" variant="ghost" onClick={() => clearSlot(pair.pairSlot, positionIndex)}>
                             Clear
                           </Button>
@@ -670,9 +668,11 @@ function MatchPlayerSelectionEditor({
 
 function SelectPlayersPanel({
   match,
+  playersById,
   onSave,
 }: {
   match: MatchRecord
+  playersById: PlayerLookup
   onSave: (
     matchId: string,
     playerIds: string[],
@@ -691,7 +691,7 @@ function SelectPlayersPanel({
     <details ref={detailsRef}>
       <summary className="details-summary">Select players</summary>
       <div className="details-panel">
-        <MatchPlayerSelectionEditor match={match} onSave={onSave} onSaveSuccess={handleSaveSuccess} />
+        <MatchPlayerSelectionEditor match={match} playersById={playersById} onSave={onSave} onSaveSuccess={handleSaveSuccess} />
       </div>
     </details>
   )
@@ -699,9 +699,11 @@ function SelectPlayersPanel({
 
 function AdminAvailabilityPanel({
   match,
+  players,
   onToggleAvailability,
 }: {
   match: MatchRecord
+  players: PlayerProfile[]
   onToggleAvailability: (matchId: string, playerId: string, isAvailable: boolean) => void
 }) {
   const availablePlayerIdSet = new Set(match.availablePlayerIds ?? [])
@@ -714,7 +716,7 @@ function AdminAvailabilityPanel({
           Mark players available or unavailable if they have not updated their availability yet.
         </p>
         <div className="stack">
-          {samplePlayers.map((player) => {
+          {players.map((player) => {
             const isAvailable = availablePlayerIdSet.has(player.id)
             return (
               <label className="checkbox-row" key={player.id}>
@@ -725,8 +727,8 @@ function AdminAvailabilityPanel({
                   }
                   type="checkbox"
                 />
-                <span className={`player-gender-indicator player-gender-indicator--${player.gender}`}>
-                  {player.name}
+                <span className={`player-gender-indicator player-gender-indicator--${player.gender ?? ''}`}>
+                  {player.fullName}
                 </span>
               </label>
             )
@@ -1032,6 +1034,8 @@ export function MatchesPage() {
     addMatch,
     assignMatchPlayers,
     matches,
+    players,
+    playersById,
     removeMatch,
     teamSettings,
     updateMatch,
@@ -1222,7 +1226,7 @@ export function MatchesPage() {
                     <dt>Available</dt>
                     <dd>
                       {availablePlayerIds.length > 0
-                        ? availablePlayerIds.map(getPlayerName).join(', ')
+                        ? availablePlayerIds.map((playerId) => playersById.get(playerId)?.fullName ?? 'Unknown player').join(', ')
                         : <span className="muted">None recorded</span>}
                     </dd>
                   </div>
@@ -1230,7 +1234,7 @@ export function MatchesPage() {
                     <dt>Selected</dt>
                     <dd>
                       {assignedPlayerIds.length > 0
-                        ? assignedPlayerIds.map(getPlayerName).join(', ')
+                        ? assignedPlayerIds.map((playerId) => playersById.get(playerId)?.fullName ?? 'Unknown player').join(', ')
                         : <span className="muted">None selected</span>}
                       {match.isIncompleteTeam ? (
                         <span className="muted"> · Incomplete team</span>
@@ -1294,9 +1298,10 @@ export function MatchesPage() {
                   />
                   <AdminAvailabilityPanel
                     match={match}
+                    players={players}
                     onToggleAvailability={updateMatchAvailability}
                   />
-                  <SelectPlayersPanel match={match} onSave={assignMatchPlayers} />
+                  <SelectPlayersPanel match={match} playersById={playersById} onSave={assignMatchPlayers} />
                   <MatchResultPanel match={match} onSave={updateMatchResult} />
                 </div>
               ) : null}

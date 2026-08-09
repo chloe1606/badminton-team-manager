@@ -3,6 +3,7 @@ import { AppShell } from '../components/layout/AppShell'
 import { AdminRoute } from '../components/routing/AdminRoute'
 import { ProtectedRoute } from '../components/routing/ProtectedRoute'
 import { ClubContactsPage } from '../pages/ClubContactsPage'
+import { AdminUsersPage } from '../pages/AdminUsersPage'
 import { DashboardPage } from '../pages/DashboardPage'
 import { FeaturePage } from '../pages/FeaturePage'
 import { LoginPage } from '../pages/LoginPage'
@@ -53,6 +54,10 @@ export const appRouter = createBrowserRouter([
               {
                 path: '/settings',
                 element: <SettingsPage />,
+              },
+              {
+                path: '/admin/users',
+                element: <AdminUsersPage />,
               },
             ],
           },

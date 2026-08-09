@@ -4,11 +4,10 @@ import { useAuth } from '../auth/hooks/useAuth'
 import { Button } from '../components/ui/Button'
 import { Card } from '../components/ui/Card'
 import { Input } from '../components/ui/Input'
-import { samplePlayerLogins } from '../data/players'
 
 export function LoginPage() {
   const { isAuthenticated, login, isLoading } = useAuth()
-  const [username, setUsername] = useState('')
+  const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const navigate = useNavigate()
@@ -23,16 +22,16 @@ export function LoginPage() {
     event.preventDefault()
     setError('')
 
-    if (!username.trim() || !password.trim()) {
-      setError('Username and password are required.')
+    if (!email.trim() || !password.trim()) {
+      setError('Email and password are required.')
       return
     }
 
     try {
-      await login({ username: username.trim(), password })
+      await login({ email: email.trim(), password })
       navigate(from, { replace: true })
-    } catch {
-      setError('Unable to log in. Please try again.')
+    } catch (nextError) {
+      setError(nextError instanceof Error ? nextError.message : 'Unable to log in. Please try again.')
     }
   }
 
@@ -40,31 +39,16 @@ export function LoginPage() {
     <main className="auth-layout">
       <Card className="auth-card" aria-labelledby="login-heading">
         <h1 id="login-heading">Badminton Team Manager</h1>
-        <p className="muted">Sign in to access team planning and attendance tools.</p>
-        <div className="stack stack-tight muted" style={{ fontSize: '0.85em' }}>
-          <p style={{ margin: 0 }}>
-            <strong>Admin:</strong> admin / admin123
-          </p>
-          <div>
-            <strong>Sample players:</strong>
-            <ul className="detail-list">
-              {samplePlayerLogins.map((player) => (
-                <li key={player.id}>
-                  {player.name}: {player.username} / {player.password}
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
+        <p className="muted">Sign in with your Supabase email address and password.</p>
         <form className="stack" onSubmit={handleSubmit} noValidate>
-          <label htmlFor="username">Username</label>
+          <label htmlFor="email">Email address</label>
           <Input
-            autoComplete="username"
-            id="username"
-            onChange={(event) => setUsername(event.target.value)}
+            autoComplete="email"
+            id="email"
+            onChange={(event) => setEmail(event.target.value)}
             required
-            type="text"
-            value={username}
+            type="email"
+            value={email}
           />
 
           <label htmlFor="password">Password</label>

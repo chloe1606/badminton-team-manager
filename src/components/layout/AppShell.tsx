@@ -7,6 +7,7 @@ const baseNavItems = [
   { to: '/members', label: 'Members', adminOnly: false },
   { to: '/matches', label: 'Matches', adminOnly: false },
   { to: '/club-contacts', label: 'Club Contacts', adminOnly: false },
+  { to: '/admin/users', label: 'Users', adminOnly: true },
   { to: '/settings', label: 'Settings', adminOnly: true },
 ]
 

@@ -3,13 +3,13 @@ export type UserRole = 'admin' | 'player'
 export interface AuthUser {
   id: string
   name: string
-  username: string
+  email: string
   role: UserRole
   playerId?: string
 }
 
 export interface LoginCredentials {
-  username: string
+  email: string
   password: string
 }
 
@@ -17,4 +17,5 @@ export interface AuthService {
   getCurrentUser(): Promise<AuthUser | null>
   login(credentials: LoginCredentials): Promise<AuthUser>
   logout(): Promise<void>
+  onAuthStateChange?: (callback: (user: AuthUser | null) => void) => { unsubscribe: () => void }
 }
