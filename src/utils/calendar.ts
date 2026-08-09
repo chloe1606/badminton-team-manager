@@ -6,6 +6,13 @@ export interface CalendarFixture {
   venueName: string
   venueAddress: string
   description?: string
+  reminders?: CalendarReminder[]
+}
+
+export interface CalendarReminder {
+  minutesBefore: number
+  action: 'DISPLAY'
+  description: string
 }
 
 const DEFAULT_EVENT_DURATION_MS = 2 * 60 * 60 * 1000
@@ -54,8 +61,26 @@ export function createMatchesCalendarIcs(fixtures: CalendarFixture[]): string {
       `SUMMARY:${escapeIcsText(fixture.title)}`,
       `LOCATION:${escapeIcsText(location)}`,
       `DESCRIPTION:${escapeIcsText(fixture.description ?? fixture.title)}`,
-      'END:VEVENT',
     )
+
+    // Add reminders (3 days before and day of match)
+    const reminders = fixture.reminders ?? [
+      { minutesBefore: 4320, action: 'DISPLAY' as const, description: 'Match in 3 days' },
+      { minutesBefore: 1440, action: 'DISPLAY' as const, description: 'Match tomorrow' },
+      { minutesBefore: 0, action: 'DISPLAY' as const, description: 'Match today' },
+    ]
+
+    reminders.forEach((reminder) => {
+      lines.push(
+        'BEGIN:VALARM',
+        `TRIGGER:-PT${reminder.minutesBefore}M`,
+        `ACTION:${reminder.action}`,
+        `DESCRIPTION:${escapeIcsText(reminder.description)}`,
+        'END:VALARM',
+      )
+    })
+
+    lines.push('END:VEVENT')
   })
 
   lines.push('END:VCALENDAR')
