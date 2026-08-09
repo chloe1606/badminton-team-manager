@@ -6,7 +6,8 @@ import {
   useState,
   type ReactNode,
 } from 'react'
-import { samplePlayers } from '../data/players'
+import { useAuth } from '../auth/hooks/useAuth'
+import { listPlayerProfiles } from '../services/playerService'
 import { defaultMatchFixtures, defaultTeamSettings } from '../data/matches'
 import type {
   MatchDetailsInput,
@@ -17,17 +18,29 @@ import type {
   NewMatchInput,
   TeamSettings,
 } from '../types/matches'
+import type { PlayerProfile } from '../types/players'
 import {
   normalizeAssignedPairs,
-  suggestAssignedPairs,
   validateMatchSelection,
 } from '../utils/matches'
+import type { PlayerGender } from '../types/matches'
 
 const MATCH_STORAGE_KEY = 'badminton-team-manager.matches'
 const SETTINGS_STORAGE_KEY = 'badminton-team-manager.team-settings'
 
+function createPlayerGenderLookup(playersById: Map<string, PlayerProfile>): Map<string, { gender: PlayerGender }> {
+  return new Map(
+    [...playersById.entries()]
+      .filter(([, player]) => Boolean(player.gender))
+      .map(([playerId, player]) => [playerId, { gender: player.gender as PlayerGender }] as const),
+  )
+}
+
 interface AppDataContextValue {
   matches: MatchRecord[]
+  players: PlayerProfile[]
+  playersById: Map<string, PlayerProfile>
+  isLoadingPlayers: boolean
   teamSettings: TeamSettings
   addMatch: (match: NewMatchInput) => void
   updateMatch: (matchId: string, match: MatchDetailsInput) => void
@@ -57,10 +70,6 @@ function readStoredValue<T>(key: string, fallbackValue: T): T {
     return fallbackValue
   }
 }
-
-const samplePlayersById = new Map(
-  samplePlayers.map((player) => [player.id, { gender: player.gender }] as const),
-)
 
 function cloneFormat(format: MatchFormatConfig): MatchFormatConfig {
   return {
@@ -105,17 +114,13 @@ function normalizeMatchRecord(match: MatchRecord): MatchRecord {
   const assignedPlayerIds = [...new Set(match.assignedPlayerIds ?? [])].filter((playerId) =>
     availablePlayerIds.includes(playerId),
   )
-  const assignedPairsSource =
-    match.assignedPairs && match.assignedPairs.length > 0
-      ? match.assignedPairs
-      : suggestAssignedPairs(assignedPlayerIds, format, samplePlayersById)
 
   return {
     ...match,
     location: match.location ?? 'away',
     availablePlayerIds,
     assignedPlayerIds,
-    assignedPairs: normalizeAssignedPairs(assignedPairsSource, format).map((pair) => ({
+    assignedPairs: normalizeAssignedPairs(match.assignedPairs, format).map((pair) => ({
       ...pair,
       playerIds: pair.playerIds.filter((playerId) => assignedPlayerIds.includes(playerId)),
     })),
@@ -135,17 +140,65 @@ function normalizeTeamSettings(settings: TeamSettings): TeamSettings {
   }
 }
 
+function normalizePlayersForMatchContext(players: PlayerProfile[]): PlayerProfile[] {
+  return players.map((player) => ({
+    ...player,
+    id: player.playerId ?? player.id,
+  }))
+}
+
 interface AppDataProviderProps {
   children: ReactNode
 }
 
 export function AppDataProvider({ children }: AppDataProviderProps) {
+  const { isAuthenticated } = useAuth()
   const [matches, setMatches] = useState<MatchRecord[]>(() =>
     readStoredValue(MATCH_STORAGE_KEY, defaultMatchFixtures).map(normalizeMatchRecord),
   )
+  const [players, setPlayers] = useState<PlayerProfile[]>([])
+  const [isLoadingPlayers, setIsLoadingPlayers] = useState(true)
   const [teamSettings, setTeamSettings] = useState<TeamSettings>(() =>
     normalizeTeamSettings(readStoredValue(SETTINGS_STORAGE_KEY, defaultTeamSettings)),
   )
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setPlayers([])
+      setIsLoadingPlayers(false)
+      return
+    }
+
+    let isActive = true
+    setIsLoadingPlayers(true)
+
+    listPlayerProfiles()
+      .then((profiles) => {
+        if (isActive) {
+          setPlayers(normalizePlayersForMatchContext(profiles))
+        }
+      })
+      .catch(() => {
+        if (isActive) {
+          setPlayers([])
+        }
+      })
+      .finally(() => {
+        if (isActive) {
+          setIsLoadingPlayers(false)
+        }
+      })
+
+    return () => {
+      isActive = false
+    }
+  }, [isAuthenticated])
+
+  const playersById = useMemo(
+    () => new Map(players.map((player) => [player.id, player] as const)),
+    [players],
+  )
+  const playerGenderLookup = useMemo(() => createPlayerGenderLookup(playersById), [playersById])
 
   useEffect(() => {
     window.localStorage.setItem(MATCH_STORAGE_KEY, JSON.stringify(matches))
@@ -158,11 +211,14 @@ export function AppDataProvider({ children }: AppDataProviderProps) {
   const value = useMemo<AppDataContextValue>(
     () => ({
       matches,
+      players,
+      playersById,
+      isLoadingPlayers,
       teamSettings,
       addMatch: (match: NewMatchInput) => {
         setMatches((currentMatches: MatchRecord[]) => [
           ...currentMatches,
-          normalizeMatchRecord({
+          {
             ...match,
             format: cloneFormat(match.format),
             availablePlayerIds: [],
@@ -170,7 +226,7 @@ export function AppDataProvider({ children }: AppDataProviderProps) {
             assignedPairs: normalizeAssignedPairs(undefined, match.format),
             id: crypto.randomUUID(),
             createdAt: new Date().toISOString(),
-          }),
+          },
         ])
       },
       updateMatch: (matchId: string, nextMatch: MatchDetailsInput) => {
@@ -241,7 +297,7 @@ export function AppDataProvider({ children }: AppDataProviderProps) {
             assignedPairs: nextAssignedPairs,
             availablePlayerIds: match.availablePlayerIds ?? [],
             format: match.format,
-            playersById: samplePlayersById,
+            playersById: playerGenderLookup,
             selectedPlayerIds: assignedPlayerIds,
           })
 
@@ -276,7 +332,7 @@ export function AppDataProvider({ children }: AppDataProviderProps) {
         setTeamSettings(normalizeTeamSettings(settings))
       },
     }),
-    [matches, teamSettings],
+    [isLoadingPlayers, matches, playerGenderLookup, players, playersById, teamSettings],
   )
 
   return <AppDataContext.Provider value={value}>{children}</AppDataContext.Provider>

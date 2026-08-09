@@ -3,18 +3,24 @@ import { AppShell } from '../components/layout/AppShell'
 import { AdminRoute } from '../components/routing/AdminRoute'
 import { ProtectedRoute } from '../components/routing/ProtectedRoute'
 import { ClubContactsPage } from '../pages/ClubContactsPage'
+import { AdminUsersPage } from '../pages/AdminUsersPage'
 import { DashboardPage } from '../pages/DashboardPage'
 import { FeaturePage } from '../pages/FeaturePage'
 import { LoginPage } from '../pages/LoginPage'
 import { MatchesPage } from '../pages/MatchesPage'
-import { MembersPage } from '../pages/MembersPage'
 import { NotFoundPage } from '../pages/NotFoundPage'
+import { SetPasswordPage } from '../pages/SetPasswordPage'
 import { SettingsPage } from '../pages/SettingsPage'
+import { UserSettingsPage } from '../pages/UserSettingsPage'
 
 export const appRouter = createBrowserRouter([
   {
     path: '/login',
     element: <LoginPage />,
+  },
+  {
+    path: '/set-password',
+    element: <SetPasswordPage />,
   },
   {
     element: <ProtectedRoute />,
@@ -25,10 +31,6 @@ export const appRouter = createBrowserRouter([
           {
             path: '/',
             element: <DashboardPage />,
-          },
-          {
-            path: '/members',
-            element: <MembersPage />,
           },
           {
             path: '/attendance',
@@ -48,11 +50,19 @@ export const appRouter = createBrowserRouter([
             element: <ClubContactsPage />,
           },
           {
+            path: '/user-settings',
+            element: <UserSettingsPage />,
+          },
+          {
             element: <AdminRoute />,
             children: [
               {
                 path: '/settings',
                 element: <SettingsPage />,
+              },
+              {
+                path: '/admin/users',
+                element: <AdminUsersPage />,
               },
             ],
           },
