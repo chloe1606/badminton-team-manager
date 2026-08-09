@@ -49,48 +49,47 @@ export function DashboardPage() {
             <p className="muted">Matches you have marked available for or been selected to play.</p>
           </div>
         </div>
-        <div className="overview-table-wrap">
-          <table className="overview-table">
-            <thead>
-              <tr>
-                <th className="col-num">#</th>
-                <th className="col-fixture">Fixture</th>
-                <th>Location</th>
-                <th>Date &amp; Time</th>
-                <th>Available?</th>
-                <th>Selected?</th>
-              </tr>
-            </thead>
-            <tbody>
-              {playerMatches.map((match, index) => {
-                const opponentClub = getClubById(clubDirectory, match.opponentClubId)
-                const opponentName = formatOpponentName(match, opponentClub)
-                const isAvailable = (match.availablePlayerIds ?? []).includes(playerId ?? '')
-                const isSelected = (match.assignedPlayerIds ?? []).includes(playerId ?? '')
+        {playerMatches.length > 0 ? (
+          <div className="dashboard-match-grid">
+            {playerMatches.map((match, index) => {
+              const opponentClub = getClubById(clubDirectory, match.opponentClubId)
+              const opponentName = formatOpponentName(match, opponentClub)
+              const isAvailable = (match.availablePlayerIds ?? []).includes(playerId ?? '')
+              const isSelected = (match.assignedPlayerIds ?? []).includes(playerId ?? '')
 
-                return (
-                  <tr key={match.id}>
-                    <td className="col-num">{index + 1}</td>
-                    <td className="col-fixture">{match.teamDisplayName} vs {opponentName}</td>
-                    <td>{match.location === 'home' ? 'Home' : 'Away'}</td>
-                    <td>{formatMatchDateRange(match.startAt)}</td>
-                    <td>{isAvailable ? 'Yes' : 'No'}</td>
-                    <td>{isSelected ? 'Yes' : 'No'}</td>
-                  </tr>
-                )
-              })}
-              {playerMatches.length === 0 && (
-                <tr>
-                  <td colSpan={6} className="muted">
-                    {playerId
-                      ? 'You are not currently available for or selected for any matches.'
-                      : 'This account is not linked to a player.'}
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+              return (
+                <section key={match.id} className="dashboard-match-card" aria-label={`Match ${index + 1}`}>
+                  <p className="eyebrow">Match {index + 1}</p>
+                  <h3 className="dashboard-match-title">{match.teamDisplayName} vs {opponentName}</h3>
+                  <dl className="dashboard-match-meta">
+                    <div>
+                      <dt>Location</dt>
+                      <dd>{match.location === 'home' ? 'Home' : 'Away'}</dd>
+                    </div>
+                    <div>
+                      <dt>Date and time</dt>
+                      <dd>{formatMatchDateRange(match.startAt)}</dd>
+                    </div>
+                    <div>
+                      <dt>Available</dt>
+                      <dd>{isAvailable ? 'Yes' : 'No'}</dd>
+                    </div>
+                    <div>
+                      <dt>Selected</dt>
+                      <dd>{isSelected ? 'Yes' : 'No'}</dd>
+                    </div>
+                  </dl>
+                </section>
+              )
+            })}
+          </div>
+        ) : (
+          <p className="muted">
+            {playerId
+              ? 'You are not currently available for or selected for any matches.'
+              : 'This account is not linked to a player.'}
+          </p>
+        )}
       </Card>
     </div>
   )
