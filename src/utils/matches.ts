@@ -307,7 +307,7 @@ export function getSeasonYear(date: Date): string {
   const year = date.getFullYear()
   const month = date.getMonth()
 
-  if (month >= 8) {
+  if (month >= 9) {
     return `${year}/${year + 1}`
   }
 
