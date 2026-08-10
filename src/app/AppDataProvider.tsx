@@ -25,8 +25,19 @@ import {
 } from '../utils/matches'
 import type { PlayerGender } from '../types/matches'
 
-const MATCH_STORAGE_KEY = 'badminton-team-manager.matches'
-const SETTINGS_STORAGE_KEY = 'badminton-team-manager.team-settings'
+const MATCH_STORAGE_KEY = 'badminton-team-manager.matches.v2'
+const SETTINGS_STORAGE_KEY = 'badminton-team-manager.team-settings.v2'
+
+const LEGACY_KEYS = [
+  'badminton-team-manager.matches',
+  'badminton-team-manager.team-settings',
+]
+
+function clearLegacyStorage() {
+  for (const key of LEGACY_KEYS) {
+    window.localStorage.removeItem(key)
+  }
+}
 
 function createPlayerGenderLookup(playersById: Map<string, PlayerProfile>): Map<string, { gender: PlayerGender }> {
   return new Map(
@@ -153,6 +164,10 @@ interface AppDataProviderProps {
 
 export function AppDataProvider({ children }: AppDataProviderProps) {
   const { isAuthenticated } = useAuth()
+
+  // Remove data stored under old key names so stale defaults don't persist
+  clearLegacyStorage()
+
   const [matches, setMatches] = useState<MatchRecord[]>(() =>
     readStoredValue(MATCH_STORAGE_KEY, defaultMatchFixtures).map(normalizeMatchRecord),
   )
