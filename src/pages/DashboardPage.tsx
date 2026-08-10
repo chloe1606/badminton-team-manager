@@ -3,9 +3,11 @@ import { useAppData } from '../app/AppDataProvider'
 import { useAuth } from '../auth/hooks/useAuth'
 import { Card } from '../components/ui/Card'
 import { clubDirectory } from '../data/clubContacts'
+import type { MatchRecord } from '../types/matches'
 import {
   formatOpponentName,
   getClubById,
+  isMatchExpired,
   sortMatchesChronologically,
 } from '../utils/matches'
 
@@ -17,30 +19,97 @@ function formatMatchDateRange(startAt: string): string {
   return formatter.format(new Date(startAt))
 }
 
+function formatMonthHeading(dateValue: string): string {
+  const formatter = new Intl.DateTimeFormat(undefined, { month: 'long', year: 'numeric' })
+  return formatter.format(new Date(dateValue))
+}
+
+interface CalendarMonthGroup {
+  monthKey: string
+  monthLabel: string
+  matches: MatchRecord[]
+}
+
 export function DashboardPage() {
   const { matches } = useAppData()
-  const { user } = useAuth()
+  const { isAdmin, user } = useAuth()
   const playerId = user?.playerId
+  const allMatches = useMemo(() => sortMatchesChronologically(matches), [matches])
+  const calendarMonthGroups = useMemo<CalendarMonthGroup[]>(() => {
+    const grouped = new Map<string, MatchRecord[]>()
+
+    for (const match of allMatches) {
+      const monthKey = match.startAt.slice(0, 7)
+      const monthMatches = grouped.get(monthKey)
+      if (monthMatches) {
+        monthMatches.push(match)
+      } else {
+        grouped.set(monthKey, [match])
+      }
+    }
+
+    return [...grouped.entries()].map(([monthKey, monthMatches]) => ({
+      monthKey,
+      monthLabel: formatMonthHeading(monthMatches[0].startAt),
+      matches: monthMatches,
+    }))
+  }, [allMatches])
   const playerMatches = useMemo(
     () =>
-      sortMatchesChronologically(matches).filter(
+      allMatches.filter(
         (match) =>
           playerId &&
+          !isMatchExpired(match) &&
+          match.matchType === 'Mixed 3' &&
+          match.divisionNumber === 3 &&
           ((match.availablePlayerIds ?? []).includes(playerId) ||
             (match.assignedPlayerIds ?? []).includes(playerId)),
       ),
-    [matches, playerId],
+    [allMatches, playerId],
   )
 
   return (
     <div className="stack">
       <Card>
         <h1>Team Dashboard</h1>
-        <p>
-          Welcome to your badminton team workspace. This dashboard is protected and only
-          visible to authenticated users.
-        </p>
+        <p>Welcome to your badminton team match summary.</p>
       </Card>
+
+      {isAdmin ? (
+        <Card>
+          <div className="card-heading">
+            <div>
+              <h2>All Matches Calendar</h2>
+              <p className="muted">All scheduled matches grouped by month.</p>
+            </div>
+          </div>
+          {calendarMonthGroups.length > 0 ? (
+            <div className="dashboard-calendar">
+              {calendarMonthGroups.map((monthGroup) => (
+                <section key={monthGroup.monthKey} className="dashboard-calendar-month">
+                  <h3 className="dashboard-calendar-month-title">{monthGroup.monthLabel}</h3>
+                  <div className="dashboard-calendar-list">
+                    {monthGroup.matches.map((match) => {
+                      const opponentClub = getClubById(clubDirectory, match.opponentClubId)
+                      const opponentName = formatOpponentName(match, opponentClub)
+                      return (
+                        <article key={match.id} className="dashboard-calendar-item">
+                          <p className="dashboard-calendar-time">{formatMatchDateRange(match.startAt)}</p>
+                          <p className="dashboard-calendar-title">
+                            {match.teamDisplayName} vs {opponentName}
+                          </p>
+                        </article>
+                      )
+                    })}
+                  </div>
+                </section>
+              ))}
+            </div>
+          ) : (
+            <p className="muted">No matches available.</p>
+          )}
+        </Card>
+      ) : null}
 
       <Card>
         <div className="card-heading">
@@ -86,7 +155,7 @@ export function DashboardPage() {
         ) : (
           <p className="muted">
             {playerId
-              ? 'You are not currently available for or selected for any matches.'
+              ? 'You are not currently available for or selected for any future matches.'
               : 'This account is not linked to a player.'}
           </p>
         )}
