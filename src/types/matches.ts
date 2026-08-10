@@ -83,6 +83,8 @@ export interface MatchPairAssignment {
 }
 
 export interface MatchDetailsInput {
+  matchType?: string
+  divisionNumber?: number
   location: MatchLocation
   opponentClubId: string
   opponentTeamNumber?: number
@@ -97,6 +99,8 @@ export type MatchLocation = 'home' | 'away'
 export interface MatchRecord {
   location: MatchLocation
   id: string
+  matchType?: string
+  divisionNumber?: number
   opponentClubId: string
   opponentTeamNumber?: number
   startAt: string
@@ -109,6 +113,7 @@ export interface MatchRecord {
   isIncompleteTeam?: boolean
   result?: MatchResult
   createdAt: string
+  updatedAt?: string
   teamDisplayName: string
   leagueName: string
   format: MatchFormatConfig

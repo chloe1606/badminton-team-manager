@@ -29,11 +29,26 @@ import {
   sortMatchesChronologically,
   summarizeMatchResult,
   validateRubberGames,
-  filterMatchesBySeason,
+  getSeasonYear,
   getCurrentSeason,
-  separateMatchesByStatus,
   calculateAdminStats,
+  isMatchExpired,
 } from '../utils/matches'
+
+interface SeasonSection {
+  season: string
+  matches: MatchRecord[]
+}
+
+const MATCH_TYPE_OPTIONS = [
+  'Mens 4',
+  'Mens 6',
+  'Ladies 4',
+  'Ladies 6',
+  'Mixed 4',
+  'Mixed 6',
+  'Composite',
+] as const
 
 interface GameDraft {
   ourScore: string
@@ -46,6 +61,8 @@ interface RubberDraft {
 }
 
 interface MatchDetailsDraft {
+  matchType: string
+  divisionNumber: string
   location: MatchLocation
   opponentClubId: string
   opponentTeamNumber: string
@@ -71,6 +88,8 @@ function toDateTimeLocalValue(value?: string): string {
 
 function createMatchDetailsDraft(match: MatchRecord): MatchDetailsDraft {
   return {
+    matchType: match.matchType ?? '',
+    divisionNumber: match.divisionNumber?.toString() ?? '',
     location: match.location,
     opponentClubId: match.opponentClubId,
     opponentTeamNumber: match.opponentTeamNumber?.toString() ?? '',
@@ -86,6 +105,11 @@ function validateMatchDetailsInput(draft: MatchDetailsDraft, teamSettings: TeamS
   error?: string
 } {
   const parsedTeamNumber = draft.opponentTeamNumber ? Number(draft.opponentTeamNumber) : undefined
+  const parsedDivisionNumber = draft.divisionNumber ? Number(draft.divisionNumber) : undefined
+
+  if (!draft.matchType.trim()) {
+    return { error: 'Enter a match type.' }
+  }
 
   if (!draft.opponentClubId) {
     return { error: 'Select an opponent club.' }
@@ -104,6 +128,13 @@ function validateMatchDetailsInput(draft: MatchDetailsDraft, teamSettings: TeamS
   }
 
   if (
+    parsedDivisionNumber !== undefined &&
+    (!Number.isInteger(parsedDivisionNumber) || parsedDivisionNumber < 1 || parsedDivisionNumber > 8)
+  ) {
+    return { error: 'Division number must be a whole number between 1 and 8.' }
+  }
+
+  if (
     parsedTeamNumber !== undefined &&
     (!Number.isInteger(parsedTeamNumber) || parsedTeamNumber < 1 || parsedTeamNumber > 5)
   ) {
@@ -116,6 +147,8 @@ function validateMatchDetailsInput(draft: MatchDetailsDraft, teamSettings: TeamS
 
   return {
     data: {
+      matchType: draft.matchType.trim(),
+      divisionNumber: parsedDivisionNumber,
       location: draft.location,
       opponentClubId: draft.opponentClubId,
       opponentTeamNumber: parsedTeamNumber,
@@ -189,7 +222,7 @@ function MatchResultEditor({
   onSaveSuccess,
 }: {
   match: MatchRecord
-  onSave: (matchId: string, result?: MatchResult) => void
+  onSave: (matchId: string, result?: MatchResult) => Promise<void>
   onSaveSuccess: () => void
 }) {
   const [rubbers, setRubbers] = useState(() => createRubberDrafts(match.result, match.format))
@@ -224,7 +257,7 @@ function MatchResultEditor({
     )
   }
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setError('')
     setStatus('')
@@ -280,17 +313,21 @@ function MatchResultEditor({
 
     const hasScores = parsedRubbers.some((rubber) => rubber.games.length > 0)
     const trimmedNotes = notes.trim()
-    onSave(
-      match.id,
-      hasScores || trimmedNotes
-        ? {
-            rubbers: parsedRubbers,
-            notes: trimmedNotes || undefined,
-          }
-        : undefined,
-    )
-    setStatus('Results saved.')
-    onSaveSuccess()
+    try {
+      await onSave(
+        match.id,
+        hasScores || trimmedNotes
+          ? {
+              rubbers: parsedRubbers,
+              notes: trimmedNotes || undefined,
+            }
+          : undefined,
+      )
+      setStatus('Results saved.')
+      onSaveSuccess()
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : 'Unable to save results.')
+    }
   }
 
   return (
@@ -386,7 +423,7 @@ function MatchPlayerSelectionEditor({
     matchId: string,
     playerIds: string[],
     assignedPairs: MatchPairAssignment[],
-  ) => string | undefined
+  ) => Promise<string | undefined>
   onSaveSuccess?: () => void
 }) {
   const availablePlayers = useMemo(
@@ -534,19 +571,23 @@ function MatchPlayerSelectionEditor({
     )
   }
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setError('')
     setStatus('')
 
-    const nextError = onSave(match.id, selectedPlayerIds, assignedPairs)
-    if (nextError) {
-      setError(nextError)
-      return
-    }
+    try {
+      const nextError = await onSave(match.id, selectedPlayerIds, assignedPairs)
+      if (nextError) {
+        setError(nextError)
+        return
+      }
 
-    setStatus('Players selected for match.')
-    onSaveSuccess?.()
+      setStatus('Players selected for match.')
+      onSaveSuccess?.()
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : 'Unable to save player selections.')
+    }
   }
 
   if (availablePlayers.length === 0) {
@@ -682,7 +723,7 @@ function SelectPlayersPanel({
     matchId: string,
     playerIds: string[],
     assignedPairs: MatchPairAssignment[],
-  ) => string | undefined
+  ) => Promise<string | undefined>
 }) {
   const detailsRef = useRef<HTMLDetailsElement>(null)
 
@@ -751,8 +792,8 @@ function MatchDetailsPanel({
   teamSettings,
 }: {
   match: MatchRecord
-  onDelete: (matchId: string) => void
-  onSave: (matchId: string, match: MatchDetailsInput) => void
+  onDelete: (matchId: string) => Promise<void>
+  onSave: (matchId: string, match: MatchDetailsInput) => Promise<void>
   teamSettings: TeamSettings
 }) {
   const detailsRef = useRef<HTMLDetailsElement>(null)
@@ -784,7 +825,7 @@ function MatchResultPanel({
   onSave,
 }: {
   match: MatchRecord
-  onSave: (matchId: string, result?: MatchResult) => void
+  onSave: (matchId: string, result?: MatchResult) => Promise<void>
 }) {
   const detailsRef = useRef<HTMLDetailsElement>(null)
 
@@ -812,8 +853,8 @@ function MatchDetailsEditor({
   teamSettings,
 }: {
   match: MatchRecord
-  onDelete: (matchId: string) => void
-  onSave: (matchId: string, match: MatchDetailsInput) => void
+  onDelete: (matchId: string) => Promise<void>
+  onSave: (matchId: string, match: MatchDetailsInput) => Promise<void>
   onSaveSuccess: () => void
   teamSettings: TeamSettings
 }) {
@@ -864,7 +905,7 @@ function MatchDetailsEditor({
     }
   }, [availableAwayVenues, draft.location, draft.venueId, teamSettings.profile.homeVenueId])
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setError('')
     setStatus('')
@@ -876,22 +917,72 @@ function MatchDetailsEditor({
       return
     }
 
-    onSave(match.id, data)
-    setStatus('Match updated.')
-    onSaveSuccess()
+    try {
+      await onSave(match.id, data)
+      setStatus('Match updated.')
+      onSaveSuccess()
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : 'Unable to save match.')
+    }
   }
 
-  function handleRemove() {
+  async function handleRemove() {
     if (!window.confirm('Remove this match?')) {
       return
     }
 
-    onDelete(match.id)
+    try {
+      await onDelete(match.id)
+    } catch (deleteError) {
+      setError(deleteError instanceof Error ? deleteError.message : 'Unable to remove match.')
+    }
   }
 
   return (
     <form className="stack" onSubmit={handleSubmit} noValidate>
       <div className="form-grid">
+        <label className="field">
+          <span>Match type</span>
+          <select
+            className="input"
+            value={draft.matchType}
+            onChange={(event) =>
+              setDraft((currentDraft) => ({
+                ...currentDraft,
+                matchType: event.target.value,
+              }))
+            }
+          >
+            <option value="">Select match type</option>
+            {MATCH_TYPE_OPTIONS.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className="field">
+          <span>Division number</span>
+          <select
+            className="input"
+            value={draft.divisionNumber}
+            onChange={(event) =>
+              setDraft((currentDraft) => ({
+                ...currentDraft,
+                divisionNumber: event.target.value,
+              }))
+            }
+          >
+            <option value="">Select division</option>
+            {[1, 2, 3, 4, 5, 6, 7, 8].map((division) => (
+              <option key={division} value={division}>
+                {division}
+              </option>
+            ))}
+          </select>
+        </label>
+
         <label className="field">
           <span>Opponent club</span>
           <select
@@ -914,23 +1005,6 @@ function MatchDetailsEditor({
         </label>
 
         <label className="field">
-          <span>Location</span>
-          <select
-            className="input"
-            value={draft.location}
-            onChange={(event) =>
-              setDraft((currentDraft) => ({
-                ...currentDraft,
-                location: event.target.value as MatchLocation,
-              }))
-            }
-          >
-            <option value="home">Home</option>
-            <option value="away">Away</option>
-          </select>
-        </label>
-
-        <label className="field">
           <span>Opponent team number</span>
           <select
             className="input"
@@ -948,6 +1022,23 @@ function MatchDetailsEditor({
                 {teamNumber}
               </option>
             ))}
+          </select>
+        </label>
+
+        <label className="field">
+          <span>Location</span>
+          <select
+            className="input"
+            value={draft.location}
+            onChange={(event) =>
+              setDraft((currentDraft) => ({
+                ...currentDraft,
+                location: event.target.value as MatchLocation,
+              }))
+            }
+          >
+            <option value="home">Home</option>
+            <option value="away">Away</option>
           </select>
         </label>
 
@@ -1038,7 +1129,9 @@ export function MatchesPage() {
   const {
     addMatch,
     assignMatchPlayers,
+    isLoadingMatches,
     matches,
+    matchesError,
     players,
     playersById,
     removeMatch,
@@ -1048,6 +1141,8 @@ export function MatchesPage() {
     updateMatchResult,
   } = useAppData()
   const { addNotification } = useNotifications()
+  const [matchType, setMatchType] = useState('Mixed 6')
+  const [divisionNumber, setDivisionNumber] = useState('3')
   const [opponentClubId, setOpponentClubId] = useState('')
   const [location, setLocation] = useState<MatchLocation>('away')
   const [opponentTeamNumber, setOpponentTeamNumber] = useState('')
@@ -1057,27 +1152,28 @@ export function MatchesPage() {
   const [notes, setNotes] = useState('')
   const [error, setError] = useState('')
   const [status, setStatus] = useState('')
+  const [collapsedSeasons, setCollapsedSeasons] = useState<Record<string, boolean>>({})
 
-  function handleAddMatch(input: Parameters<typeof addMatch>[0]) {
-    addMatch(input)
+  async function handleAddMatch(input: Parameters<typeof addMatch>[0]) {
+    await addMatch(input)
     const club = getClubById(clubDirectory, input.opponentClubId)
     const opponentLabel = club?.name ?? input.opponentClubId
     addNotification('match_added', 'Match added', `New fixture vs ${opponentLabel} added.`, '🏸')
   }
 
-  function handleUpdateMatch(matchId: string, input: MatchDetailsInput) {
-    updateMatch(matchId, input)
+  async function handleUpdateMatch(matchId: string, input: MatchDetailsInput) {
+    await updateMatch(matchId, input)
     const club = getClubById(clubDirectory, input.opponentClubId)
     const opponentLabel = club?.name ?? input.opponentClubId
     addNotification('match_time_changed', 'Match updated', `Fixture vs ${opponentLabel} has been updated.`, '🕐')
   }
 
-  function handleAssignMatchPlayers(
+  async function handleAssignMatchPlayers(
     matchId: string,
     playerIds: string[],
     assignedPairs: MatchPairAssignment[],
-  ): string | undefined {
-    const error = assignMatchPlayers(matchId, playerIds, assignedPairs)
+  ): Promise<string | undefined> {
+    const error = await assignMatchPlayers(matchId, playerIds, assignedPairs)
     if (!error) {
       addNotification('player_selected', 'Team selected', `${playerIds.length} player${playerIds.length !== 1 ? 's' : ''} selected for match.`, '👤')
     }
@@ -1085,16 +1181,33 @@ export function MatchesPage() {
   }
   const currentSeason = useMemo(() => getCurrentSeason(), [])
   const sortedMatches = useMemo(() => sortMatchesChronologically(matches), [matches])
-  const seasonMatches = useMemo(() => filterMatchesBySeason(sortedMatches, currentSeason), [sortedMatches, currentSeason])
-  const { current: currentMatches, finished: finishedMatches } = useMemo(
-    () => {
-      const separated = separateMatchesByStatus(seasonMatches)
-      return {
-        current: separated.current,
-        finished: separated.finished.sort((a, b) => new Date(b.startAt).getTime() - new Date(a.startAt).getTime()),
+  const seasonSections = useMemo<SeasonSection[]>(() => {
+    const seasonMap = new Map<string, MatchRecord[]>()
+
+    for (const match of sortedMatches) {
+      const season = getSeasonYear(new Date(match.startAt))
+      const seasonMatches = seasonMap.get(season)
+      if (seasonMatches) {
+        seasonMatches.push(match)
+      } else {
+        seasonMap.set(season, [match])
       }
-    },
-    [seasonMatches],
+    }
+
+    return [...seasonMap.entries()]
+      .sort(([leftSeason], [rightSeason]) => leftSeason.localeCompare(rightSeason))
+      .map(([season, seasonMatches]) => ({ season, matches: seasonMatches }))
+  }, [sortedMatches])
+  const currentAndFutureSeasonMatches = useMemo(
+    () =>
+      seasonSections
+        .filter((section) => section.season >= currentSeason)
+        .flatMap((section) => section.matches),
+    [currentSeason, seasonSections],
+  )
+  const adminStats = useMemo(
+    () => calculateAdminStats(currentAndFutureSeasonMatches),
+    [currentAndFutureSeasonMatches],
   )
   const teamDisplayName = useMemo(
     () => formatTeamDisplayName(teamSettings.profile),
@@ -1113,7 +1226,25 @@ export function MatchesPage() {
     [selectedHomeClub, teamSettings.profile.homeVenueId],
   )
   const availableAwayVenues = selectedClub?.addresses ?? []
-  const adminStats = useMemo(() => calculateAdminStats(currentMatches), [currentMatches])
+
+  useEffect(() => {
+    setCollapsedSeasons((currentCollapsedSeasons) => {
+      const nextCollapsedSeasons: Record<string, boolean> = {}
+
+      for (const section of seasonSections) {
+        nextCollapsedSeasons[section.season] =
+          currentCollapsedSeasons[section.season] ?? section.season < currentSeason
+      }
+
+      const hasChanges =
+        Object.keys(nextCollapsedSeasons).length !== Object.keys(currentCollapsedSeasons).length ||
+        Object.entries(nextCollapsedSeasons).some(
+          ([season, isCollapsed]) => currentCollapsedSeasons[season] !== isCollapsed,
+        )
+
+      return hasChanges ? nextCollapsedSeasons : currentCollapsedSeasons
+    })
+  }, [currentSeason, seasonSections])
 
   useEffect(() => {
     if (location === 'home') {
@@ -1132,7 +1263,7 @@ export function MatchesPage() {
   }, [availableAwayVenues, location, teamSettings.profile.homeVenueId, venueId])
 
   function exportMatch(matchId: string) {
-    const match = seasonMatches.find((fixture) => fixture.id === matchId)
+    const match = sortedMatches.find((fixture) => fixture.id === matchId)
     if (!match) {
       return
     }
@@ -1143,16 +1274,25 @@ export function MatchesPage() {
   function exportAllMatches() {
     downloadIcs(
       'badminton-match-fixtures.ics',
-      createMatchesCalendarIcs(seasonMatches.map((match) => createCalendarFixture(match, teamSettings))),
+      createMatchesCalendarIcs(sortedMatches.map((match) => createCalendarFixture(match, teamSettings))),
     )
   }
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  function toggleSeason(season: string) {
+    setCollapsedSeasons((currentCollapsedSeasons) => ({
+      ...currentCollapsedSeasons,
+      [season]: !currentCollapsedSeasons[season],
+    }))
+  }
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setError('')
     setStatus('')
 
     const { data, error: nextError } = validateMatchDetailsInput({
+      matchType,
+      divisionNumber,
       location,
       opponentClubId,
       opponentTeamNumber,
@@ -1167,21 +1307,27 @@ export function MatchesPage() {
       return
     }
 
-    handleAddMatch({
-      ...data,
-      teamDisplayName,
-      leagueName: teamSettings.profile.leagueName.trim(),
-      format: cloneFormat(teamSettings.matchFormat),
-    })
+    try {
+      await handleAddMatch({
+        ...data,
+        teamDisplayName,
+        leagueName: teamSettings.profile.leagueName.trim(),
+        format: cloneFormat(teamSettings.matchFormat),
+      })
 
-    setOpponentClubId('')
-    setLocation('away')
-    setOpponentTeamNumber('')
-    setVenueId('')
-    setStartAt('')
-    setEndAt('')
-    setNotes('')
-    setStatus('Match added.')
+      setOpponentClubId('')
+      setLocation('away')
+      setMatchType('Mixed 6')
+      setDivisionNumber('3')
+      setOpponentTeamNumber('')
+      setVenueId('')
+      setStartAt('')
+      setEndAt('')
+      setNotes('')
+      setStatus('Match added.')
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : 'Unable to add match.')
+    }
   }
 
   return (
@@ -1242,255 +1388,274 @@ export function MatchesPage() {
       ) : null}
 
       <section className="stack" aria-label="Match list">
-        {currentMatches.length > 0 ? (
+        {matchesError ? <p className="error-text">{matchesError}</p> : null}
+        {isLoadingMatches ? <p className="muted">Loading matches…</p> : null}
+        {seasonSections.length > 0 ? (
           <>
-            <div className="season-label">Season {currentSeason}</div>
-            {currentMatches.map((match, index) => {
-          const club = getClubById(clubDirectory, match.opponentClubId)
-          const venueClub = getVenueClub(match, teamSettings)
-          const address = getAddressById(venueClub, match.venueId)
-          const opponentName = formatOpponentName(match, club)
-          const resultSummary = summarizeMatchResult(match.result, match.format)
-          const pendingRubbers = match.format.numberOfRubbers - resultSummary.completedRubbers
-          const availablePlayerIds = match.availablePlayerIds ?? []
-          const assignedPlayerIds = match.assignedPlayerIds ?? []
-          const isCurrentPlayerAvailable = user?.playerId
-            ? availablePlayerIds.includes(user.playerId)
-            : false
+            {seasonSections.map((section) => {
+              const isCollapsed = collapsedSeasons[section.season] ?? false
 
-          return (
-            <Card key={match.id} className="match-card">
-              <div className="card-heading">
-                <div>
-                  <p className="eyebrow">Match {index + 1} · {match.leagueName}</p>
-                  <h2>{match.teamDisplayName} vs {opponentName}</h2>
-                </div>
-                <Button onClick={() => exportMatch(match.id)} variant="ghost">
-                  Export to calendar
-                </Button>
-              </div>
+              return (
+                <section key={section.season} className="season-section">
+                  <button
+                    type="button"
+                    className="season-header"
+                    onClick={() => toggleSeason(section.season)}
+                    aria-expanded={!isCollapsed}
+                  >
+                    <span className="season-label">Season {section.season}</span>
+                    <span className="season-header-count">
+                      {section.matches.length} match{section.matches.length === 1 ? '' : 'es'}
+                    </span>
+                    <span className="season-header-toggle">{isCollapsed ? 'Show' : 'Hide'}</span>
+                  </button>
+                  {!isCollapsed ? (
+                    <div className="stack">
+                      {section.matches.map((match, index) => {
+                        const club = getClubById(clubDirectory, match.opponentClubId)
+                        const venueClub = getVenueClub(match, teamSettings)
+                        const address = getAddressById(venueClub, match.venueId)
+                        const opponentName = formatOpponentName(match, club)
+                        const resultSummary = summarizeMatchResult(match.result, match.format)
+                        const pendingRubbers = match.format.numberOfRubbers - resultSummary.completedRubbers
+                        const availablePlayerIds = match.availablePlayerIds ?? []
+                        const assignedPlayerIds = match.assignedPlayerIds ?? []
+                        const isCurrentPlayerAvailable = user?.playerId
+                          ? availablePlayerIds.includes(user.playerId)
+                          : false
+                        const isExpired = isMatchExpired(match)
 
-              <dl className="match-info-grid">
-                <div>
-                  <dt>Date &amp; Time</dt>
-                  <dd>{formatMatchDateRange(match.startAt)}</dd>
-                </div>
-                <div>
-                  <dt>Location</dt>
-                  <dd>
-                  {match.location === 'home' ? 'Home' : 'Away'}
-                  {match.notes ? <p className="muted match-notes">{match.notes}</p> : null}
-                  </dd>
-                </div>
-                <div>
-                  <dt>Venue</dt>
-                  <dd>
-                    <strong>{address?.venueName ?? 'Venue TBC'}</strong>
-                    {address?.address ? <><br />{address.address}</> : null}
-                    {address?.notes ? <><br /><span className="muted">{address.notes}</span></> : null}
-                  </dd>
-                </div>
-                <div>
-                  <dt>Format</dt>
-                  <dd>
-                    {match.format.numberOfRubbers} rubbers
-                  </dd>
-                </div>
-              </dl>
-              <div className="match-players-row">
-                <dl className="match-players-grid">
-                  <div>
-                    <dt>Available</dt>
-                    <dd>
-                      {availablePlayerIds.length > 0 ? (
-                        availablePlayerIds.map((playerId, idx) => (
-                          <Fragment key={playerId}>
-                            {idx > 0 && ', '}
-                            <span className="user-name">
-                              {playersById.get(playerId)?.fullName ?? 'Unknown player'}
-                            </span>
-                          </Fragment>
-                        ))
-                      ) : (
-                        <span className="muted">None recorded</span>
-                      )}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt>Selected</dt>
-                    <dd>
-                      {assignedPlayerIds.length > 0 ? (
-                        <>
-                          {assignedPlayerIds.map((playerId, idx) => (
-                            <Fragment key={playerId}>
-                              {idx > 0 && ', '}
-                              <span className="user-name">
-                                {playersById.get(playerId)?.fullName ?? 'Unknown player'}
-                              </span>
-                            </Fragment>
-                          ))}
-                          {match.isIncompleteTeam ? (
-                            <span className="muted"> · Incomplete team</span>
-                          ) : null}
-                        </>
-                      ) : (
-                        <span className="muted">None selected</span>
-                      )}
-                    </dd>
-                  </div>
-                  {isAdmin ? (
-                  <div>
-                    <dt>Result</dt>
-                    <dd>
-                      {match.result
-                        ? `${resultSummary.rubbersWon}–${resultSummary.rubbersLost}${pendingRubbers > 0 ? ` (${pendingRubbers} pending)` : ''}`
-                        : <span className="muted">Not yet logged</span>}
-                    </dd>
-                  </div>
-                ) : null}
-                </dl>
-                {user?.playerId ? (
-                  <div className="match-availability">
-                    <Button
-                      type="button"
-                      variant={isCurrentPlayerAvailable ? 'secondary' : 'primary'}
-                      onClick={() =>
-                        updateMatchAvailability(match.id, user.playerId!, !isCurrentPlayerAvailable)
-                      }
-                    >
-                      {isCurrentPlayerAvailable ? 'Mark unavailable' : 'Mark available'}
-                    </Button>
-                    {assignedPlayerIds.includes(user.playerId) ? (
-                      <span className="muted">Selected by admin.</span>
-                    ) : null}
-                  </div>
-                ) : null}
-              </div>
+                        return (
+                          <Card
+                            key={match.id}
+                            className={`match-card${isExpired ? ' match-card--expired' : ''}`}
+                          >
+                            <div className="card-heading">
+                              <div>
+                                <div className="match-card-meta-row">
+                                  <p className="eyebrow">Match {index + 1} · {match.leagueName}</p>
+                                  <Button
+                                    className="match-card-export-button"
+                                    onClick={() => exportMatch(match.id)}
+                                    variant="ghost"
+                                  >
+                                    Export to calendar
+                                  </Button>
+                                </div>
+                                <h2>{match.teamDisplayName} vs {opponentName}</h2>
+                              </div>
+                            </div>
 
-              {isAdmin && match.result ? (
-                <dl className="match-rubbers-grid">
-                  {match.result.rubbers.map((rubber, rubberIndex) => {
-                    const rubberWinner = deriveRubberWinner(rubber.games, match.format)
-                    return (
-                      <div key={rubber.id}>
-                        <dt>R{rubberIndex + 1} · {rubber.pairSlot}</dt>
-                        <dd>
-                          {rubber.games.length > 0
-                            ? rubber.games.map((game) => `${game.ourScore}–${game.theirScore}`).join(', ')
-                            : '—'}
-                          {' '}
-                          <span className="muted">
-                            {rubberWinner === 'us' ? '· Won' : rubberWinner === 'them' ? '· Lost' : '· In progress'}
-                          </span>
-                        </dd>
-                      </div>
-                    )
-                  })}
-                  {match.result.notes ? (
-                    <div className="match-rubbers-notes">
-                      <dt>Notes</dt>
-                      <dd>{match.result.notes}</dd>
+                            <dl className="match-info-grid">
+                              <div>
+                                <dt>Date &amp; Time</dt>
+                                <dd>{formatMatchDateRange(match.startAt)}</dd>
+                              </div>
+                              <div>
+                                <dt>Location</dt>
+                                <dd>
+                                  {match.location === 'home' ? 'Home' : 'Away'}
+                                  {match.notes ? <p className="muted match-notes">{match.notes}</p> : null}
+                                </dd>
+                              </div>
+                              <div>
+                                <dt>Venue</dt>
+                                <dd>
+                                  <strong>{address?.venueName ?? 'Venue TBC'}</strong>
+                                  {address?.address ? <><br />{address.address}</> : null}
+                                  {address?.notes ? <><br /><span className="muted">{address.notes}</span></> : null}
+                                </dd>
+                              </div>
+                              <div>
+                                <dt>Format</dt>
+                                <dd>{match.format.numberOfRubbers} rubbers</dd>
+                              </div>
+                            </dl>
+                            <div className="match-players-row">
+                              <dl className="match-players-grid">
+                                <div>
+                                  <dt>Available</dt>
+                                  <dd>
+                                    {availablePlayerIds.length > 0 ? (
+                                      availablePlayerIds.map((playerId, playerIndex) => (
+                                        <Fragment key={playerId}>
+                                          {playerIndex > 0 && ', '}
+                                          <span className="user-name">
+                                            {playersById.get(playerId)?.fullName ?? 'Unknown player'}
+                                          </span>
+                                        </Fragment>
+                                      ))
+                                    ) : (
+                                      <span className="muted">None recorded</span>
+                                    )}
+                                  </dd>
+                                </div>
+                                <div>
+                                  <dt>Selected</dt>
+                                  <dd>
+                                    {assignedPlayerIds.length > 0 ? (
+                                      <>
+                                        {assignedPlayerIds.map((playerId, playerIndex) => (
+                                          <Fragment key={playerId}>
+                                            {playerIndex > 0 && ', '}
+                                            <span className="user-name">
+                                              {playersById.get(playerId)?.fullName ?? 'Unknown player'}
+                                            </span>
+                                          </Fragment>
+                                        ))}
+                                        {match.isIncompleteTeam ? (
+                                          <span className="muted"> · Incomplete team</span>
+                                        ) : null}
+                                      </>
+                                    ) : (
+                                      <span className="muted">None selected</span>
+                                    )}
+                                  </dd>
+                                </div>
+                                {isAdmin ? (
+                                  <div>
+                                    <dt>Result</dt>
+                                    <dd>
+                                      {match.result ? (
+                                        `${resultSummary.rubbersWon}–${resultSummary.rubbersLost}${
+                                          pendingRubbers > 0 ? ` (${pendingRubbers} pending)` : ''
+                                        }`
+                                      ) : (
+                                        <span className="muted">Not yet logged</span>
+                                      )}
+                                    </dd>
+                                  </div>
+                                ) : null}
+                              </dl>
+                              {user?.playerId ? (
+                                <div className="match-availability">
+                                  <Button
+                                    type="button"
+                                    variant={isCurrentPlayerAvailable ? 'secondary' : 'primary'}
+                                    onClick={() =>
+                                      void updateMatchAvailability(
+                                        match.id,
+                                        user.playerId!,
+                                        !isCurrentPlayerAvailable,
+                                      ).catch((availabilityError) => {
+                                        setError(
+                                          availabilityError instanceof Error
+                                            ? availabilityError.message
+                                            : 'Unable to update availability.',
+                                        )
+                                      })
+                                    }
+                                  >
+                                    {isCurrentPlayerAvailable ? 'Mark unavailable' : 'Mark available'}
+                                  </Button>
+                                  {assignedPlayerIds.includes(user.playerId) ? (
+                                    <span className="muted">Selected by admin.</span>
+                                  ) : null}
+                                </div>
+                              ) : null}
+                            </div>
+
+                            {isAdmin && match.result ? (
+                              <dl className="match-rubbers-grid">
+                                {match.result.rubbers.map((rubber, rubberIndex) => {
+                                  const rubberWinner = deriveRubberWinner(rubber.games, match.format)
+                                  return (
+                                    <div key={rubber.id}>
+                                      <dt>R{rubberIndex + 1} · {rubber.pairSlot}</dt>
+                                      <dd>
+                                        {rubber.games.length > 0
+                                          ? rubber.games.map((game) => `${game.ourScore}–${game.theirScore}`).join(', ')
+                                          : '—'}{' '}
+                                        <span className="muted">
+                                          {rubberWinner === 'us'
+                                            ? '· Won'
+                                            : rubberWinner === 'them'
+                                              ? '· Lost'
+                                              : '· In progress'}
+                                        </span>
+                                      </dd>
+                                    </div>
+                                  )
+                                })}
+                                {match.result.notes ? (
+                                  <div className="match-rubbers-notes">
+                                    <dt>Notes</dt>
+                                    <dd>{match.result.notes}</dd>
+                                  </div>
+                                ) : null}
+                              </dl>
+                            ) : null}
+
+                            {isAdmin ? (
+                              <div className="match-admin-panels">
+                                <MatchDetailsPanel
+                                  match={match}
+                                  onDelete={removeMatch}
+                                  onSave={handleUpdateMatch}
+                                  teamSettings={teamSettings}
+                                />
+                                <AdminAvailabilityPanel
+                                  match={match}
+                                  players={players}
+                                  onToggleAvailability={updateMatchAvailability}
+                                />
+                                <SelectPlayersPanel
+                                  match={match}
+                                  playersById={playersById}
+                                  onSave={handleAssignMatchPlayers}
+                                />
+                                <MatchResultPanel match={match} onSave={updateMatchResult} />
+                              </div>
+                            ) : null}
+                          </Card>
+                        )
+                      })}
                     </div>
                   ) : null}
-                </dl>
-              ) : null}
-
-              {isAdmin ? (
-                <div className="match-admin-panels">
-                  <MatchDetailsPanel
-                    match={match}
-                    onDelete={removeMatch}
-                    onSave={handleUpdateMatch}
-                    teamSettings={teamSettings}
-                  />
-                  <AdminAvailabilityPanel
-                    match={match}
-                    players={players}
-                    onToggleAvailability={updateMatchAvailability}
-                  />
-                  <SelectPlayersPanel match={match} playersById={playersById} onSave={handleAssignMatchPlayers} />
-                  <MatchResultPanel match={match} onSave={updateMatchResult} />
-                </div>
-              ) : null}
-            </Card>
-          )
-        })}
+                </section>
+              )
+            })}
           </>
         ) : (
-          <p className="muted">No upcoming matches this season.</p>
+          <p className="muted">No matches found.</p>
         )}
       </section>
-
-      {finishedMatches.length > 0 ? (
-        <section className="stack finished-matches-section" aria-label="Finished matches">
-          <h2>Finished Matches</h2>
-          {finishedMatches.map((match, index) => {
-          const club = getClubById(clubDirectory, match.opponentClubId)
-          const venueClub = getVenueClub(match, teamSettings)
-          const address = getAddressById(venueClub, match.venueId)
-          const opponentName = formatOpponentName(match, club)
-          const resultSummary = summarizeMatchResult(match.result, match.format)
-          const pendingRubbers = match.format.numberOfRubbers - resultSummary.completedRubbers
-
-          return (
-            <Card key={match.id} className="match-card match-card--expired">
-              <div className="card-heading">
-                <div>
-                  <p className="eyebrow">Match {index + 1} · {match.leagueName}</p>
-                  <h2>{match.teamDisplayName} vs {opponentName}</h2>
-                </div>
-              </div>
-
-              <dl className="match-info-grid">
-                <div>
-                  <dt>Date &amp; Time</dt>
-                  <dd>{formatMatchDateRange(match.startAt)}</dd>
-                </div>
-                <div>
-                  <dt>Location</dt>
-                  <dd>
-                    {match.location === 'home' ? 'Home' : 'Away'}
-                    {match.notes ? <p className="muted match-notes">{match.notes}</p> : null}
-                  </dd>
-                </div>
-                <div>
-                  <dt>Venue</dt>
-                  <dd>
-                    <strong>{address?.venueName ?? 'Venue TBC'}</strong>
-                    {address?.address ? <><br />{address.address}</> : null}
-                    {address?.notes ? <><br /><span className="muted">{address.notes}</span></> : null}
-                  </dd>
-                </div>
-                <div>
-                  <dt>Format</dt>
-                  <dd>
-                    {match.format.numberOfRubbers} rubbers
-                  </dd>
-                </div>
-              </dl>
-              <div className="match-players-row">
-                <dl className="match-players-grid">
-                  <div>
-                    <dt>Result</dt>
-                    <dd>
-                      {match.result
-                        ? `${resultSummary.rubbersWon}–${resultSummary.rubbersLost}${pendingRubbers > 0 ? ` (${pendingRubbers} pending)` : ''}`
-                        : <span className="muted">Not logged</span>}
-                    </dd>
-                  </div>
-                </dl>
-              </div>
-            </Card>
-          )
-          })}
-        </section>
-      ) : null}
 
       {isAdmin ? (
         <Card>
           <h2>Add Match</h2>
           <form className="stack" onSubmit={handleSubmit} noValidate>
             <div className="form-grid">
+              <label className="field">
+                <span>Match type</span>
+                <select
+                  className="input"
+                  value={matchType}
+                  onChange={(event) => setMatchType(event.target.value)}
+                >
+                  {MATCH_TYPE_OPTIONS.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="field">
+                <span>Division number</span>
+                <select
+                  className="input"
+                  value={divisionNumber}
+                  onChange={(event) => setDivisionNumber(event.target.value)}
+                >
+                  {[1, 2, 3, 4, 5, 6, 7, 8].map((division) => (
+                    <option key={division} value={division}>
+                      {division}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
               <label className="field">
                 <span>Opponent club</span>
                 <select
@@ -1508,18 +1673,6 @@ export function MatchesPage() {
               </label>
 
               <label className="field">
-                <span>Location</span>
-                <select
-                  className="input"
-                  value={location}
-                  onChange={(event) => setLocation(event.target.value as MatchLocation)}
-                >
-                  <option value="home">Home</option>
-                  <option value="away">Away</option>
-                </select>
-              </label>
-
-              <label className="field">
                 <span>Opponent team number</span>
                 <select
                   className="input"
@@ -1532,6 +1685,18 @@ export function MatchesPage() {
                       {teamNumber}
                     </option>
                   ))}
+                </select>
+              </label>
+
+              <label className="field">
+                <span>Location</span>
+                <select
+                  className="input"
+                  value={location}
+                  onChange={(event) => setLocation(event.target.value as MatchLocation)}
+                >
+                  <option value="home">Home</option>
+                  <option value="away">Away</option>
                 </select>
               </label>
 

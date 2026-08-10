@@ -2,13 +2,23 @@ import {
   createContext,
   useContext,
   useEffect,
+  useCallback,
   useMemo,
   useState,
   type ReactNode,
 } from 'react'
 import { useAuth } from '../auth/hooks/useAuth'
 import { listPlayerProfiles } from '../services/playerService'
-import { defaultMatchFixtures, defaultTeamSettings } from '../data/matches'
+import {
+  createMatch,
+  deleteMatch,
+  listMatches,
+  updateMatchAssignments as persistMatchAssignments,
+  updateMatchAvailability as persistMatchAvailability,
+  updateMatchDetails,
+  updateMatchResult as persistMatchResult,
+} from '../services/matchService'
+import { defaultTeamSettings } from '../data/matches'
 import type {
   MatchDetailsInput,
   MatchFormatConfig,
@@ -24,12 +34,11 @@ import {
   validateMatchSelection,
 } from '../utils/matches'
 import type { PlayerGender } from '../types/matches'
+import { isSupabaseConfigured, supabaseConfigError } from '../lib/supabase'
 
-const MATCH_STORAGE_KEY = 'badminton-team-manager.matches.v2'
 const SETTINGS_STORAGE_KEY = 'badminton-team-manager.team-settings.v2'
 
 const LEGACY_KEYS = [
-  'badminton-team-manager.matches',
   'badminton-team-manager.team-settings',
 ]
 
@@ -50,18 +59,20 @@ interface AppDataContextValue {
   matches: MatchRecord[]
   players: PlayerProfile[]
   playersById: Map<string, PlayerProfile>
+  matchesError: string | null
+  isLoadingMatches: boolean
   isLoadingPlayers: boolean
   teamSettings: TeamSettings
-  addMatch: (match: NewMatchInput) => void
-  updateMatch: (matchId: string, match: MatchDetailsInput) => void
-  removeMatch: (matchId: string) => void
-  updateMatchAvailability: (matchId: string, playerId: string, isAvailable: boolean) => void
+  addMatch: (match: NewMatchInput) => Promise<void>
+  updateMatch: (matchId: string, match: MatchDetailsInput) => Promise<void>
+  removeMatch: (matchId: string) => Promise<void>
+  updateMatchAvailability: (matchId: string, playerId: string, isAvailable: boolean) => Promise<void>
   assignMatchPlayers: (
     matchId: string,
     playerIds: string[],
     assignedPairs: MatchPairAssignment[],
-  ) => string | undefined
-  updateMatchResult: (matchId: string, result?: MatchResult) => void
+  ) => Promise<string | undefined>
+  updateMatchResult: (matchId: string, result?: MatchResult) => Promise<void>
   updateTeamSettings: (settings: TeamSettings) => void
 }
 
@@ -163,8 +174,10 @@ interface AppDataProviderProps {
 
 export function AppDataProvider({ children }: AppDataProviderProps) {
   const { isAuthenticated } = useAuth()
-  const [matches, setMatches] = useState<MatchRecord[]>(() =>
-    readStoredValue(MATCH_STORAGE_KEY, defaultMatchFixtures).map(normalizeMatchRecord),
+  const [matches, setMatches] = useState<MatchRecord[]>([])
+  const [isLoadingMatches, setIsLoadingMatches] = useState(isSupabaseConfigured)
+  const [matchesError, setMatchesError] = useState<string | null>(
+    isSupabaseConfigured ? null : supabaseConfigError,
   )
   const [players, setPlayers] = useState<PlayerProfile[]>([])
   const [isLoadingPlayers, setIsLoadingPlayers] = useState(true)
@@ -173,11 +186,40 @@ export function AppDataProvider({ children }: AppDataProviderProps) {
   )
 
   useEffect(() => {
-    setMatches((currentMatches) => {
-      const normalizedMatches = currentMatches.map(normalizeMatchRecord)
-      const hasChanges = JSON.stringify(normalizedMatches) !== JSON.stringify(currentMatches)
-      return hasChanges ? normalizedMatches : currentMatches
-    })
+    if (!isSupabaseConfigured) {
+      setMatches([])
+      setIsLoadingMatches(false)
+      setMatchesError(supabaseConfigError)
+      return
+    }
+
+    let isActive = true
+    setIsLoadingMatches(true)
+    setMatchesError(null)
+
+    listMatches()
+      .then((loadedMatches) => {
+        if (isActive) {
+          console.info('Loaded matches from Supabase', loadedMatches)
+          setMatches(loadedMatches.map(normalizeMatchRecord))
+        }
+      })
+      .catch((error: unknown) => {
+        if (isActive) {
+          console.error('Failed to load matches from Supabase', error)
+          setMatches([])
+          setMatchesError(error instanceof Error ? error.message : 'Unable to load matches.')
+        }
+      })
+      .finally(() => {
+        if (isActive) {
+          setIsLoadingMatches(false)
+        }
+      })
+
+    return () => {
+      isActive = false
+    }
   }, [])
 
   useEffect(() => {
@@ -250,77 +292,64 @@ export function AppDataProvider({ children }: AppDataProviderProps) {
   }, [isAuthenticated, isLoadingPlayers, playersById])
 
   useEffect(() => {
-    window.localStorage.setItem(MATCH_STORAGE_KEY, JSON.stringify(matches))
-  }, [matches])
-
-  useEffect(() => {
     window.localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(teamSettings))
   }, [teamSettings])
+
+  const replaceMatch = useCallback((nextMatch: MatchRecord) => {
+    const normalizedMatch = normalizeMatchRecord(nextMatch)
+    setMatches((currentMatches) =>
+      currentMatches.map((match) => (match.id === normalizedMatch.id ? normalizedMatch : match)),
+    )
+  }, [])
+
+  const addMatchRecord = useCallback((nextMatch: MatchRecord) => {
+    const normalizedMatch = normalizeMatchRecord(nextMatch)
+    setMatches((currentMatches) => [...currentMatches, normalizedMatch])
+  }, [])
 
   const value = useMemo<AppDataContextValue>(
     () => ({
       matches,
+      matchesError,
       players,
       playersById,
+      isLoadingMatches,
       isLoadingPlayers,
       teamSettings,
-      addMatch: (match: NewMatchInput) => {
-        setMatches((currentMatches: MatchRecord[]) => [
-          ...currentMatches,
-          {
-            ...match,
-            format: cloneFormat(match.format),
-            availablePlayerIds: [],
-            assignedPlayerIds: [],
-            assignedPairs: normalizeAssignedPairs(undefined, match.format),
-            id: crypto.randomUUID(),
-            createdAt: new Date().toISOString(),
-          },
-        ])
+      addMatch: async (match: NewMatchInput) => {
+        const createdMatch = await createMatch({
+          ...match,
+          format: cloneFormat(match.format),
+        })
+        addMatchRecord(createdMatch)
       },
-      updateMatch: (matchId: string, nextMatch: MatchDetailsInput) => {
-        setMatches((currentMatches: MatchRecord[]) =>
-          currentMatches.map((match: MatchRecord) =>
-            match.id === matchId ? { ...match, ...nextMatch } : match,
-          ),
-        )
+      updateMatch: async (matchId: string, nextMatch: MatchDetailsInput) => {
+        const updatedMatch = await updateMatchDetails(matchId, nextMatch)
+        replaceMatch(updatedMatch)
       },
-      removeMatch: (matchId: string) => {
+      removeMatch: async (matchId: string) => {
+        await deleteMatch(matchId)
         setMatches((currentMatches: MatchRecord[]) =>
           currentMatches.filter((match: MatchRecord) => match.id !== matchId),
         )
       },
-      updateMatchAvailability: (matchId: string, playerId: string, isAvailable: boolean) => {
-        setMatches((currentMatches: MatchRecord[]) =>
-          currentMatches.map((match: MatchRecord) => {
-            if (match.id !== matchId) {
-              return match
-            }
+      updateMatchAvailability: async (matchId: string, playerId: string, isAvailable: boolean) => {
+        const match = matches.find((fixture: MatchRecord) => fixture.id === matchId)
+        if (!match) {
+          throw new Error('Match not found.')
+        }
 
-            const availablePlayerIds = new Set(match.availablePlayerIds ?? [])
-            if (isAvailable) {
-              availablePlayerIds.add(playerId)
-            } else {
-              availablePlayerIds.delete(playerId)
-            }
+        const availablePlayerIds = new Set(match.availablePlayerIds ?? [])
+        if (isAvailable) {
+          availablePlayerIds.add(playerId)
+        } else {
+          availablePlayerIds.delete(playerId)
+        }
 
-            const nextAvailablePlayerIds = [...availablePlayerIds]
-
-            return {
-              ...match,
-              availablePlayerIds: nextAvailablePlayerIds,
-              assignedPlayerIds: (match.assignedPlayerIds ?? []).filter((id) =>
-                nextAvailablePlayerIds.includes(id),
-              ),
-              assignedPairs: normalizeAssignedPairs(match.assignedPairs, match.format).map((pair) => ({
-                ...pair,
-                playerIds: pair.playerIds.filter((id) => nextAvailablePlayerIds.includes(id)),
-              })),
-            }
-          }),
-        )
+        const updatedMatch = await persistMatchAvailability(matchId, [...availablePlayerIds])
+        replaceMatch(updatedMatch)
       },
-      assignMatchPlayers: (
+      assignMatchPlayers: async (
         matchId: string,
         playerIds: string[],
         assignedPairs: MatchPairAssignment[],
@@ -355,33 +384,36 @@ export function AppDataProvider({ children }: AppDataProviderProps) {
           }
         }
 
-        setMatches((currentMatches: MatchRecord[]) =>
-          currentMatches.map((currentMatch: MatchRecord) =>
-            currentMatch.id === matchId
-              ? {
-                  ...currentMatch,
-                  assignedPlayerIds,
-                  assignedPairs: nextAssignedPairs,
-                  isIncompleteTeam,
-                }
-              : currentMatch,
-          ),
+        const updatedMatch = await persistMatchAssignments(
+          matchId,
+          assignedPlayerIds,
+          nextAssignedPairs,
+          isIncompleteTeam,
         )
+        replaceMatch(updatedMatch)
 
         return undefined
       },
-      updateMatchResult: (matchId: string, result?: MatchResult) => {
-        setMatches((currentMatches: MatchRecord[]) =>
-          currentMatches.map((match: MatchRecord) =>
-            match.id === matchId ? { ...match, result } : match,
-          ),
-        )
+      updateMatchResult: async (matchId: string, result?: MatchResult) => {
+        const updatedMatch = await persistMatchResult(matchId, result)
+        replaceMatch(updatedMatch)
       },
       updateTeamSettings: (settings: TeamSettings) => {
         setTeamSettings(normalizeTeamSettings(settings))
       },
     }),
-    [isLoadingPlayers, matches, playerGenderLookup, players, playersById, teamSettings],
+    [
+      addMatchRecord,
+      isLoadingMatches,
+      isLoadingPlayers,
+      matches,
+      matchesError,
+      playerGenderLookup,
+      players,
+      playersById,
+      replaceMatch,
+      teamSettings,
+    ],
   )
 
   return <AppDataContext.Provider value={value}>{children}</AppDataContext.Provider>
