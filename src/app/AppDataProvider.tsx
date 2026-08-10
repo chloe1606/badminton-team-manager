@@ -25,8 +25,18 @@ import {
 } from '../utils/matches'
 import type { PlayerGender } from '../types/matches'
 
-const MATCH_STORAGE_KEY = 'badminton-team-manager.matches'
-const SETTINGS_STORAGE_KEY = 'badminton-team-manager.team-settings'
+const MATCH_STORAGE_KEY = 'badminton-team-manager.matches.v2'
+const SETTINGS_STORAGE_KEY = 'badminton-team-manager.team-settings.v2'
+
+const LEGACY_KEYS = [
+  'badminton-team-manager.matches',
+  'badminton-team-manager.team-settings',
+]
+
+// Run once at module load time so legacy data is gone before useState reads storage
+for (const key of LEGACY_KEYS) {
+  window.localStorage.removeItem(key)
+}
 
 function createPlayerGenderLookup(playersById: Map<string, PlayerProfile>): Map<string, { gender: PlayerGender }> {
   return new Map(

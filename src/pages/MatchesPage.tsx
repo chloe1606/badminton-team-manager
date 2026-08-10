@@ -1,5 +1,6 @@
 import { FormEvent, Fragment, useEffect, useMemo, useRef, useState } from 'react'
 import { useAppData } from '../app/AppDataProvider'
+import { useNotifications } from '../app/NotificationsProvider'
 import { useAuth } from '../auth/hooks/useAuth'
 import { Button } from '../components/ui/Button'
 import { Card } from '../components/ui/Card'
@@ -1046,6 +1047,7 @@ export function MatchesPage() {
     updateMatchAvailability,
     updateMatchResult,
   } = useAppData()
+  const { addNotification } = useNotifications()
   const [opponentClubId, setOpponentClubId] = useState('')
   const [location, setLocation] = useState<MatchLocation>('away')
   const [opponentTeamNumber, setOpponentTeamNumber] = useState('')
@@ -1056,6 +1058,31 @@ export function MatchesPage() {
   const [error, setError] = useState('')
   const [status, setStatus] = useState('')
 
+  function handleAddMatch(input: Parameters<typeof addMatch>[0]) {
+    addMatch(input)
+    const club = getClubById(clubDirectory, input.opponentClubId)
+    const opponentLabel = club?.name ?? input.opponentClubId
+    addNotification('match_added', 'Match added', `New fixture vs ${opponentLabel} added.`, '🏸')
+  }
+
+  function handleUpdateMatch(matchId: string, input: MatchDetailsInput) {
+    updateMatch(matchId, input)
+    const club = getClubById(clubDirectory, input.opponentClubId)
+    const opponentLabel = club?.name ?? input.opponentClubId
+    addNotification('match_time_changed', 'Match updated', `Fixture vs ${opponentLabel} has been updated.`, '🕐')
+  }
+
+  function handleAssignMatchPlayers(
+    matchId: string,
+    playerIds: string[],
+    assignedPairs: MatchPairAssignment[],
+  ): string | undefined {
+    const error = assignMatchPlayers(matchId, playerIds, assignedPairs)
+    if (!error) {
+      addNotification('player_selected', 'Team selected', `${playerIds.length} player${playerIds.length !== 1 ? 's' : ''} selected for match.`, '👤')
+    }
+    return error
+  }
   const currentSeason = useMemo(() => getCurrentSeason(), [])
   const sortedMatches = useMemo(() => sortMatchesChronologically(matches), [matches])
   const seasonMatches = useMemo(() => filterMatchesBySeason(sortedMatches, currentSeason), [sortedMatches, currentSeason])
@@ -1140,7 +1167,7 @@ export function MatchesPage() {
       return
     }
 
-    addMatch({
+    handleAddMatch({
       ...data,
       teamDisplayName,
       leagueName: teamSettings.profile.leagueName.trim(),
@@ -1373,7 +1400,7 @@ export function MatchesPage() {
                   <MatchDetailsPanel
                     match={match}
                     onDelete={removeMatch}
-                    onSave={updateMatch}
+                    onSave={handleUpdateMatch}
                     teamSettings={teamSettings}
                   />
                   <AdminAvailabilityPanel
@@ -1381,7 +1408,7 @@ export function MatchesPage() {
                     players={players}
                     onToggleAvailability={updateMatchAvailability}
                   />
-                  <SelectPlayersPanel match={match} playersById={playersById} onSave={assignMatchPlayers} />
+                  <SelectPlayersPanel match={match} playersById={playersById} onSave={handleAssignMatchPlayers} />
                   <MatchResultPanel match={match} onSave={updateMatchResult} />
                 </div>
               ) : null}
