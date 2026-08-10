@@ -33,10 +33,9 @@ const LEGACY_KEYS = [
   'badminton-team-manager.team-settings',
 ]
 
-function clearLegacyStorage() {
-  for (const key of LEGACY_KEYS) {
-    window.localStorage.removeItem(key)
-  }
+// Run once at module load time so legacy data is gone before useState reads storage
+for (const key of LEGACY_KEYS) {
+  window.localStorage.removeItem(key)
 }
 
 function createPlayerGenderLookup(playersById: Map<string, PlayerProfile>): Map<string, { gender: PlayerGender }> {
@@ -164,10 +163,6 @@ interface AppDataProviderProps {
 
 export function AppDataProvider({ children }: AppDataProviderProps) {
   const { isAuthenticated } = useAuth()
-
-  // Remove data stored under old key names so stale defaults don't persist
-  clearLegacyStorage()
-
   const [matches, setMatches] = useState<MatchRecord[]>(() =>
     readStoredValue(MATCH_STORAGE_KEY, defaultMatchFixtures).map(normalizeMatchRecord),
   )
