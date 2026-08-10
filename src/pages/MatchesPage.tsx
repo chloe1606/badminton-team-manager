@@ -1083,15 +1083,6 @@ export function MatchesPage() {
     }
     return error
   }
-  const [location, setLocation] = useState<MatchLocation>('away')
-  const [opponentTeamNumber, setOpponentTeamNumber] = useState('')
-  const [venueId, setVenueId] = useState('')
-  const [startAt, setStartAt] = useState('')
-  const [endAt, setEndAt] = useState('')
-  const [notes, setNotes] = useState('')
-  const [error, setError] = useState('')
-  const [status, setStatus] = useState('')
-
   const currentSeason = useMemo(() => getCurrentSeason(), [])
   const sortedMatches = useMemo(() => sortMatchesChronologically(matches), [matches])
   const seasonMatches = useMemo(() => filterMatchesBySeason(sortedMatches, currentSeason), [sortedMatches, currentSeason])
