@@ -1356,8 +1356,7 @@ export function MatchesPage() {
             <h1>Matches</h1>
             <p>
               Fixtures and results for <strong>{teamDisplayName}</strong> in{' '}
-              <strong>{teamSettings.profile.leagueName ?? 'League TBC'}</strong> ·{' '}
-              <strong>{matchType} {divisionNumber}</strong>.
+              <strong>{teamSettings.profile.leagueName ?? 'League TBC'}</strong>.
             </p>
           </div>
           <Button onClick={exportAllMatches} variant="secondary">
@@ -1452,7 +1451,10 @@ export function MatchesPage() {
                             <div className="card-heading">
                               <div>
                                 <div className="match-card-meta-row">
-                                  <p className="eyebrow">Match {index + 1} · {match.leagueName}</p>
+                                  <p className="eyebrow">
+                                    Match {index + 1} · {match.leagueName} · {match.matchType ?? matchType} Div{' '}
+                                    {match.divisionNumber ?? divisionNumber}
+                                  </p>
                                   <Button
                                     className="match-card-export-button"
                                     onClick={() => exportMatch(match.id)}

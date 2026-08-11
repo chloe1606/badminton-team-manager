@@ -167,6 +167,7 @@ function combineContextSettings(
       teamLabel: teamMatchSetting?.teamLabel ?? defaultTeamSettings.profile.teamLabel,
       homeClubId: leagueDetail?.homeClubId ?? defaultTeamSettings.profile.homeClubId,
       homeVenueId: leagueDetail?.homeVenueId ?? defaultTeamSettings.profile.homeVenueId,
+      leagueName: leagueDetail?.leagueName ?? defaultTeamSettings.profile.leagueName,
     },
     matchFormat: teamMatchSetting?.format ?? defaultTeamSettings.matchFormat,
   })

@@ -60,7 +60,7 @@ export function DashboardPage() {
         (match) =>
           playerId &&
           !isMatchExpired(match) &&
-          match.matchType === 'Mixed 3' &&
+          match.matchType === 'Mixed 6' &&
           match.divisionNumber === 3 &&
           ((match.availablePlayerIds ?? []).includes(playerId) ||
             (match.assignedPlayerIds ?? []).includes(playerId)),
