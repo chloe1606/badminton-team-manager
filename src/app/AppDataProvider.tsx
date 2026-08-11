@@ -5,6 +5,7 @@ import {
   useCallback,
   useMemo,
   useState,
+  useRef,
   type ReactNode,
 } from 'react'
 import { useAuth } from '../auth/hooks/useAuth'
@@ -179,6 +180,7 @@ interface AppDataProviderProps {
 
 export function AppDataProvider({ children }: AppDataProviderProps) {
   const { isAuthenticated } = useAuth()
+  const hasReloaded = useRef(false)
   const [matches, setMatches] = useState<MatchRecord[]>([])
   const [isLoadingMatches, setIsLoadingMatches] = useState(isSupabaseConfigured)
   const [matchesError, setMatchesError] = useState<string | null>(
@@ -313,9 +315,10 @@ export function AppDataProvider({ children }: AppDataProviderProps) {
     }
   }, [])
 
-  // Force page reload after authentication and initial data load
+  // Force page reload after authentication and initial data load (only once)
   useEffect(() => {
-    if (isAuthenticated && !isLoadingMatches && !isLoadingLeagueSettings) {
+    if (isAuthenticated && !isLoadingMatches && !isLoadingLeagueSettings && !hasReloaded.current) {
+      hasReloaded.current = true
       // Add a small delay to ensure all state updates are processed
       const timer = setTimeout(() => {
         window.location.reload()
