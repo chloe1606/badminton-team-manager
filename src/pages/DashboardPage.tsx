@@ -31,7 +31,7 @@ interface CalendarMonthGroup {
 }
 
 export function DashboardPage() {
-  const { matches } = useAppData()
+  const { matches, isLoadingMatches } = useAppData()
   const { isAdmin, user } = useAuth()
   const playerId = user?.playerId
   const allMatches = useMemo(() => sortMatchesChronologically(matches), [matches])
@@ -118,7 +118,9 @@ export function DashboardPage() {
             <p className="muted">Matches you have marked available for or been selected to play.</p>
           </div>
         </div>
-        {playerMatches.length > 0 ? (
+        {isLoadingMatches ? (
+          <p className="muted">Loading matches...</p>
+        ) : playerMatches.length > 0 ? (
           <div className="dashboard-match-grid">
             {playerMatches.map((match, index) => {
               const opponentClub = getClubById(clubDirectory, match.opponentClubId)
