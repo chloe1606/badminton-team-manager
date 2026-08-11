@@ -10,7 +10,7 @@ const baseNavItems = [
   { to: '/club-contacts', label: 'Club Contacts', adminOnly: false },
   { to: '/user-settings', label: 'User Settings', adminOnly: false },
   { to: '/admin/users', label: 'Users', adminOnly: true },
-  { to: '/settings', label: 'Settings', adminOnly: true },
+  { to: '/league', label: 'League', adminOnly: true },
 ]
 
 export function AppShell() {

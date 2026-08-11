@@ -55,7 +55,7 @@ export function ResultsPage() {
             <h1>Results</h1>
             <p>
               All logged results for <strong>{formatTeamDisplayName(teamSettings.profile)}</strong> in{' '}
-              <strong>{teamSettings.profile.leagueName}</strong>.
+              <strong>{teamSettings.profile.leagueName ?? 'League TBC'}</strong>.
             </p>
           </div>
         </div>

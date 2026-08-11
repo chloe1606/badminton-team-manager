@@ -34,6 +34,7 @@ import {
   calculateAdminStats,
   isMatchExpired,
 } from '../utils/matches'
+import { createMatchContextKey } from '../lib/matchContext'
 
 interface SeasonSection {
   season: string
@@ -1153,6 +1154,21 @@ export function MatchesPage() {
   const [error, setError] = useState('')
   const [status, setStatus] = useState('')
   const [collapsedSeasons, setCollapsedSeasons] = useState<Record<string, boolean>>({})
+  const selectedMatchContextKey = createMatchContextKey(matchType, Number(divisionNumber))
+  const selectedMatches = useMemo(
+    () =>
+      matches.filter(
+        (match) =>
+          (match.matchContextKey ?? createMatchContextKey(match.matchType ?? '', match.divisionNumber ?? 0)) ===
+          (isAdmin ? selectedMatchContextKey : createMatchContextKey('Mixed 6', 3)),
+      ),
+    [isAdmin, matches, selectedMatchContextKey],
+  )
+  const visibleMatches = useMemo(
+    () =>
+      selectedMatches,
+    [selectedMatches],
+  )
 
   async function handleAddMatch(input: Parameters<typeof addMatch>[0]) {
     await addMatch(input)
@@ -1180,7 +1196,7 @@ export function MatchesPage() {
     return error
   }
   const currentSeason = useMemo(() => getCurrentSeason(), [])
-  const sortedMatches = useMemo(() => sortMatchesChronologically(matches), [matches])
+  const sortedMatches = useMemo(() => sortMatchesChronologically(visibleMatches), [visibleMatches])
   const seasonSections = useMemo<SeasonSection[]>(() => {
     const seasonMap = new Map<string, MatchRecord[]>()
 
@@ -1311,7 +1327,8 @@ export function MatchesPage() {
       await handleAddMatch({
         ...data,
         teamDisplayName,
-        leagueName: teamSettings.profile.leagueName.trim(),
+        leagueName: (teamSettings.profile.leagueName ?? 'NWKBA').trim(),
+        matchContextKey: selectedMatchContextKey,
         format: cloneFormat(teamSettings.matchFormat),
       })
 
@@ -1338,7 +1355,7 @@ export function MatchesPage() {
             <h1>Matches</h1>
             <p>
               Fixtures and results for <strong>{teamDisplayName}</strong> in{' '}
-              <strong>{teamSettings.profile.leagueName}</strong>.
+              <strong>{teamSettings.profile.leagueName ?? 'League TBC'}</strong>.
             </p>
           </div>
           <Button onClick={exportAllMatches} variant="secondary">

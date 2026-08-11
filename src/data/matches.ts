@@ -15,7 +15,6 @@ export const defaultTeamSettings: TeamSettings = {
     teamName: 'Parklangley',
     teamNumber: 3,
     teamLabel: 'Mixed',
-    leagueName: 'NWKBA',
     homeClubId: 'park-langley',
     homeVenueId: 'park-langley-the-parklangley-club',
   },

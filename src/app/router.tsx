@@ -8,10 +8,10 @@ import { DashboardPage } from '../pages/DashboardPage'
 import { FeaturePage } from '../pages/FeaturePage'
 import { LoginPage } from '../pages/LoginPage'
 import { MatchesPage } from '../pages/MatchesPage'
+import { LeaguePage } from '../pages/LeaguePage'
 import { NotFoundPage } from '../pages/NotFoundPage'
 import { ResultsPage } from '../pages/ResultsPage'
 import { SetPasswordPage } from '../pages/SetPasswordPage'
-import { SettingsPage } from '../pages/SettingsPage'
 import { UserSettingsPage } from '../pages/UserSettingsPage'
 
 export const appRouter = createBrowserRouter([
@@ -62,8 +62,8 @@ export const appRouter = createBrowserRouter([
             element: <AdminRoute />,
             children: [
               {
-                path: '/settings',
-                element: <SettingsPage />,
+                path: '/league',
+                element: <LeaguePage />,
               },
               {
                 path: '/admin/users',
