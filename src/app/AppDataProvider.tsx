@@ -313,6 +313,17 @@ export function AppDataProvider({ children }: AppDataProviderProps) {
     }
   }, [])
 
+  // Force page reload after authentication and initial data load
+  useEffect(() => {
+    if (isAuthenticated && !isLoadingMatches && !isLoadingLeagueSettings) {
+      // Add a small delay to ensure all state updates are processed
+      const timer = setTimeout(() => {
+        window.location.reload()
+      }, 100)
+      return () => clearTimeout(timer)
+    }
+  }, [isAuthenticated, isLoadingMatches, isLoadingLeagueSettings])
+
   const replaceMatch = useCallback((nextMatch: MatchRecord) => {
     const normalizedMatch = normalizeMatchRecord(nextMatch)
     setMatches((currentMatches) =>
