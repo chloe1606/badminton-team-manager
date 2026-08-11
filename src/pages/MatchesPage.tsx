@@ -1408,7 +1408,7 @@ export function MatchesPage() {
       <section className="stack" aria-label="Match list">
         {matchesError ? <p className="error-text">{matchesError}</p> : null}
         {isLoadingMatches || isLoadingLeagueSettings ? <p className="muted">Loading matches…</p> : null}
-        {!isLoadingLeagueSettings && seasonSections.length > 0 ? (
+        {!isLoadingLeagueSettings && !isLoadingMatches && seasonSections.length > 0 ? (
           <>
             {seasonSections.map((section) => {
               const isCollapsed = collapsedSeasons[section.season] ?? false
