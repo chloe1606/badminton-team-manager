@@ -56,6 +56,7 @@ interface AppDataContextValue {
   playersById: Map<string, PlayerProfile>
   matchesError: string | null
   isLoadingMatches: boolean
+  isLoadingLeagueSettings: boolean
   isLoadingPlayers: boolean
   teamSettings: TeamSettings
   addMatch: (match: NewMatchInput) => Promise<void>
@@ -184,6 +185,7 @@ export function AppDataProvider({ children }: AppDataProviderProps) {
   )
   const [players, setPlayers] = useState<PlayerProfile[]>([])
   const [isLoadingPlayers, setIsLoadingPlayers] = useState(true)
+  const [isLoadingLeagueSettings, setIsLoadingLeagueSettings] = useState(isSupabaseConfigured)
   const [teamSettings, setTeamSettings] = useState<TeamSettings>(normalizeTeamSettings(defaultTeamSettings))
 
   useEffect(() => {
@@ -283,10 +285,12 @@ export function AppDataProvider({ children }: AppDataProviderProps) {
 
   useEffect(() => {
     if (!isSupabaseConfigured) {
+      setIsLoadingLeagueSettings(false)
       return
     }
 
     let isActive = true
+    setIsLoadingLeagueSettings(true)
 
     Promise.all([listTeamMatchSettings(), listLeagueContextDetails()])
       .then(([matchSettings, details]) => {
@@ -296,6 +300,11 @@ export function AppDataProvider({ children }: AppDataProviderProps) {
       })
       .catch((error: unknown) => {
         console.error('Failed to load league context settings', error)
+      })
+      .finally(() => {
+        if (isActive) {
+          setIsLoadingLeagueSettings(false)
+        }
       })
 
     return () => {
@@ -322,6 +331,7 @@ export function AppDataProvider({ children }: AppDataProviderProps) {
       players,
       playersById,
       isLoadingMatches,
+      isLoadingLeagueSettings,
       isLoadingPlayers,
       teamSettings,
       addMatch: async (match: NewMatchInput) => {
@@ -413,6 +423,7 @@ export function AppDataProvider({ children }: AppDataProviderProps) {
     [
       addMatchRecord,
       isLoadingMatches,
+      isLoadingLeagueSettings,
       isLoadingPlayers,
       matches,
       matchesError,
