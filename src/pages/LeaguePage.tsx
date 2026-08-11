@@ -128,6 +128,7 @@ export function LeaguePage() {
         </div>
         <p className="muted">
           Current team: <strong>{teamSettings.profile.teamName}</strong>
+          {' '}· Match type: <strong>{matchType}</strong> · Division: <strong>{divisionNumber}</strong>
           {' '}· Selected venue: <strong>{selectedVenue?.venueName ?? 'Venue TBC'}</strong>
         </p>
         <form className="stack" onSubmit={handleSubmit}>
