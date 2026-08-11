@@ -266,24 +266,13 @@ export function AppDataProvider({ children }: AppDataProviderProps) {
       return
     }
 
-    const validPlayerIds = new Set(playersById.keys())
     setMatches((currentMatches) => {
       const normalizedMatches = currentMatches.map((match) => {
-        const availablePlayerIds = (match.availablePlayerIds ?? []).filter((playerId) =>
-          validPlayerIds.has(playerId),
-        )
-        const assignedPlayerIds = (match.assignedPlayerIds ?? []).filter((playerId) =>
-          availablePlayerIds.includes(playerId),
-        )
-
         return {
           ...match,
-          availablePlayerIds,
-          assignedPlayerIds,
-          assignedPairs: normalizeAssignedPairs(match.assignedPairs, match.format).map((pair) => ({
-            ...pair,
-            playerIds: pair.playerIds.filter((playerId) => assignedPlayerIds.includes(playerId)),
-          })),
+          availablePlayerIds: match.availablePlayerIds ?? [],
+          assignedPlayerIds: match.assignedPlayerIds ?? [],
+          assignedPairs: normalizeAssignedPairs(match.assignedPairs, match.format),
         }
       })
 
