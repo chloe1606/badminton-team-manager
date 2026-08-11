@@ -1497,7 +1497,11 @@ export function MatchesPage() {
                                       availablePlayerIds.map((playerId, playerIndex) => (
                                         <Fragment key={playerId}>
                                           {playerIndex > 0 && ', '}
-                                          <span className="user-name">
+                                          <span
+                                            className={
+                                              playerId === user?.playerId ? 'user-name user-name--current' : 'user-name'
+                                            }
+                                          >
                                             {playersById.get(playerId)?.fullName ?? 'Unknown player'}
                                           </span>
                                         </Fragment>
@@ -1515,7 +1519,11 @@ export function MatchesPage() {
                                         {assignedPlayerIds.map((playerId, playerIndex) => (
                                           <Fragment key={playerId}>
                                             {playerIndex > 0 && ', '}
-                                            <span className="user-name">
+                                            <span
+                                              className={
+                                                playerId === user?.playerId ? 'user-name user-name--current' : 'user-name'
+                                              }
+                                            >
                                               {playersById.get(playerId)?.fullName ?? 'Unknown player'}
                                             </span>
                                           </Fragment>

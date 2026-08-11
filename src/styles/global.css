@@ -688,13 +688,12 @@ a {
   opacity: 0.5;
 }
 
-/* User name styling - bold and dark green */
 .user-name {
-  font-weight: 700;
-  color: var(--color-primary-strong);
+  font-weight: 400;
+  color: var(--color-text);
 }
 
-/* Match player name styling */
+.user-name--current,
 .match-player-name {
   font-weight: 700;
   color: var(--color-primary-strong);
