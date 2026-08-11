@@ -1,4 +1,5 @@
 import { isSupabaseConfigured, requireSupabase, supabaseConfigError } from '../lib/supabase'
+import { createMatchContextKey } from '../lib/matchContext'
 import type {
   MatchDetailsInput,
   MatchFormatConfig,
@@ -12,6 +13,7 @@ interface SupabaseMatchRow {
   id: string
   match_type: string | null
   division_number: number | null
+  match_context_key: string | null
   location: 'home' | 'away' | null
   opponent_club_id: string | null
   opponent_team_number: number | null
@@ -35,6 +37,7 @@ const MATCH_COLUMNS = [
   'id',
   'match_type',
   'division_number',
+  'match_context_key',
   'location',
   'opponent_club_id',
   'opponent_team_number',
@@ -108,6 +111,7 @@ function mapMatchRow(row: SupabaseMatchRow): MatchRecord {
 
   return {
     id: row.id,
+    matchContextKey: row.match_context_key ?? undefined,
     matchType: row.match_type ?? undefined,
     divisionNumber: row.division_number ?? undefined,
     location: row.location ?? 'away',
@@ -132,6 +136,9 @@ function mapMatchRow(row: SupabaseMatchRow): MatchRecord {
 
 function toInsertPayload(match: NewMatchInput) {
   return {
+    match_context_key:
+      match.matchContextKey ??
+      (match.matchType && match.divisionNumber ? createMatchContextKey(match.matchType, match.divisionNumber) : null),
     match_type: match.matchType ?? null,
     division_number: match.divisionNumber ?? null,
     location: match.location,
@@ -154,6 +161,10 @@ function toInsertPayload(match: NewMatchInput) {
 
 function toDetailsPayload(match: MatchDetailsInput) {
   return {
+    match_context_key:
+      match.matchType && match.divisionNumber
+        ? createMatchContextKey(match.matchType, match.divisionNumber)
+        : null,
     match_type: match.matchType ?? null,
     division_number: match.divisionNumber ?? null,
     location: match.location,

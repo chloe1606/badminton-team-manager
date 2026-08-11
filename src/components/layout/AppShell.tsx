@@ -8,9 +8,9 @@ const baseNavItems = [
   { to: '/matches', label: 'Matches', adminOnly: false },
   { to: '/results', label: 'Results', adminOnly: false },
   { to: '/club-contacts', label: 'Club Contacts', adminOnly: false },
-  { to: '/user-settings', label: 'User Settings', adminOnly: false },
   { to: '/admin/users', label: 'Users', adminOnly: true },
-  { to: '/settings', label: 'Settings', adminOnly: true },
+  { to: '/league', label: 'League', adminOnly: true },
+  { to: '/user-settings', label: 'User Settings', adminOnly: false },
 ]
 
 export function AppShell() {

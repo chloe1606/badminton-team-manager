@@ -10,6 +10,12 @@ import {
 import { useAuth } from '../auth/hooks/useAuth'
 import { listPlayerProfiles } from '../services/playerService'
 import {
+  listLeagueContextDetails,
+  listTeamMatchSettings,
+  type LeagueContextDetailsRecord,
+  type TeamMatchSettingsRecord,
+} from '../services/leagueService'
+import {
   createMatch,
   deleteMatch,
   listMatches,
@@ -36,17 +42,6 @@ import {
 import type { PlayerGender } from '../types/matches'
 import { isSupabaseConfigured, supabaseConfigError } from '../lib/supabase'
 
-const SETTINGS_STORAGE_KEY = 'badminton-team-manager.team-settings.v2'
-
-const LEGACY_KEYS = [
-  'badminton-team-manager.team-settings',
-]
-
-// Run once at module load time so legacy data is gone before useState reads storage
-for (const key of LEGACY_KEYS) {
-  window.localStorage.removeItem(key)
-}
-
 function createPlayerGenderLookup(playersById: Map<string, PlayerProfile>): Map<string, { gender: PlayerGender }> {
   return new Map(
     [...playersById.entries()]
@@ -61,6 +56,7 @@ interface AppDataContextValue {
   playersById: Map<string, PlayerProfile>
   matchesError: string | null
   isLoadingMatches: boolean
+  isLoadingLeagueSettings: boolean
   isLoadingPlayers: boolean
   teamSettings: TeamSettings
   addMatch: (match: NewMatchInput) => Promise<void>
@@ -77,20 +73,6 @@ interface AppDataContextValue {
 }
 
 const AppDataContext = createContext<AppDataContextValue | undefined>(undefined)
-
-function readStoredValue<T>(key: string, fallbackValue: T): T {
-  const storedValue = window.localStorage.getItem(key)
-  if (!storedValue) {
-    return fallbackValue
-  }
-
-  try {
-    return JSON.parse(storedValue) as T
-  } catch {
-    window.localStorage.removeItem(key)
-    return fallbackValue
-  }
-}
 
 function cloneFormat(format: MatchFormatConfig): MatchFormatConfig {
   return {
@@ -168,6 +150,29 @@ function normalizePlayersForMatchContext(players: PlayerProfile[]): PlayerProfil
   }))
 }
 
+function combineContextSettings(
+  teamMatchSettings: TeamMatchSettingsRecord[],
+  leagueDetails: LeagueContextDetailsRecord[],
+): TeamSettings {
+  const defaultContextKey = 'mixed-6__3'
+  const teamMatchSetting =
+    teamMatchSettings.find((setting) => setting.matchContextKey === defaultContextKey) ?? teamMatchSettings[0]
+  const leagueDetail =
+    leagueDetails.find((detail) => detail.matchContextKey === defaultContextKey) ?? leagueDetails[0]
+
+  return normalizeTeamSettings({
+    profile: {
+      teamName: teamMatchSetting?.teamName ?? defaultTeamSettings.profile.teamName,
+      teamNumber: teamMatchSetting?.teamNumber ?? defaultTeamSettings.profile.teamNumber,
+      teamLabel: teamMatchSetting?.teamLabel ?? defaultTeamSettings.profile.teamLabel,
+      homeClubId: leagueDetail?.homeClubId ?? defaultTeamSettings.profile.homeClubId,
+      homeVenueId: leagueDetail?.homeVenueId ?? defaultTeamSettings.profile.homeVenueId,
+      leagueName: leagueDetail?.leagueName ?? defaultTeamSettings.profile.leagueName,
+    },
+    matchFormat: teamMatchSetting?.format ?? defaultTeamSettings.matchFormat,
+  })
+}
+
 interface AppDataProviderProps {
   children: ReactNode
 }
@@ -181,9 +186,8 @@ export function AppDataProvider({ children }: AppDataProviderProps) {
   )
   const [players, setPlayers] = useState<PlayerProfile[]>([])
   const [isLoadingPlayers, setIsLoadingPlayers] = useState(true)
-  const [teamSettings, setTeamSettings] = useState<TeamSettings>(() =>
-    normalizeTeamSettings(readStoredValue(SETTINGS_STORAGE_KEY, defaultTeamSettings)),
-  )
+  const [isLoadingLeagueSettings, setIsLoadingLeagueSettings] = useState(isSupabaseConfigured)
+  const [teamSettings, setTeamSettings] = useState<TeamSettings>(normalizeTeamSettings(defaultTeamSettings))
 
   useEffect(() => {
     if (!isSupabaseConfigured) {
@@ -265,24 +269,13 @@ export function AppDataProvider({ children }: AppDataProviderProps) {
       return
     }
 
-    const validPlayerIds = new Set(playersById.keys())
     setMatches((currentMatches) => {
       const normalizedMatches = currentMatches.map((match) => {
-        const availablePlayerIds = (match.availablePlayerIds ?? []).filter((playerId) =>
-          validPlayerIds.has(playerId),
-        )
-        const assignedPlayerIds = (match.assignedPlayerIds ?? []).filter((playerId) =>
-          availablePlayerIds.includes(playerId),
-        )
-
         return {
           ...match,
-          availablePlayerIds,
-          assignedPlayerIds,
-          assignedPairs: normalizeAssignedPairs(match.assignedPairs, match.format).map((pair) => ({
-            ...pair,
-            playerIds: pair.playerIds.filter((playerId) => assignedPlayerIds.includes(playerId)),
-          })),
+          availablePlayerIds: match.availablePlayerIds ?? [],
+          assignedPlayerIds: match.assignedPlayerIds ?? [],
+          assignedPairs: normalizeAssignedPairs(match.assignedPairs, match.format),
         }
       })
 
@@ -292,8 +285,33 @@ export function AppDataProvider({ children }: AppDataProviderProps) {
   }, [isAuthenticated, isLoadingPlayers, playersById])
 
   useEffect(() => {
-    window.localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(teamSettings))
-  }, [teamSettings])
+    if (!isSupabaseConfigured) {
+      setIsLoadingLeagueSettings(false)
+      return
+    }
+
+    let isActive = true
+    setIsLoadingLeagueSettings(true)
+
+    Promise.all([listTeamMatchSettings(), listLeagueContextDetails()])
+      .then(([matchSettings, details]) => {
+        if (isActive) {
+          setTeamSettings(combineContextSettings(matchSettings, details))
+        }
+      })
+      .catch((error: unknown) => {
+        console.error('Failed to load league context settings', error)
+      })
+      .finally(() => {
+        if (isActive) {
+          setIsLoadingLeagueSettings(false)
+        }
+      })
+
+    return () => {
+      isActive = false
+    }
+  }, [])
 
   const replaceMatch = useCallback((nextMatch: MatchRecord) => {
     const normalizedMatch = normalizeMatchRecord(nextMatch)
@@ -314,6 +332,7 @@ export function AppDataProvider({ children }: AppDataProviderProps) {
       players,
       playersById,
       isLoadingMatches,
+      isLoadingLeagueSettings,
       isLoadingPlayers,
       teamSettings,
       addMatch: async (match: NewMatchInput) => {
@@ -405,6 +424,7 @@ export function AppDataProvider({ children }: AppDataProviderProps) {
     [
       addMatchRecord,
       isLoadingMatches,
+      isLoadingLeagueSettings,
       isLoadingPlayers,
       matches,
       matchesError,

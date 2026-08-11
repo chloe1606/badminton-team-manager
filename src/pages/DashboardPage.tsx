@@ -31,7 +31,7 @@ interface CalendarMonthGroup {
 }
 
 export function DashboardPage() {
-  const { matches } = useAppData()
+  const { matches, isLoadingMatches } = useAppData()
   const { isAdmin, user } = useAuth()
   const playerId = user?.playerId
   const allMatches = useMemo(() => sortMatchesChronologically(matches), [matches])
@@ -60,7 +60,7 @@ export function DashboardPage() {
         (match) =>
           playerId &&
           !isMatchExpired(match) &&
-          match.matchType === 'Mixed 3' &&
+          match.matchType === 'Mixed 6' &&
           match.divisionNumber === 3 &&
           ((match.availablePlayerIds ?? []).includes(playerId) ||
             (match.assignedPlayerIds ?? []).includes(playerId)),
@@ -118,7 +118,9 @@ export function DashboardPage() {
             <p className="muted">Matches you have marked available for or been selected to play.</p>
           </div>
         </div>
-        {playerMatches.length > 0 ? (
+        {isLoadingMatches ? (
+          <p className="muted">Loading matches...</p>
+        ) : playerMatches.length > 0 ? (
           <div className="dashboard-match-grid">
             {playerMatches.map((match, index) => {
               const opponentClub = getClubById(clubDirectory, match.opponentClubId)
@@ -127,7 +129,11 @@ export function DashboardPage() {
               const isSelected = (match.assignedPlayerIds ?? []).includes(playerId ?? '')
 
               return (
-                <section key={match.id} className="dashboard-match-card" aria-label={`Match ${index + 1}`}>
+                <section
+                  key={match.id}
+                  className={`dashboard-match-card${isSelected ? ' dashboard-match-card--selected' : ''}`}
+                  aria-label={`Match ${index + 1}`}
+                >
                   <p className="eyebrow">Match {index + 1}</p>
                   <h3 className="dashboard-match-title">{match.teamDisplayName} vs {opponentName}</h3>
                   <dl className="dashboard-match-meta">

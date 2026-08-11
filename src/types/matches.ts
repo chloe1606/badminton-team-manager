@@ -24,9 +24,9 @@ export interface TeamProfile {
   teamName: string
   teamNumber: number
   teamLabel: string
-  leagueName: string
   homeClubId: string
   homeVenueId: string
+  leagueName?: string
 }
 
 export type PlayerGender = 'lady' | 'man'
@@ -99,6 +99,7 @@ export type MatchLocation = 'home' | 'away'
 export interface MatchRecord {
   location: MatchLocation
   id: string
+  matchContextKey?: string
   matchType?: string
   divisionNumber?: number
   opponentClubId: string
@@ -120,6 +121,7 @@ export interface MatchRecord {
 }
 
 export interface NewMatchInput extends MatchDetailsInput {
+  matchContextKey?: string
   teamDisplayName: string
   leagueName: string
   format: MatchFormatConfig

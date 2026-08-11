@@ -34,6 +34,7 @@ import {
   calculateAdminStats,
   isMatchExpired,
 } from '../utils/matches'
+import { createMatchContextKey } from '../lib/matchContext'
 
 interface SeasonSection {
   season: string
@@ -1129,6 +1130,7 @@ export function MatchesPage() {
   const {
     addMatch,
     assignMatchPlayers,
+    isLoadingLeagueSettings,
     isLoadingMatches,
     matches,
     matchesError,
@@ -1153,6 +1155,21 @@ export function MatchesPage() {
   const [error, setError] = useState('')
   const [status, setStatus] = useState('')
   const [collapsedSeasons, setCollapsedSeasons] = useState<Record<string, boolean>>({})
+  const selectedMatchContextKey = createMatchContextKey(matchType, Number(divisionNumber))
+  const selectedMatches = useMemo(
+    () =>
+      matches.filter(
+        (match) =>
+          (match.matchContextKey ?? createMatchContextKey(match.matchType ?? '', match.divisionNumber ?? 0)) ===
+          (isAdmin ? selectedMatchContextKey : createMatchContextKey('Mixed 6', 3)),
+      ),
+    [isAdmin, matches, selectedMatchContextKey],
+  )
+  const visibleMatches = useMemo(
+    () =>
+      selectedMatches,
+    [selectedMatches],
+  )
 
   async function handleAddMatch(input: Parameters<typeof addMatch>[0]) {
     await addMatch(input)
@@ -1180,7 +1197,7 @@ export function MatchesPage() {
     return error
   }
   const currentSeason = useMemo(() => getCurrentSeason(), [])
-  const sortedMatches = useMemo(() => sortMatchesChronologically(matches), [matches])
+  const sortedMatches = useMemo(() => sortMatchesChronologically(visibleMatches), [visibleMatches])
   const seasonSections = useMemo<SeasonSection[]>(() => {
     const seasonMap = new Map<string, MatchRecord[]>()
 
@@ -1311,7 +1328,8 @@ export function MatchesPage() {
       await handleAddMatch({
         ...data,
         teamDisplayName,
-        leagueName: teamSettings.profile.leagueName.trim(),
+        leagueName: (teamSettings.profile.leagueName ?? 'NWKBA').trim(),
+        matchContextKey: selectedMatchContextKey,
         format: cloneFormat(teamSettings.matchFormat),
       })
 
@@ -1337,8 +1355,8 @@ export function MatchesPage() {
           <div>
             <h1>Matches</h1>
             <p>
-              Fixtures and results for <strong>{teamDisplayName}</strong> in{' '}
-              <strong>{teamSettings.profile.leagueName}</strong>.
+              Fixtures for <strong>{teamSettings.profile.teamName}</strong> in{' '}
+              <strong>{matchType} Div {divisionNumber}</strong>.
             </p>
           </div>
           <Button onClick={exportAllMatches} variant="secondary">
@@ -1389,8 +1407,9 @@ export function MatchesPage() {
 
       <section className="stack" aria-label="Match list">
         {matchesError ? <p className="error-text">{matchesError}</p> : null}
-        {isLoadingMatches ? <p className="muted">Loading matches…</p> : null}
-        {seasonSections.length > 0 ? (
+        {isLoadingMatches || isLoadingLeagueSettings ? (
+          <p className="muted">Loading matches…</p>
+        ) : seasonSections.length > 0 ? (
           <>
             {seasonSections.map((section) => {
               const isCollapsed = collapsedSeasons[section.season] ?? false
@@ -1433,7 +1452,10 @@ export function MatchesPage() {
                             <div className="card-heading">
                               <div>
                                 <div className="match-card-meta-row">
-                                  <p className="eyebrow">Match {index + 1} · {match.leagueName}</p>
+                                  <p className="eyebrow">
+                                    Match {index + 1} · {match.matchType ?? matchType} Div{' '}
+                                    {match.divisionNumber ?? divisionNumber}
+                                  </p>
                                   <Button
                                     className="match-card-export-button"
                                     onClick={() => exportMatch(match.id)}
@@ -1480,7 +1502,11 @@ export function MatchesPage() {
                                       availablePlayerIds.map((playerId, playerIndex) => (
                                         <Fragment key={playerId}>
                                           {playerIndex > 0 && ', '}
-                                          <span className="user-name">
+                                          <span
+                                            className={
+                                              playerId === user?.playerId ? 'user-name user-name--current' : 'user-name'
+                                            }
+                                          >
                                             {playersById.get(playerId)?.fullName ?? 'Unknown player'}
                                           </span>
                                         </Fragment>
@@ -1498,7 +1524,11 @@ export function MatchesPage() {
                                         {assignedPlayerIds.map((playerId, playerIndex) => (
                                           <Fragment key={playerId}>
                                             {playerIndex > 0 && ', '}
-                                            <span className="user-name">
+                                            <span
+                                              className={
+                                                playerId === user?.playerId ? 'user-name user-name--current' : 'user-name'
+                                              }
+                                            >
                                               {playersById.get(playerId)?.fullName ?? 'Unknown player'}
                                             </span>
                                           </Fragment>
