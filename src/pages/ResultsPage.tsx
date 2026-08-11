@@ -53,7 +53,7 @@ export function ResultsPage() {
           <div>
             <h1>Results</h1>
             <p>
-              Fixtures for <strong>{teamSettings.profile.teamName}</strong> in{' '}
+              Results for <strong>{teamSettings.profile.teamName}</strong> in{' '}
               <strong>Mixed 6 Div 3</strong>.
             </p>
           </div>

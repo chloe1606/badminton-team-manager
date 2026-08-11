@@ -129,7 +129,11 @@ export function DashboardPage() {
               const isSelected = (match.assignedPlayerIds ?? []).includes(playerId ?? '')
 
               return (
-                <section key={match.id} className="dashboard-match-card" aria-label={`Match ${index + 1}`}>
+                <section
+                  key={match.id}
+                  className={`dashboard-match-card${isSelected ? ' dashboard-match-card--selected' : ''}`}
+                  aria-label={`Match ${index + 1}`}
+                >
                   <p className="eyebrow">Match {index + 1}</p>
                   <h3 className="dashboard-match-title">{match.teamDisplayName} vs {opponentName}</h3>
                   <dl className="dashboard-match-meta">

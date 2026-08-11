@@ -446,6 +446,11 @@ a {
   background: #fcfdfd;
 }
 
+.dashboard-match-card--selected {
+  background: #e8f5e9;
+  border-color: #4caf50;
+}
+
 .dashboard-match-title {
   margin: 0;
   font-size: 1.05rem;
