@@ -1356,7 +1356,8 @@ export function MatchesPage() {
             <h1>Matches</h1>
             <p>
               Fixtures and results for <strong>{teamDisplayName}</strong> in{' '}
-              <strong>{teamSettings.profile.leagueName ?? 'League TBC'}</strong>.
+              <strong>{teamSettings.profile.leagueName ?? 'League TBC'}</strong> ·{' '}
+              <strong>{matchType} {divisionNumber}</strong>.
             </p>
           </div>
           <Button onClick={exportAllMatches} variant="secondary">
