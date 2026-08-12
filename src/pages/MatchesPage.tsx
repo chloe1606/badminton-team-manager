@@ -4,7 +4,6 @@ import { useNotifications } from '../app/NotificationsProvider'
 import { useAuth } from '../auth/hooks/useAuth'
 import { Button } from '../components/ui/Button'
 import { Card } from '../components/ui/Card'
-import { MatchFilters, type MatchFiltersValue } from '../components/matches/MatchFilters'
 import { clubDirectory } from '../data/clubContacts'
 import type {
   MatchDetailsInput,
@@ -18,11 +17,6 @@ import type {
 } from '../types/matches'
 import type { PlayerProfile } from '../types/players'
 import { createMatchesCalendarIcs, downloadIcs, type CalendarFixture } from '../utils/calendar'
-import {
-  createDefaultMatchFilters,
-  filterMatches,
-  getMatchSeasonOptions,
-} from '../utils/matchFilters'
 import {
   deriveRubberWinner,
   formatOpponentName,
@@ -1182,7 +1176,6 @@ export function MatchesPage() {
   const [error, setError] = useState('')
   const [status, setStatus] = useState('')
   const [collapsedSeasons, setCollapsedSeasons] = useState<Record<string, boolean>>({})
-  const [filters, setFilters] = useState<MatchFiltersValue>(() => createDefaultMatchFilters('2026/2027'))
   const selectedMatchContextKey = createMatchContextKey(matchType, Number(divisionNumber))
   const selectedMatches = useMemo(
     () =>
@@ -1193,8 +1186,7 @@ export function MatchesPage() {
       ),
     [isAdmin, matches, selectedMatchContextKey],
   )
-  const seasonOptions = useMemo(() => getMatchSeasonOptions(selectedMatches), [selectedMatches])
-  const visibleMatches = useMemo(() => filterMatches(selectedMatches, filters), [filters, selectedMatches])
+  const visibleMatches = useMemo(() => selectedMatches, [selectedMatches])
 
   async function handleAddMatch(input: Parameters<typeof addMatch>[0]) {
     await addMatch(input)
@@ -1237,7 +1229,7 @@ export function MatchesPage() {
     }
 
     return [...seasonMap.entries()]
-      .sort(([leftSeason], [rightSeason]) => leftSeason.localeCompare(rightSeason))
+      .sort(([leftSeason], [rightSeason]) => rightSeason.localeCompare(leftSeason))
       .map(([season, seasonMatches]) => ({ season, matches: seasonMatches }))
   }, [sortedMatches])
   const currentAndFutureSeasonMatches = useMemo(
@@ -1395,11 +1387,6 @@ export function MatchesPage() {
             Export all to calendar
           </Button>
         </div>
-      </Card>
-
-      <Card>
-        <h2>Filters</h2>
-        <MatchFilters filters={filters} onChange={setFilters} seasonOptions={seasonOptions} />
       </Card>
 
       {isAdmin ? (
@@ -1659,9 +1646,6 @@ export function MatchesPage() {
                                   >
                                     Unavailable
                                   </Button>
-                                  {assignedPlayerIds.includes(user.playerId) ? (
-                                    <span className="muted">Selected by admin</span>
-                                  ) : null}
                                 </div>
                               ) : null}
                             </div>
