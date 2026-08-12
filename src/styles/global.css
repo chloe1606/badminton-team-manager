@@ -452,6 +452,10 @@ a {
   align-items: flex-end;
 }
 
+.match-players-grid > div {
+  margin-bottom: var(--space-3);
+}
+
 .match-availability {
   display: flex;
   flex-wrap: wrap;
@@ -913,6 +917,15 @@ a {
   justify-content: center;
   gap: var(--space-1);
   text-align: center;
+  padding: var(--space-2);
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: var(--radius-sm);
+}
+
+@media (max-width: 700px) {
+  .next-match-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 /* Results Page */
