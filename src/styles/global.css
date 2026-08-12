@@ -186,11 +186,19 @@ a {
 
 .btn-success {
   background: #166534;
+  border-color: #166534;
   color: #ffffff;
 }
 
 .btn-success:hover {
   background: #14532d;
+}
+
+.btn-success:disabled {
+  background: var(--color-surface);
+  border-color: #166534;
+  color: #166534;
+  opacity: 1;
 }
 
 .btn-secondary {
@@ -215,7 +223,7 @@ a {
 
 .btn:disabled {
   opacity: 0.7;
-  cursor: wait;
+  cursor: not-allowed;
 }
 
 .muted {
