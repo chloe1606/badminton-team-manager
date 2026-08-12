@@ -14,7 +14,7 @@ export function LeaguePage() {
   const [homeVenueId, setHomeVenueId] = useState('park-langley-the-parklangley-club')
   const [leagueName, setLeagueName] = useState('NWKBA')
   const [teamName, setTeamName] = useState(teamSettings.profile.teamName)
-  const [teamNumber, setTeamNumber] = useState(String(teamSettings.profile.teamNumber))
+  const [teamNumber, setTeamNumber] = useState(teamSettings.profile.teamNumber?.toString() ?? '')
   const [teamLabel, setTeamLabel] = useState(teamSettings.profile.teamLabel)
   const [bestOf, setBestOf] = useState(String(teamSettings.matchFormat.scoring.bestOf))
   const [targetScore, setTargetScore] = useState(String(teamSettings.matchFormat.scoring.targetScore))
@@ -31,7 +31,7 @@ export function LeaguePage() {
   )
   useEffect(() => {
     setTeamName(teamSettings.profile.teamName)
-    setTeamNumber(String(teamSettings.profile.teamNumber))
+    setTeamNumber(teamSettings.profile.teamNumber?.toString() ?? '')
     setTeamLabel(teamSettings.profile.teamLabel)
     setHomeClubId(teamSettings.profile.homeClubId)
     setHomeVenueId(teamSettings.profile.homeVenueId)
@@ -52,7 +52,7 @@ export function LeaguePage() {
         matchType,
         divisionNumber: Number(divisionNumber),
         teamName: teamName.trim(),
-        teamNumber: Number(teamNumber),
+        teamNumber: teamNumber ? Number(teamNumber) : null,
         teamLabel: teamLabel.trim(),
         format: {
           ...teamSettings.matchFormat,
@@ -73,7 +73,7 @@ export function LeaguePage() {
         leagueName: leagueName.trim(),
       })
       setTeamName(updatedSettings.teamName)
-      setTeamNumber(String(updatedSettings.teamNumber))
+      setTeamNumber(updatedSettings.teamNumber?.toString() ?? '')
       setTeamLabel(updatedSettings.teamLabel)
       setStatus('League settings saved.')
     } catch (saveError) {
@@ -106,6 +106,17 @@ export function LeaguePage() {
             <input className="input" value={leagueName} onChange={(event) => setLeagueName(event.target.value)} />
           </label>
           <label className="field">
+            <span>Team number</span>
+            <select className="input" value={teamNumber} onChange={(event) => setTeamNumber(event.target.value)}>
+              <option value="">Not set</option>
+              {[1, 2, 3, 4, 5].map((value) => (
+                <option key={value} value={value}>
+                  {value}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="field">
             <span>Home club</span>
             <select className="input" value={homeClubId} onChange={(event) => setHomeClubId(event.target.value)}>
               {clubDirectory.map((club) => (
@@ -128,6 +139,7 @@ export function LeaguePage() {
         </div>
         <p className="muted">
           Current team: <strong>{teamSettings.profile.teamName}</strong>
+          {teamNumber ? <> <strong>{teamNumber}</strong></> : null}
           {' '}· Match type: <strong>{matchType}</strong> · Division: <strong>{divisionNumber}</strong>
           {' '}· Selected venue: <strong>{selectedVenue?.venueName ?? 'Venue TBC'}</strong>
         </p>

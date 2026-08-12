@@ -8,7 +8,7 @@ export interface TeamMatchSettingsRecord {
   divisionNumber: number
   matchContextKey: string
   teamName: string
-  teamNumber: number
+  teamNumber: number | null
   teamLabel: string
   format: MatchFormatConfig
 }
@@ -115,7 +115,7 @@ export async function upsertTeamMatchSettings(input: {
   matchType: string
   divisionNumber: number
   teamName: string
-  teamNumber: number
+  teamNumber: number | null
   teamLabel: string
   format: MatchFormatConfig
 }): Promise<TeamMatchSettingsRecord> {

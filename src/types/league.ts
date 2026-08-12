@@ -6,7 +6,7 @@ export interface TeamMatchSettingsRecord {
   divisionNumber: number
   matchContextKey: string
   teamName: string
-  teamNumber: number
+  teamNumber: number | null
   teamLabel: string
   format: MatchFormatConfig
 }
@@ -20,4 +20,3 @@ export interface LeagueContextDetailsRecord {
   homeVenueId: string
   leagueName: string
 }
-

@@ -9,9 +9,10 @@ import type {
   PlayerGender,
   TeamProfile,
 } from '../types/matches'
+import type { PlayerProfile } from '../types/players'
 
 export function formatTeamDisplayName(profile: TeamProfile): string {
-  return [profile.teamName.trim(), String(profile.teamNumber).trim(), profile.teamLabel.trim()]
+  return [profile.teamName.trim(), profile.teamNumber?.toString().trim(), profile.teamLabel.trim()]
     .filter(Boolean)
     .join(' ')
 }
@@ -344,7 +345,12 @@ export function separateMatchesByStatus(
 }
 
 export interface MatchAvailabilityStats {
+  matchId: string
+  startAt: string
   availableCount: number
+  unavailableCount: number
+  selectedCount: number
+  isCompleteTeam: boolean
   menRequired: number
   ladiesRequired: number
 }
@@ -357,10 +363,12 @@ export interface AdminDashboardStats {
 
 export function calculateAdminStats(
   matches: MatchRecord[],
+  players: PlayerProfile[],
 ): AdminDashboardStats {
   let played = 0
   let toPlay = 0
   const now = new Date()
+  void players
 
   const matchStats: MatchAvailabilityStats[] = matches.map((match) => {
     if (new Date(match.startAt) < now) {
@@ -370,7 +378,13 @@ export function calculateAdminStats(
     }
 
     return {
+      matchId: match.id,
+      startAt: match.startAt,
       availableCount: match.availablePlayerIds?.length ?? 0,
+      unavailableCount: match.unavailablePlayerIds?.length ?? 0,
+      selectedCount: match.assignedPlayerIds?.length ?? 0,
+      isCompleteTeam:
+        (match.assignedPlayerIds?.length ?? 0) >= match.format.squad.squadSize && !match.isIncompleteTeam,
       menRequired: match.format.squad.menRequired,
       ladiesRequired: match.format.squad.ladiesRequired,
     }

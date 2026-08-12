@@ -4,6 +4,7 @@ import { useNotifications } from '../app/NotificationsProvider'
 import { useAuth } from '../auth/hooks/useAuth'
 import { Button } from '../components/ui/Button'
 import { Card } from '../components/ui/Card'
+import { MatchFilters, type MatchFiltersValue } from '../components/matches/MatchFilters'
 import { clubDirectory } from '../data/clubContacts'
 import type {
   MatchDetailsInput,
@@ -17,6 +18,11 @@ import type {
 } from '../types/matches'
 import type { PlayerProfile } from '../types/players'
 import { createMatchesCalendarIcs, downloadIcs, type CalendarFixture } from '../utils/calendar'
+import {
+  createDefaultMatchFilters,
+  filterMatches,
+  getMatchSeasonOptions,
+} from '../utils/matchFilters'
 import {
   deriveRubberWinner,
   formatOpponentName,
@@ -751,9 +757,14 @@ function AdminAvailabilityPanel({
 }: {
   match: MatchRecord
   players: PlayerProfile[]
-  onToggleAvailability: (matchId: string, playerId: string, isAvailable: boolean) => void
+  onToggleAvailability: (
+    matchId: string,
+    playerId: string,
+    availability: 'available' | 'unavailable' | 'clear',
+  ) => void
 }) {
   const availablePlayerIdSet = new Set(match.availablePlayerIds ?? [])
+  const unavailablePlayerIdSet = new Set(match.unavailablePlayerIds ?? [])
 
   return (
     <details>
@@ -765,12 +776,28 @@ function AdminAvailabilityPanel({
         <div className="stack">
           {players.map((player) => {
             const isAvailable = availablePlayerIdSet.has(player.id)
+            const isUnavailable = unavailablePlayerIdSet.has(player.id)
             return (
               <label className="checkbox-row" key={player.id}>
                 <input
                   checked={isAvailable}
                   onChange={(event) =>
-                    onToggleAvailability(match.id, player.id, event.target.checked)
+                    onToggleAvailability(
+                      match.id,
+                      player.id,
+                      event.target.checked ? 'available' : isUnavailable ? 'unavailable' : 'clear',
+                    )
+                  }
+                  type="checkbox"
+                />
+                <input
+                  checked={isUnavailable}
+                  onChange={(event) =>
+                    onToggleAvailability(
+                      match.id,
+                      player.id,
+                      event.target.checked ? 'unavailable' : isAvailable ? 'available' : 'clear',
+                    )
                   }
                   type="checkbox"
                 />
@@ -1155,6 +1182,7 @@ export function MatchesPage() {
   const [error, setError] = useState('')
   const [status, setStatus] = useState('')
   const [collapsedSeasons, setCollapsedSeasons] = useState<Record<string, boolean>>({})
+  const [filters, setFilters] = useState<MatchFiltersValue>(() => createDefaultMatchFilters('2026/2027'))
   const selectedMatchContextKey = createMatchContextKey(matchType, Number(divisionNumber))
   const selectedMatches = useMemo(
     () =>
@@ -1165,11 +1193,8 @@ export function MatchesPage() {
       ),
     [isAdmin, matches, selectedMatchContextKey],
   )
-  const visibleMatches = useMemo(
-    () =>
-      selectedMatches,
-    [selectedMatches],
-  )
+  const seasonOptions = useMemo(() => getMatchSeasonOptions(selectedMatches), [selectedMatches])
+  const visibleMatches = useMemo(() => filterMatches(selectedMatches, filters), [filters, selectedMatches])
 
   async function handleAddMatch(input: Parameters<typeof addMatch>[0]) {
     await addMatch(input)
@@ -1223,8 +1248,15 @@ export function MatchesPage() {
     [currentSeason, seasonSections],
   )
   const adminStats = useMemo(
-    () => calculateAdminStats(currentAndFutureSeasonMatches),
-    [currentAndFutureSeasonMatches],
+    () => calculateAdminStats(currentAndFutureSeasonMatches, players),
+    [currentAndFutureSeasonMatches, players],
+  )
+  const nextMatchStats = useMemo(
+    () =>
+      adminStats.matchStats
+        .slice()
+        .sort((left, right) => new Date(left.startAt).getTime() - new Date(right.startAt).getTime())[0],
+    [adminStats.matchStats],
   )
   const teamDisplayName = useMemo(
     () => formatTeamDisplayName(teamSettings.profile),
@@ -1250,7 +1282,7 @@ export function MatchesPage() {
 
       for (const section of seasonSections) {
         nextCollapsedSeasons[section.season] =
-          currentCollapsedSeasons[section.season] ?? section.season < currentSeason
+          currentCollapsedSeasons[section.season] ?? section.season > currentSeason
       }
 
       const hasChanges =
@@ -1365,6 +1397,11 @@ export function MatchesPage() {
         </div>
       </Card>
 
+      <Card>
+        <h2>Filters</h2>
+        <MatchFilters filters={filters} onChange={setFilters} seasonOptions={seasonOptions} />
+      </Card>
+
       {isAdmin ? (
         <Card>
           <div className="admin-summary">
@@ -1380,25 +1417,27 @@ export function MatchesPage() {
             </div>
             {adminStats.matchStats.length > 0 && (
               <div className="summary-matches">
-                <p className="summary-label">Player Availability per Match</p>
-                <div className="match-stats-grid">
-                  {adminStats.matchStats.map((stats, idx) => (
-                    <div key={idx} className="match-stat-item">
-                      <div className="stat-available">
-                        <span className="stat-value">{stats.availableCount}</span>
-                        <span className="stat-label">Available</span>
-                      </div>
-                      <div className="stat-required">
-                        <span className="stat-value">
-                          {stats.menRequired > 0 && `${stats.menRequired}M`}
-                          {stats.menRequired > 0 && stats.ladiesRequired > 0 && ' '}
-                          {stats.ladiesRequired > 0 && `${stats.ladiesRequired}L`}
-                        </span>
-                        <span className="stat-label">Required</span>
-                      </div>
+                <p className="summary-label">Next Match Player Availability</p>
+                {nextMatchStats ? (
+                  <div className="next-match-summary">
+                    <div className="next-match-summary-item">
+                      <span className="stat-value">{nextMatchStats.availableCount}</span>
+                      <span className="stat-label">Available</span>
                     </div>
-                  ))}
-                </div>
+                    <div className="next-match-summary-item">
+                      <span className="stat-value">{nextMatchStats.selectedCount}</span>
+                      <span className="stat-label">Selected</span>
+                    </div>
+                    <div className="next-match-summary-item">
+                      <span className="stat-value">{nextMatchStats.unavailableCount}</span>
+                      <span className="stat-label">Unavailable</span>
+                    </div>
+                    <div className="next-match-summary-item">
+                      <span className="stat-value">{nextMatchStats.isCompleteTeam ? 'Yes' : 'No'}</span>
+                      <span className="stat-label">Complete team</span>
+                    </div>
+                  </div>
+                ) : null}
               </div>
             )}
           </div>
@@ -1438,9 +1477,11 @@ export function MatchesPage() {
                         const resultSummary = summarizeMatchResult(match.result, match.format)
                         const pendingRubbers = match.format.numberOfRubbers - resultSummary.completedRubbers
                         const availablePlayerIds = match.availablePlayerIds ?? []
+                        const unavailablePlayerIds = match.unavailablePlayerIds ?? []
                         const assignedPlayerIds = match.assignedPlayerIds ?? []
-                        const isCurrentPlayerAvailable = user?.playerId
-                          ? availablePlayerIds.includes(user.playerId)
+                        const isCurrentPlayerAvailable = user?.playerId ? availablePlayerIds.includes(user.playerId) : false
+                        const isCurrentPlayerUnavailable = user?.playerId
+                          ? unavailablePlayerIds.includes(user.playerId)
                           : false
                         const isExpired = isMatchExpired(match)
 
@@ -1517,6 +1558,27 @@ export function MatchesPage() {
                                   </dd>
                                 </div>
                                 <div>
+                                  <dt>Unavailable</dt>
+                                  <dd>
+                                    {unavailablePlayerIds.length > 0 ? (
+                                      unavailablePlayerIds.map((playerId, playerIndex) => (
+                                        <Fragment key={playerId}>
+                                          {playerIndex > 0 && ', '}
+                                          <span
+                                            className={
+                                              playerId === user?.playerId ? 'user-name user-name--current' : 'user-name'
+                                            }
+                                          >
+                                            {playersById.get(playerId)?.fullName ?? 'Unknown player'}
+                                          </span>
+                                        </Fragment>
+                                      ))
+                                    ) : (
+                                      <span className="muted">None recorded</span>
+                                    )}
+                                  </dd>
+                                </div>
+                                <div>
                                   <dt>Selected</dt>
                                   <dd>
                                     {assignedPlayerIds.length > 0 ? (
@@ -1561,12 +1623,12 @@ export function MatchesPage() {
                                 <div className="match-availability">
                                   <Button
                                     type="button"
-                                    variant={isCurrentPlayerAvailable ? 'secondary' : 'primary'}
+                                    variant={isCurrentPlayerAvailable ? 'secondary' : 'success'}
                                     onClick={() =>
                                       void updateMatchAvailability(
                                         match.id,
                                         user.playerId!,
-                                        !isCurrentPlayerAvailable,
+                                        isCurrentPlayerAvailable ? 'clear' : 'available',
                                       ).catch((availabilityError) => {
                                         setError(
                                           availabilityError instanceof Error
@@ -1576,10 +1638,29 @@ export function MatchesPage() {
                                       })
                                     }
                                   >
-                                    {isCurrentPlayerAvailable ? 'Mark unavailable' : 'Mark available'}
+                                    {isCurrentPlayerAvailable ? 'Available' : 'Mark available'}
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    variant={isCurrentPlayerUnavailable ? 'secondary' : 'danger'}
+                                    onClick={() =>
+                                      void updateMatchAvailability(
+                                        match.id,
+                                        user.playerId!,
+                                        isCurrentPlayerUnavailable ? 'clear' : 'unavailable',
+                                      ).catch((availabilityError) => {
+                                        setError(
+                                          availabilityError instanceof Error
+                                            ? availabilityError.message
+                                            : 'Unable to update availability.',
+                                        )
+                                      })
+                                    }
+                                  >
+                                    Unavailable
                                   </Button>
                                   {assignedPlayerIds.includes(user.playerId) ? (
-                                    <span className="muted">Selected by admin.</span>
+                                    <span className="muted">Selected by admin</span>
                                   ) : null}
                                 </div>
                               ) : null}

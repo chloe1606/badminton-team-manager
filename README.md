@@ -10,10 +10,11 @@ React + TypeScript foundation for a badminton team management system.
 - Home/away match entry with home venue managed in Settings and away venue selection from opponent club venues
 - Add Match opponent selection from the curated club list, including filtered venue choices and optional opponent team number (`1` to `5`)
 - Supabase-backed player accounts with self-serve match availability, plus admin availability updates, squad selection, and pair assignment for each fixture
+- Matches grouped by season, with older seasons shown by default and future seasons collapsible until expanded
 - Admin-only user management page for inviting new users into Supabase
 - **Overview** page with a read-only match table, player availability/selection snapshots, and per-match calendar export
 - Match result logging for configurable league formats, with configurable squad rules, pair slots, rubbers per player, and best-of-3 game scoring to 21 with a 30-point cap
-- **Settings** page for editing the current team profile and default league/match-format configuration
+- **League** page for editing the current team profile and default league/match-format configuration, including optional team number
 
 ## Setup
 
@@ -91,11 +92,11 @@ Admins can log per-game scores for each rubber and add optional result notes. Th
 
 ## Team and league configuration
 
-The default team profile is **Parklangley 3 Mixed**.  
-Use the **Settings** page to edit:
+The default team profile is **Parklangley 3**.  
+Use the **League** page to edit:
 
 - team name
-- team number
+- team number (or leave it unset)
 - team label
 - league name
 - home club and venue

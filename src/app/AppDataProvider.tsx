@@ -62,7 +62,11 @@ interface AppDataContextValue {
   addMatch: (match: NewMatchInput) => Promise<void>
   updateMatch: (matchId: string, match: MatchDetailsInput) => Promise<void>
   removeMatch: (matchId: string) => Promise<void>
-  updateMatchAvailability: (matchId: string, playerId: string, isAvailable: boolean) => Promise<void>
+  updateMatchAvailability: (
+    matchId: string,
+    playerId: string,
+    availability: 'available' | 'unavailable' | 'clear',
+  ) => Promise<void>
   assignMatchPlayers: (
     matchId: string,
     playerIds: string[],
@@ -114,6 +118,9 @@ function normalizeFormat(format: MatchFormatConfig | undefined): MatchFormatConf
 function normalizeMatchRecord(match: MatchRecord): MatchRecord {
   const format = normalizeFormat(match.format)
   const availablePlayerIds = [...new Set(match.availablePlayerIds ?? [])]
+  const unavailablePlayerIds = [...new Set(match.unavailablePlayerIds ?? [])].filter(
+    (playerId) => !availablePlayerIds.includes(playerId),
+  )
   const assignedPlayerIds = [...new Set(match.assignedPlayerIds ?? [])].filter((playerId) =>
     availablePlayerIds.includes(playerId),
   )
@@ -122,6 +129,7 @@ function normalizeMatchRecord(match: MatchRecord): MatchRecord {
     ...match,
     location: match.location ?? 'away',
     availablePlayerIds,
+    unavailablePlayerIds,
     assignedPlayerIds,
     assignedPairs: normalizeAssignedPairs(match.assignedPairs, format).map((pair) => ({
       ...pair,
@@ -352,20 +360,34 @@ export function AppDataProvider({ children }: AppDataProviderProps) {
           currentMatches.filter((match: MatchRecord) => match.id !== matchId),
         )
       },
-      updateMatchAvailability: async (matchId: string, playerId: string, isAvailable: boolean) => {
+      updateMatchAvailability: async (
+        matchId: string,
+        playerId: string,
+        availability: 'available' | 'unavailable' | 'clear',
+      ) => {
         const match = matches.find((fixture: MatchRecord) => fixture.id === matchId)
         if (!match) {
           throw new Error('Match not found.')
         }
 
         const availablePlayerIds = new Set(match.availablePlayerIds ?? [])
-        if (isAvailable) {
+        const unavailablePlayerIds = new Set(match.unavailablePlayerIds ?? [])
+        if (availability === 'available') {
           availablePlayerIds.add(playerId)
+          unavailablePlayerIds.delete(playerId)
+        } else if (availability === 'unavailable') {
+          availablePlayerIds.delete(playerId)
+          unavailablePlayerIds.add(playerId)
         } else {
           availablePlayerIds.delete(playerId)
+          unavailablePlayerIds.delete(playerId)
         }
 
-        const updatedMatch = await persistMatchAvailability(matchId, [...availablePlayerIds])
+        const updatedMatch = await persistMatchAvailability(
+          matchId,
+          [...availablePlayerIds],
+          [...unavailablePlayerIds],
+        )
         replaceMatch(updatedMatch)
       },
       assignMatchPlayers: async (
