@@ -1663,6 +1663,13 @@ export function MatchesPage() {
                               <dl className="match-rubbers-grid">
                                 {match.result.rubbers.map((rubber, rubberIndex) => {
                                   const rubberWinner = deriveRubberWinner(rubber.games, match.format)
+                                  const isHomeMatch = match.location === 'home'
+                                  const parkLangleyWon =
+                                    rubberWinner === 'us'
+                                      ? isHomeMatch
+                                      : rubberWinner === 'them'
+                                        ? !isHomeMatch
+                                        : null
                                   return (
                                     <div key={rubber.id}>
                                       <dt>R{rubberIndex + 1} · {rubber.pairSlot}</dt>
@@ -1671,9 +1678,9 @@ export function MatchesPage() {
                                           ? rubber.games.map((game) => `${game.ourScore}–${game.theirScore}`).join(', ')
                                           : '—'}{' '}
                                         <span className="muted">
-                                          {rubberWinner === 'us'
+                                          {parkLangleyWon === true
                                             ? '· Won'
-                                            : rubberWinner === 'them'
+                                            : parkLangleyWon === false
                                               ? '· Lost'
                                               : '· In progress'}
                                         </span>
