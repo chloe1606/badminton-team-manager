@@ -44,14 +44,22 @@ export function ResultsPage() {
   }, [filters, matches])
 
   const totalMatches = completedMatches.length
-  const totalWins = completedMatches.reduce((acc, match) => {
-    const summary = summarizeMatchResult(match.result, match.format)
-    return acc + summary.rubbersWon
-  }, 0)
-  const totalLosses = completedMatches.reduce((acc, match) => {
-    const summary = summarizeMatchResult(match.result, match.format)
-    return acc + summary.rubbersLost
-  }, 0)
+  const summaryTotals = completedMatches.reduce(
+    (acc, match) => {
+      const summary = summarizeMatchResult(match.result, match.format)
+      acc.gamesWon += summary.rubbersWon
+      acc.gamesLost += summary.rubbersLost
+
+      if (summary.rubbersWon > summary.rubbersLost) {
+        acc.matchesWon += 1
+      } else if (summary.rubbersLost > summary.rubbersWon) {
+        acc.matchesLost += 1
+      }
+
+      return acc
+    },
+    { gamesWon: 0, gamesLost: 0, matchesWon: 0, matchesLost: 0 },
+  )
 
   return (
     <div className="stack">
@@ -73,17 +81,32 @@ export function ResultsPage() {
               <p className="summary-value">{totalMatches}</p>
             </div>
             <div className="summary-stat">
-              <p className="summary-label">Wins</p>
-              <p className="summary-value">{totalWins}</p>
+              <p className="summary-label">Games Won</p>
+              <p className="summary-value">{summaryTotals.gamesWon}</p>
             </div>
             <div className="summary-stat">
-              <p className="summary-label">Losses</p>
-              <p className="summary-value">{totalLosses}</p>
+              <p className="summary-label">Games Lost</p>
+              <p className="summary-value">{summaryTotals.gamesLost}</p>
+            </div>
+            <div className="summary-stat">
+              <p className="summary-label">Matches Won</p>
+              <p className="summary-value">{summaryTotals.matchesWon}</p>
+            </div>
+            <div className="summary-stat">
+              <p className="summary-label">Matches Lost</p>
+              <p className="summary-value">{summaryTotals.matchesLost}</p>
             </div>
             <div className="summary-stat">
               <p className="summary-label">Win Rate</p>
               <p className="summary-value">
-                {totalMatches > 0 ? Math.round((totalWins / (totalWins + totalLosses)) * 100) : 0}%
+                {summaryTotals.matchesWon + summaryTotals.matchesLost > 0
+                  ? Math.round(
+                      (summaryTotals.matchesWon /
+                        (summaryTotals.matchesWon + summaryTotals.matchesLost)) *
+                        100,
+                    )
+                  : 0}
+                %
               </p>
             </div>
           </div>
