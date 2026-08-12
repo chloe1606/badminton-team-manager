@@ -12,6 +12,7 @@ import {
   getClubById,
   sortMatchesChronologically,
   summarizeMatchResult,
+  summarizeMatchResultFromHomeAwayPerspective,
 } from '../utils/matches'
 
 function formatMatchDateRange(startAt: string): string {
@@ -102,6 +103,11 @@ export function ResultsPage() {
             const address = getAddressById(venueClub, match.venueId)
             const opponentName = formatOpponentName(match, club)
             const resultSummary = summarizeMatchResult(match.result, match.format)
+            const homeAwayResult = summarizeMatchResultFromHomeAwayPerspective(
+              match.result,
+              match.format,
+              match.location,
+            )
             const pendingRubbers = match.format.numberOfRubbers - resultSummary.completedRubbers
             const assignedPlayerIds = match.assignedPlayerIds ?? []
 
@@ -117,7 +123,7 @@ export function ResultsPage() {
                   <div className="result-score">
                     <span className="score-label">Final Score</span>
                     <span className="score-value">
-                      {resultSummary.rubbersWon}–{resultSummary.rubbersLost}
+                      {homeAwayResult.homeScore}–{homeAwayResult.awayScore}
                     </span>
                   </div>
                 </div>

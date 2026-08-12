@@ -19,6 +19,7 @@ import type { PlayerProfile } from '../types/players'
 import { createMatchesCalendarIcs, downloadIcs, type CalendarFixture } from '../utils/calendar'
 import {
   deriveRubberWinner,
+  formatGameScoreFromHomeAwayPerspective,
   formatOpponentName,
   formatTeamDisplayName,
   gamesNeededToWin,
@@ -28,6 +29,7 @@ import {
   suggestAssignedPairs,
   sortMatchesChronologically,
   summarizeMatchResult,
+  summarizeMatchResultFromHomeAwayPerspective,
   validateRubberGames,
   getSeasonYear,
   getCurrentSeason,
@@ -1469,6 +1471,11 @@ export function MatchesPage() {
                         const address = getAddressById(venueClub, match.venueId)
                         const opponentName = formatOpponentName(match, club)
                         const resultSummary = summarizeMatchResult(match.result, match.format)
+                        const homeAwayResult = summarizeMatchResultFromHomeAwayPerspective(
+                          match.result,
+                          match.format,
+                          match.location,
+                        )
                         const pendingRubbers = match.format.numberOfRubbers - resultSummary.completedRubbers
                         const availablePlayerIds = match.availablePlayerIds ?? []
                         const unavailablePlayerIds = match.unavailablePlayerIds ?? []
@@ -1603,7 +1610,7 @@ export function MatchesPage() {
                                     <dt>Result</dt>
                                     <dd>
                                       {match.result ? (
-                                        `${resultSummary.rubbersWon}–${resultSummary.rubbersLost}${
+                                        `${homeAwayResult.homeScore}–${homeAwayResult.awayScore}${
                                           pendingRubbers > 0 ? ` (${pendingRubbers} pending)` : ''
                                         }`
                                       ) : (
@@ -1664,7 +1671,7 @@ export function MatchesPage() {
                                 {match.result.rubbers.map((rubber, rubberIndex) => {
                                   const rubberWinner = deriveRubberWinner(rubber.games, match.format)
                                   const isHomeMatch = match.location === 'home'
-                                  const parkLangleyWon =
+                                  const homeTeamWon =
                                     rubberWinner === 'us'
                                       ? isHomeMatch
                                       : rubberWinner === 'them'
@@ -1675,13 +1682,20 @@ export function MatchesPage() {
                                       <dt>R{rubberIndex + 1} · {rubber.pairSlot}</dt>
                                       <dd>
                                         {rubber.games.length > 0
-                                          ? rubber.games.map((game) => `${game.ourScore}–${game.theirScore}`).join(', ')
+                                          ? rubber.games
+                                              .map((game) =>
+                                                formatGameScoreFromHomeAwayPerspective(
+                                                  game,
+                                                  match.location,
+                                                ),
+                                              )
+                                              .join(', ')
                                           : '—'}{' '}
                                         <span className="muted">
-                                          {parkLangleyWon === true
-                                            ? '· Won'
-                                            : parkLangleyWon === false
-                                              ? '· Lost'
+                                          {homeTeamWon === true
+                                            ? '· Home won'
+                                            : homeTeamWon === false
+                                              ? '· Away won'
                                               : '· In progress'}
                                         </span>
                                       </dd>
