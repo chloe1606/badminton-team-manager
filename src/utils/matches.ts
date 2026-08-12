@@ -4,6 +4,7 @@ import type {
   MatchFormatConfig,
   MatchPairAssignment,
   MatchGameScore,
+  MatchLocation,
   MatchRecord,
   MatchResult,
   PlayerGender,
@@ -302,6 +303,26 @@ export function summarizeMatchResult(result: MatchResult | undefined, format: Ma
     },
     { rubbersWon: 0, rubbersLost: 0, completedRubbers: 0 },
   )
+}
+
+export function summarizeMatchResultFromHomeAwayPerspective(
+  result: MatchResult | undefined,
+  format: MatchFormatConfig,
+  location: MatchLocation,
+): { homeScore: number; awayScore: number } {
+  const summary = summarizeMatchResult(result, format)
+  return location === 'home'
+    ? { homeScore: summary.rubbersWon, awayScore: summary.rubbersLost }
+    : { homeScore: summary.rubbersLost, awayScore: summary.rubbersWon }
+}
+
+export function formatGameScoreFromHomeAwayPerspective(
+  game: MatchGameScore,
+  location: MatchLocation,
+): string {
+  return location === 'home'
+    ? `${game.ourScore}–${game.theirScore}`
+    : `${game.theirScore}–${game.ourScore}`
 }
 
 export function getSeasonYear(date: Date): string {

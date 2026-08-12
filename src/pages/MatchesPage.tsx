@@ -1618,6 +1618,7 @@ export function MatchesPage() {
                                   <Button
                                     type="button"
                                     variant="success"
+                                    disabled={isCurrentPlayerAvailable}
                                     onClick={() =>
                                       void updateMatchAvailability(
                                         match.id,
@@ -1637,6 +1638,7 @@ export function MatchesPage() {
                                   <Button
                                     type="button"
                                     variant={isCurrentPlayerUnavailable ? 'secondary' : 'danger'}
+                                    disabled={isCurrentPlayerUnavailable}
                                     onClick={() =>
                                       void updateMatchAvailability(
                                         match.id,
@@ -1666,7 +1668,9 @@ export function MatchesPage() {
                                       <dt>R{rubberIndex + 1} · {rubber.pairSlot}</dt>
                                       <dd>
                                         {rubber.games.length > 0
-                                          ? rubber.games.map((game) => `${game.ourScore}–${game.theirScore}`).join(', ')
+                                          ? rubber.games
+                                              .map((game) => `${game.ourScore}–${game.theirScore}`)
+                                              .join(', ')
                                           : '—'}{' '}
                                         <span className="muted">
                                           {rubberWinner === 'us'
