@@ -12,7 +12,7 @@ import type {
 import type { PlayerProfile } from '../types/players'
 
 export function formatTeamDisplayName(profile: TeamProfile): string {
-  return [profile.teamName.trim(), profile.teamNumber?.toString().trim(), profile.teamLabel.trim()]
+  return [profile.teamName.trim(), profile.teamNumber?.toString().trim()]
     .filter(Boolean)
     .join(' ')
 }
@@ -316,7 +316,15 @@ export function getSeasonYear(date: Date): string {
 }
 
 export function getCurrentSeason(): string {
-  return getSeasonYear(new Date())
+  const now = new Date()
+  const month = now.getMonth()
+  const year = now.getFullYear()
+  // Badminton season runs Sep–May. Jun–Aug is the off-season summer break,
+  // so treat those months as belonging to the upcoming season.
+  if (month >= 5 && month < 9) {
+    return `${year}/${year + 1}`
+  }
+  return getSeasonYear(now)
 }
 
 export function filterMatchesBySeason(matches: MatchRecord[], season: string): MatchRecord[] {
