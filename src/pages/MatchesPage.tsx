@@ -1274,7 +1274,7 @@ export function MatchesPage() {
 
       for (const section of seasonSections) {
         nextCollapsedSeasons[section.season] =
-          currentCollapsedSeasons[section.season] ?? section.season > currentSeason
+          currentCollapsedSeasons[section.season] ?? section.season < currentSeason
       }
 
       const hasChanges =
@@ -1379,7 +1379,7 @@ export function MatchesPage() {
           <div>
             <h1>Matches</h1>
             <p>
-              Fixtures for <strong>{teamSettings.profile.teamName}</strong> in{' '}
+              Fixtures for <strong>{teamDisplayName}</strong> in{' '}
               <strong>{matchType} Div {divisionNumber}</strong>.
             </p>
           </div>
@@ -1454,11 +1454,9 @@ export function MatchesPage() {
                     aria-expanded={!isCollapsed}
                   >
                     <span className="season-label">Season {section.season}</span>
+                    <span className="season-header-toggle">{isCollapsed ? 'Show' : 'Hide'}</span>
                     <span className="season-header-count">
                       {section.matches.length} match{section.matches.length === 1 ? '' : 'es'}
-                    </span>
-                    <span className="season-header-toggle">
-                      {isCurrentSeasonSection ? 'Available' : isCollapsed ? 'Show' : 'Hide'}
                     </span>
                   </button>
                   {!isCollapsed ? (
@@ -1613,12 +1611,11 @@ export function MatchesPage() {
                                   </div>
                                 ) : null}
                               </dl>
-                              {user?.playerId ? (
+                              {user?.playerId && !isExpired ? (
                                 <div className="match-availability">
                                   <Button
                                     type="button"
-                                    variant={isCurrentPlayerAvailable ? 'secondary' : 'success'}
-                                    disabled={isExpired}
+                                    variant="success"
                                     onClick={() =>
                                       void updateMatchAvailability(
                                         match.id,
@@ -1633,12 +1630,11 @@ export function MatchesPage() {
                                       })
                                     }
                                   >
-                                    {isCurrentPlayerAvailable ? 'Available' : 'Mark available'}
+                                    Available
                                   </Button>
                                   <Button
                                     type="button"
                                     variant={isCurrentPlayerUnavailable ? 'secondary' : 'danger'}
-                                    disabled={isExpired}
                                     onClick={() =>
                                       void updateMatchAvailability(
                                         match.id,

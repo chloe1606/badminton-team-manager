@@ -6,6 +6,7 @@ import { clubDirectory } from '../data/clubContacts'
 import type { MatchRecord } from '../types/matches'
 import { createDefaultMatchFilters, filterMatches, getMatchSeasonOptions } from '../utils/matchFilters'
 import {
+  formatTeamDisplayName,
   formatOpponentName,
   getAddressById,
   getClubById,
@@ -32,6 +33,7 @@ function getVenueClub(match: MatchRecord, homeClubId: string) {
 export function ResultsPage() {
   const { matches, playersById, teamSettings } = useAppData()
   const [filters, setFilters] = useState<MatchFiltersValue>(() => createDefaultMatchFilters('2026/2027'))
+  const teamDisplayName = useMemo(() => formatTeamDisplayName(teamSettings.profile), [teamSettings.profile])
 
   const seasonOptions = useMemo(() => getMatchSeasonOptions(matches), [matches])
   const completedMatches = useMemo(() => {
@@ -57,7 +59,7 @@ export function ResultsPage() {
           <div>
             <h1>Results</h1>
             <p>
-              Results for <strong>{teamSettings.profile.teamName}</strong> in{' '}
+              Results for <strong>{teamDisplayName}</strong> in{' '}
               <strong>Mixed 6 Div 3</strong>.
             </p>
           </div>
