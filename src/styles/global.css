@@ -184,6 +184,15 @@ a {
   background: var(--color-primary-strong);
 }
 
+.btn-success {
+  background: #166534;
+  color: #ffffff;
+}
+
+.btn-success:hover {
+  background: #14532d;
+}
+
 .btn-secondary {
   background: var(--color-surface);
   border-color: var(--color-border);
@@ -193,6 +202,15 @@ a {
 .btn-ghost {
   background: transparent;
   color: var(--color-primary-strong);
+}
+
+.btn-danger {
+  background: #7f1d1d;
+  color: #ffffff;
+}
+
+.btn-danger:hover {
+  background: #651717;
 }
 
 .btn:disabled {
@@ -228,6 +246,10 @@ a {
 .form-grid {
   display: grid;
   gap: var(--space-4);
+}
+
+.match-filter-grid {
+  align-items: end;
 }
 
 .form-actions {
@@ -742,12 +764,16 @@ a {
   gap: var(--space-4);
 }
 
+.season-section--historical {
+  opacity: 0.65;
+}
+
 .season-header {
-  display: flex;
+  display: grid;
   align-items: center;
-  justify-content: space-between;
   gap: var(--space-3);
   width: 100%;
+  grid-template-columns: minmax(0, 1fr) auto auto;
   padding: var(--space-3) var(--space-4);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
@@ -759,6 +785,7 @@ a {
 
 .season-header .season-label {
   margin-bottom: 0;
+  justify-self: start;
 }
 
 .season-header-count,
@@ -768,6 +795,13 @@ a {
   color: var(--color-muted);
   font-size: 0.875rem;
   font-weight: 600;
+}
+
+.season-header-toggle {
+  padding: var(--space-1) var(--space-3);
+  border-radius: 999px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
 }
 
 /* Admin Dashboard Summary */
@@ -849,6 +883,28 @@ a {
 
 .summary-matches {
   grid-column: 1 / -1;
+}
+
+.summary-matches .match-stats-grid {
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+}
+
+.next-match-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-3);
+  padding: var(--space-3);
+  background: rgba(255, 255, 255, 0.6);
+  border-radius: var(--radius-sm);
+}
+
+.next-match-summary-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  text-align: center;
 }
 
 /* Results Page */

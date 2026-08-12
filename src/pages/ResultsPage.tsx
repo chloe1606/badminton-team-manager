@@ -1,9 +1,12 @@
-import { Fragment, useMemo } from 'react'
+import { Fragment, useMemo, useState } from 'react'
 import { useAppData } from '../app/AppDataProvider'
+import { MatchFilters, type MatchFiltersValue } from '../components/matches/MatchFilters'
 import { Card } from '../components/ui/Card'
 import { clubDirectory } from '../data/clubContacts'
 import type { MatchRecord } from '../types/matches'
+import { createDefaultMatchFilters, filterMatches, getMatchSeasonOptions } from '../utils/matchFilters'
 import {
+  formatTeamDisplayName,
   formatOpponentName,
   getAddressById,
   getClubById,
@@ -29,12 +32,15 @@ function getVenueClub(match: MatchRecord, homeClubId: string) {
 
 export function ResultsPage() {
   const { matches, playersById, teamSettings } = useAppData()
+  const [filters, setFilters] = useState<MatchFiltersValue>(() => createDefaultMatchFilters('2026/2027'))
+  const teamDisplayName = useMemo(() => formatTeamDisplayName(teamSettings.profile), [teamSettings.profile])
 
+  const seasonOptions = useMemo(() => getMatchSeasonOptions(matches), [matches])
   const completedMatches = useMemo(() => {
-    return sortMatchesChronologically(matches)
+    return sortMatchesChronologically(filterMatches(matches, filters))
       .filter((match) => match.result)
       .sort((a, b) => new Date(b.startAt).getTime() - new Date(a.startAt).getTime())
-  }, [matches])
+  }, [filters, matches])
 
   const totalMatches = completedMatches.length
   const totalWins = completedMatches.reduce((acc, match) => {
@@ -53,7 +59,7 @@ export function ResultsPage() {
           <div>
             <h1>Results</h1>
             <p>
-              Results for <strong>{teamSettings.profile.teamName}</strong> in{' '}
+              Results for <strong>{teamDisplayName}</strong> in{' '}
               <strong>Mixed 6 Div 3</strong>.
             </p>
           </div>
@@ -81,6 +87,11 @@ export function ResultsPage() {
             </div>
           </div>
         )}
+      </Card>
+
+      <Card>
+        <h2>Filters</h2>
+        <MatchFilters filters={filters} onChange={setFilters} seasonOptions={seasonOptions} />
       </Card>
 
       <section className="stack" aria-label="Results list">

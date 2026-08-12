@@ -25,6 +25,7 @@ interface SupabaseMatchRow {
   league_name: string | null
   format: MatchFormatConfig | string | null
   available_player_ids: string[] | null
+  unavailable_player_ids: string[] | null
   assigned_player_ids: string[] | null
   assigned_pairs: MatchPairAssignment[] | string | null
   is_incomplete_team: boolean | null
@@ -49,6 +50,7 @@ const MATCH_COLUMNS = [
   'league_name',
   'format',
   'available_player_ids',
+  'unavailable_player_ids',
   'assigned_player_ids',
   'assigned_pairs',
   'is_incomplete_team',
@@ -125,6 +127,7 @@ function mapMatchRow(row: SupabaseMatchRow): MatchRecord {
     leagueName: row.league_name,
     format,
     availablePlayerIds: normalizeStringArray(row.available_player_ids ?? undefined),
+    unavailablePlayerIds: normalizeStringArray(row.unavailable_player_ids ?? undefined),
     assignedPlayerIds: normalizeStringArray(row.assigned_player_ids ?? undefined),
     assignedPairs: parseJsonField<MatchPairAssignment[]>(row.assigned_pairs, 'assigned_pairs'),
     isIncompleteTeam: row.is_incomplete_team ?? undefined,
@@ -152,6 +155,7 @@ function toInsertPayload(match: NewMatchInput) {
     league_name: match.leagueName,
     format: match.format,
     available_player_ids: [],
+    unavailable_player_ids: [],
     assigned_player_ids: [],
     assigned_pairs: [],
     is_incomplete_team: false,
@@ -235,12 +239,14 @@ export async function deleteMatch(matchId: string): Promise<void> {
 export async function updateMatchAvailability(
   matchId: string,
   playerIds: string[],
+  unavailablePlayerIds: string[],
 ): Promise<MatchRecord> {
   const supabase = requireSupabase()
   const { data, error } = await supabase
     .from(MATCH_TABLE)
     .update({
       available_player_ids: [...new Set(playerIds)],
+      unavailable_player_ids: [...new Set(unavailablePlayerIds)],
     })
     .eq('id', matchId)
     .select(MATCH_COLUMNS)

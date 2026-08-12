@@ -34,11 +34,14 @@ export function DashboardPage() {
   const { matches, isLoadingMatches } = useAppData()
   const { isAdmin, user } = useAuth()
   const playerId = user?.playerId
-  const allMatches = useMemo(() => sortMatchesChronologically(matches), [matches])
+  const futureMatches = useMemo(
+    () => sortMatchesChronologically(matches).filter((match) => !isMatchExpired(match)),
+    [matches],
+  )
   const calendarMonthGroups = useMemo<CalendarMonthGroup[]>(() => {
     const grouped = new Map<string, MatchRecord[]>()
 
-    for (const match of allMatches) {
+    for (const match of futureMatches) {
       const monthKey = match.startAt.slice(0, 7)
       const monthMatches = grouped.get(monthKey)
       if (monthMatches) {
@@ -53,19 +56,18 @@ export function DashboardPage() {
       monthLabel: formatMonthHeading(monthMatches[0].startAt),
       matches: monthMatches,
     }))
-  }, [allMatches])
+  }, [futureMatches])
   const playerMatches = useMemo(
     () =>
-      allMatches.filter(
+      futureMatches.filter(
         (match) =>
           playerId &&
-          !isMatchExpired(match) &&
           match.matchType === 'Mixed 6' &&
           match.divisionNumber === 3 &&
           ((match.availablePlayerIds ?? []).includes(playerId) ||
             (match.assignedPlayerIds ?? []).includes(playerId)),
       ),
-    [allMatches, playerId],
+    [futureMatches, playerId],
   )
 
   return (

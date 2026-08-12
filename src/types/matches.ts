@@ -22,7 +22,7 @@ export interface ClubDirectoryEntry {
 
 export interface TeamProfile {
   teamName: string
-  teamNumber: number
+  teamNumber: number | null
   teamLabel: string
   homeClubId: string
   homeVenueId: string
@@ -109,6 +109,7 @@ export interface MatchRecord {
   venueId: string
   notes?: string
   availablePlayerIds?: string[]
+  unavailablePlayerIds?: string[]
   assignedPlayerIds?: string[]
   assignedPairs?: MatchPairAssignment[]
   isIncompleteTeam?: boolean
