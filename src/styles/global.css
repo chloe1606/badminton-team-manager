@@ -769,11 +769,11 @@ a {
 }
 
 .season-header {
-  display: flex;
+  display: grid;
   align-items: center;
-  justify-content: space-between;
   gap: var(--space-3);
   width: 100%;
+  grid-template-columns: minmax(0, 1fr) auto auto;
   padding: var(--space-3) var(--space-4);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
