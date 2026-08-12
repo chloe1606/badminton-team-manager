@@ -1271,6 +1271,7 @@ export function MatchesPage() {
   useEffect(() => {
     setCollapsedSeasons((currentCollapsedSeasons) => {
       const nextCollapsedSeasons: Record<string, boolean> = {}
+      const currentSeasonSet = new Set(seasonSections.map((section) => section.season))
 
       for (const section of seasonSections) {
         nextCollapsedSeasons[section.season] =
@@ -1278,6 +1279,7 @@ export function MatchesPage() {
       }
 
       const hasChanges =
+        Object.keys(currentCollapsedSeasons).some((season) => !currentSeasonSet.has(season)) ||
         Object.keys(nextCollapsedSeasons).length !== Object.keys(currentCollapsedSeasons).length ||
         Object.entries(nextCollapsedSeasons).some(
           ([season, isCollapsed]) => currentCollapsedSeasons[season] !== isCollapsed,

@@ -785,6 +785,7 @@ a {
 
 .season-header .season-label {
   margin-bottom: 0;
+  justify-self: start;
 }
 
 .season-header-count,
