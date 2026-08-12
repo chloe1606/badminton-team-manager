@@ -1440,9 +1440,9 @@ export function MatchesPage() {
         ) : seasonSections.length > 0 ? (
           <>
             {seasonSections.map((section) => {
-              const isCollapsed = collapsedSeasons[section.season] ?? false
               const isCurrentSeasonSection = section.season === currentSeason
               const isOlderSeasonSection = section.season < currentSeason
+              const isCollapsed = collapsedSeasons[section.season] ?? isOlderSeasonSection
 
               return (
                 <section

@@ -41,6 +41,7 @@ import {
 } from '../utils/matches'
 import type { PlayerGender } from '../types/matches'
 import { isSupabaseConfigured, supabaseConfigError } from '../lib/supabase'
+import { requireSupabase } from '../lib/supabase'
 
 function createPlayerGenderLookup(playersById: Map<string, PlayerProfile>): Map<string, { gender: PlayerGender }> {
   return new Map(
@@ -198,6 +199,13 @@ export function AppDataProvider({ children }: AppDataProviderProps) {
   const [teamSettings, setTeamSettings] = useState<TeamSettings>(normalizeTeamSettings(defaultTeamSettings))
 
   useEffect(() => {
+    if (!isAuthenticated) {
+      setMatches([])
+      setIsLoadingMatches(false)
+      setMatchesError(null)
+      return
+    }
+
     if (!isSupabaseConfigured) {
       setMatches([])
       setIsLoadingMatches(false)
@@ -232,7 +240,36 @@ export function AppDataProvider({ children }: AppDataProviderProps) {
     return () => {
       isActive = false
     }
-  }, [])
+  }, [isAuthenticated])
+
+  useEffect(() => {
+    if (!isAuthenticated || !isSupabaseConfigured) {
+      return
+    }
+
+    const supabase = requireSupabase()
+    const channel = supabase
+      .channel('matches-realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'matches' },
+        () => {
+          listMatches()
+            .then((loadedMatches) => {
+              setMatches(loadedMatches.map(normalizeMatchRecord))
+              setMatchesError(null)
+            })
+            .catch((error: unknown) => {
+              setMatchesError(error instanceof Error ? error.message : 'Unable to load matches.')
+            })
+        },
+      )
+      .subscribe()
+
+    return () => {
+      void supabase.removeChannel(channel)
+    }
+  }, [isAuthenticated])
 
   useEffect(() => {
     if (!isAuthenticated) {
