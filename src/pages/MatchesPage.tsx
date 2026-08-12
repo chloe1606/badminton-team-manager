@@ -1439,12 +1439,17 @@ export function MatchesPage() {
           <>
             {seasonSections.map((section) => {
               const isCollapsed = collapsedSeasons[section.season] ?? false
+              const isCurrentSeasonSection = section.season === currentSeason
+              const isOlderSeasonSection = section.season < currentSeason
 
               return (
-                <section key={section.season} className="season-section">
+                <section
+                  key={section.season}
+                  className={`season-section${isOlderSeasonSection ? ' season-section--historical' : ''}`}
+                >
                   <button
                     type="button"
-                    className="season-header"
+                    className={`season-header${isCurrentSeasonSection ? ' season-header--current' : ''}`}
                     onClick={() => toggleSeason(section.season)}
                     aria-expanded={!isCollapsed}
                   >
@@ -1452,7 +1457,9 @@ export function MatchesPage() {
                     <span className="season-header-count">
                       {section.matches.length} match{section.matches.length === 1 ? '' : 'es'}
                     </span>
-                    <span className="season-header-toggle">{isCollapsed ? 'Show' : 'Hide'}</span>
+                    <span className="season-header-toggle">
+                      {isCurrentSeasonSection ? 'Available' : isCollapsed ? 'Show' : 'Hide'}
+                    </span>
                   </button>
                   {!isCollapsed ? (
                     <div className="stack">
@@ -1611,6 +1618,7 @@ export function MatchesPage() {
                                   <Button
                                     type="button"
                                     variant={isCurrentPlayerAvailable ? 'secondary' : 'success'}
+                                    disabled={isExpired}
                                     onClick={() =>
                                       void updateMatchAvailability(
                                         match.id,
@@ -1630,6 +1638,7 @@ export function MatchesPage() {
                                   <Button
                                     type="button"
                                     variant={isCurrentPlayerUnavailable ? 'secondary' : 'danger'}
+                                    disabled={isExpired}
                                     onClick={() =>
                                       void updateMatchAvailability(
                                         match.id,

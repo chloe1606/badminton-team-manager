@@ -764,6 +764,10 @@ a {
   gap: var(--space-4);
 }
 
+.season-section--historical {
+  opacity: 0.65;
+}
+
 .season-header {
   display: flex;
   align-items: center;
@@ -781,6 +785,13 @@ a {
 
 .season-header .season-label {
   margin-bottom: 0;
+}
+
+.season-header--current .season-header-toggle {
+  padding: var(--space-1) var(--space-3);
+  border-radius: 999px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
 }
 
 .season-header-count,
