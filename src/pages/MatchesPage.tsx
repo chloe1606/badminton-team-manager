@@ -19,7 +19,6 @@ import type { PlayerProfile } from '../types/players'
 import { createMatchesCalendarIcs, downloadIcs, type CalendarFixture } from '../utils/calendar'
 import {
   deriveRubberWinner,
-  formatGameScoreFromHomeAwayPerspective,
   formatOpponentName,
   formatTeamDisplayName,
   gamesNeededToWin,
@@ -29,7 +28,6 @@ import {
   suggestAssignedPairs,
   sortMatchesChronologically,
   summarizeMatchResult,
-  summarizeMatchResultFromHomeAwayPerspective,
   validateRubberGames,
   getSeasonYear,
   getCurrentSeason,
@@ -1471,11 +1469,6 @@ export function MatchesPage() {
                         const address = getAddressById(venueClub, match.venueId)
                         const opponentName = formatOpponentName(match, club)
                         const resultSummary = summarizeMatchResult(match.result, match.format)
-                        const homeAwayResult = summarizeMatchResultFromHomeAwayPerspective(
-                          match.result,
-                          match.format,
-                          match.location,
-                        )
                         const pendingRubbers = match.format.numberOfRubbers - resultSummary.completedRubbers
                         const availablePlayerIds = match.availablePlayerIds ?? []
                         const unavailablePlayerIds = match.unavailablePlayerIds ?? []
@@ -1610,7 +1603,7 @@ export function MatchesPage() {
                                     <dt>Result</dt>
                                     <dd>
                                       {match.result ? (
-                                        `${homeAwayResult.homeScore}–${homeAwayResult.awayScore}${
+                                        `${resultSummary.rubbersWon}–${resultSummary.rubbersLost}${
                                           pendingRubbers > 0 ? ` (${pendingRubbers} pending)` : ''
                                         }`
                                       ) : (
@@ -1670,32 +1663,20 @@ export function MatchesPage() {
                               <dl className="match-rubbers-grid">
                                 {match.result.rubbers.map((rubber, rubberIndex) => {
                                   const rubberWinner = deriveRubberWinner(rubber.games, match.format)
-                                  const isHomeMatch = match.location === 'home'
-                                  const homeTeamWon =
-                                    rubberWinner === 'us'
-                                      ? isHomeMatch
-                                      : rubberWinner === 'them'
-                                        ? !isHomeMatch
-                                        : null
                                   return (
                                     <div key={rubber.id}>
                                       <dt>R{rubberIndex + 1} · {rubber.pairSlot}</dt>
                                       <dd>
                                         {rubber.games.length > 0
                                           ? rubber.games
-                                              .map((game) =>
-                                                formatGameScoreFromHomeAwayPerspective(
-                                                  game,
-                                                  match.location,
-                                                ),
-                                              )
+                                              .map((game) => `${game.ourScore}–${game.theirScore}`)
                                               .join(', ')
                                           : '—'}{' '}
                                         <span className="muted">
-                                          {homeTeamWon === true
-                                            ? '· Home won'
-                                            : homeTeamWon === false
-                                              ? '· Away won'
+                                          {rubberWinner === 'us'
+                                            ? '· Won'
+                                            : rubberWinner === 'them'
+                                              ? '· Lost'
                                               : '· In progress'}
                                         </span>
                                       </dd>
