@@ -787,13 +787,6 @@ a {
   margin-bottom: 0;
 }
 
-.season-header--current .season-header-toggle {
-  padding: var(--space-1) var(--space-3);
-  border-radius: 999px;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-}
-
 .season-header-count,
 .season-header-toggle {
   display: inline-flex;
@@ -801,6 +794,13 @@ a {
   color: var(--color-muted);
   font-size: 0.875rem;
   font-weight: 600;
+}
+
+.season-header-toggle {
+  padding: var(--space-1) var(--space-3);
+  border-radius: 999px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
 }
 
 /* Admin Dashboard Summary */
