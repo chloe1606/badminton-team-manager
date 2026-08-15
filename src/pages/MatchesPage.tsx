@@ -1163,7 +1163,7 @@ export function MatchesPage() {
     updateMatchAvailability,
     updateMatchResult,
   } = useAppData()
-  const { addNotification } = useNotifications()
+  const { addNotification, broadcastNotification } = useNotifications()
   const [matchType, setMatchType] = useState('Mixed 6')
   const [divisionNumber, setDivisionNumber] = useState('3')
   const [opponentClubId, setOpponentClubId] = useState('')
@@ -1192,7 +1192,7 @@ export function MatchesPage() {
     await addMatch(input)
     const club = getClubById(clubDirectory, input.opponentClubId)
     const opponentLabel = club?.name ?? input.opponentClubId
-    addNotification('match_added', 'Match added', `New fixture vs ${opponentLabel} added.`, '🏸')
+    broadcastNotification('match_added', 'Match added', `New fixture vs ${opponentLabel} added.`, '🏸')
   }
 
   async function handleUpdateMatch(matchId: string, input: MatchDetailsInput) {
@@ -1209,7 +1209,7 @@ export function MatchesPage() {
   ): Promise<string | undefined> {
     const error = await assignMatchPlayers(matchId, playerIds, assignedPairs)
     if (!error) {
-      addNotification('player_selected', 'Team selected', `${playerIds.length} player${playerIds.length !== 1 ? 's' : ''} selected for match.`, '👤')
+      broadcastNotification('player_selected', 'Team selected', `${playerIds.length} player${playerIds.length !== 1 ? 's' : ''} selected for match.`, '👤')
     }
     return error
   }

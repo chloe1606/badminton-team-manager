@@ -135,6 +135,42 @@ export async function deleteNotification(id: string): Promise<void> {
   }
 }
 
+export async function broadcastNotificationToAllUsers(
+  type: NotificationType,
+  title: string,
+  message: string,
+  icon: string,
+): Promise<void> {
+  const supabase = requireSupabase()
+
+  const { data: profiles, error: profilesError } = await supabase
+    .from('profiles')
+    .select('id')
+
+  if (profilesError) {
+    throw new Error(profilesError.message)
+  }
+
+  if (!profiles || profiles.length === 0) {
+    return
+  }
+
+  const rows = (profiles as { id: string }[]).map((p) => ({
+    user_id: p.id,
+    type,
+    title,
+    message,
+    icon,
+    read: false,
+  }))
+
+  const { error } = await supabase.from('notifications').insert(rows)
+
+  if (error) {
+    throw new Error(error.message)
+  }
+}
+
 export async function clearAllNotifications(): Promise<void> {
   if (!isSupabaseConfigured) {
     return

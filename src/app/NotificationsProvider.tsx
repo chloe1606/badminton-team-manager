@@ -2,6 +2,7 @@ import { createContext, ReactNode, useCallback, useContext, useEffect, useState 
 import { useAuth } from '../auth/hooks/useAuth'
 import { isSupabaseConfigured, requireSupabase } from '../lib/supabase'
 import {
+  broadcastNotificationToAllUsers,
   clearAllNotifications,
   createNotification,
   deleteNotification as deleteNotificationInDb,
@@ -34,6 +35,12 @@ interface NotificationsContextType {
   notifications: Notification[]
   unreadCount: number
   addNotification: (
+    type: NotificationType,
+    title: string,
+    message: string,
+    icon: string,
+  ) => void
+  broadcastNotification: (
     type: NotificationType,
     title: string,
     message: string,
@@ -206,6 +213,33 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
     [],
   )
 
+  const broadcastNotification = useCallback(
+    (type: NotificationType, title: string, message: string, icon: string) => {
+      const tempId = `${Date.now()}-${Math.random()}`
+      const now = new Date()
+      const optimistic: Notification = {
+        id: tempId,
+        type,
+        title,
+        message,
+        timestamp: now,
+        icon,
+        read: false,
+      }
+
+      setNotifications((prev: Notification[]) => [optimistic, ...prev])
+
+      if (isSupabaseConfigured) {
+        broadcastNotificationToAllUsers(type, title, message, icon)
+          .catch((error: unknown) => {
+            console.error('Failed to broadcast notification to all users', error)
+            setNotifications((prev: Notification[]) => prev.filter((n: Notification) => n.id !== tempId))
+          })
+      }
+    },
+    [],
+  )
+
   const markAsRead = useCallback((id: string) => {
     setNotifications((prev: Notification[]) =>
       prev.map((n: Notification) => (n.id === id ? { ...n, read: true } : n)),
@@ -252,6 +286,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
         notifications,
         unreadCount,
         addNotification,
+        broadcastNotification,
         markAsRead,
         markAllAsRead,
         deleteNotification,
