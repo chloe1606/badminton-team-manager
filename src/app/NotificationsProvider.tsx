@@ -91,30 +91,69 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
     }
 
     const supabase = requireSupabase()
+
     const channel = supabase
       .channel('notifications-realtime')
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'notifications' },
-        () => {
-          listNotifications()
-            .then((records) => {
-              setNotifications(
-                records.map((r) => ({
-                  id: r.id,
-                  type: r.type,
-                  title: r.title,
-                  message: r.message,
-                  icon: r.icon,
-                  read: r.read,
-                  timestamp: new Date(r.createdAt),
-                  createdAt: r.createdAt,
-                })),
-              )
-            })
-            .catch((error: unknown) => {
-              console.error('Failed to reload notifications from Supabase', error)
-            })
+        { event: 'INSERT', schema: 'public', table: 'notifications' },
+        (_payload: unknown) => {
+          const payload = _payload as { new: { id: string; type: string; title: string; message: string; icon: string | null; read: boolean | null; created_at: string | null } }
+          const row = payload.new
+          const incoming: Notification = {
+            id: row.id,
+            type: row.type as NotificationType,
+            title: row.title,
+            message: row.message,
+            icon: row.icon ?? '',
+            read: row.read ?? false,
+            timestamp: new Date(row.created_at ?? new Date()),
+            createdAt: row.created_at ?? undefined,
+          }
+          // Replace optimistic entry (matched by title+message+type) or prepend if not found
+          setNotifications((prev: Notification[]) => {
+            const optimisticIndex = prev.findIndex(
+              (n) =>
+                n.type === incoming.type &&
+                n.title === incoming.title &&
+                n.message === incoming.message &&
+                !n.createdAt,
+            )
+            if (optimisticIndex !== -1) {
+              const next = [...prev]
+              next[optimisticIndex] = incoming
+              return next
+            }
+            // Avoid duplicates if already added
+            if (prev.some((n) => n.id === incoming.id)) {
+              return prev
+            }
+            return [incoming, ...prev]
+          })
+        },
+      )
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'notifications' },
+        (_payload: unknown) => {
+          const payload = _payload as { new: { id: string; read: boolean | null } }
+          const row = payload.new
+          setNotifications((prev: Notification[]) =>
+            prev.map((n: Notification) =>
+              n.id === row.id ? { ...n, read: row.read ?? n.read } : n,
+            ),
+          )
+        },
+      )
+      .on(
+        'postgres_changes',
+        { event: 'DELETE', schema: 'public', table: 'notifications' },
+        (_payload: unknown) => {
+          const payload = _payload as { old: { id: string } }
+          const row = payload.old
+          setNotifications((prev: Notification[]) =>
+            prev.filter((n: Notification) => n.id !== row.id),
+          )
         },
       )
       .subscribe()
