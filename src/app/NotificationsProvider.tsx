@@ -126,38 +126,50 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
 
   const addNotification = useCallback(
     (type: NotificationType, title: string, message: string, icon: string) => {
-      if (isSupabaseConfigured) {
-        createNotification(type, title, message, icon).catch((error: unknown) => {
-          console.error('Failed to create notification in Supabase', error)
-        })
-        // The real-time subscription will update state; no local state update needed
-        return
-      }
-
-      // Fallback: local-only when Supabase is not configured
-      const id = `${Date.now()}-${Math.random()}`
-      const notification: Notification = {
-        id,
+      const tempId = `${Date.now()}-${Math.random()}`
+      const now = new Date()
+      const optimistic: Notification = {
+        id: tempId,
         type,
         title,
         message,
-        timestamp: new Date(),
+        timestamp: now,
         icon,
         read: false,
       }
 
-      setNotifications((prev) => [notification, ...prev])
+      setNotifications((prev: Notification[]) => [optimistic, ...prev])
 
-      setTimeout(() => {
-        setNotifications((prev) => prev.filter((n) => n.id !== id))
-      }, 10000)
+      if (isSupabaseConfigured) {
+        createNotification(type, title, message, icon)
+          .then((record) => {
+            // Replace the optimistic entry with the real DB record
+            setNotifications((prev: Notification[]) =>
+              prev.map((n: Notification) =>
+                n.id === tempId
+                  ? { ...n, id: record.id, createdAt: record.createdAt }
+                  : n,
+              ),
+            )
+          })
+          .catch((error: unknown) => {
+            console.error('Failed to create notification in Supabase', error)
+            // Remove the optimistic entry on failure
+            setNotifications((prev: Notification[]) => prev.filter((n: Notification) => n.id !== tempId))
+          })
+      } else {
+        // Auto-remove after 10 seconds when Supabase is not configured
+        setTimeout(() => {
+          setNotifications((prev: Notification[]) => prev.filter((n: Notification) => n.id !== tempId))
+        }, 10000)
+      }
     },
     [],
   )
 
   const markAsRead = useCallback((id: string) => {
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, read: true } : n)),
+    setNotifications((prev: Notification[]) =>
+      prev.map((n: Notification) => (n.id === id ? { ...n, read: true } : n)),
     )
     if (isSupabaseConfigured) {
       markNotificationAsRead(id).catch((error: unknown) => {
@@ -167,7 +179,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const markAllAsRead = useCallback(() => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })))
+    setNotifications((prev: Notification[]) => prev.map((n: Notification) => ({ ...n, read: true })))
     if (isSupabaseConfigured) {
       markAllNotificationsAsRead().catch((error: unknown) => {
         console.error('Failed to mark all notifications as read in Supabase', error)
@@ -176,7 +188,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const deleteNotification = useCallback((id: string) => {
-    setNotifications((prev) => prev.filter((n) => n.id !== id))
+    setNotifications((prev: Notification[]) => prev.filter((n: Notification) => n.id !== id))
     if (isSupabaseConfigured) {
       deleteNotificationInDb(id).catch((error: unknown) => {
         console.error('Failed to delete notification in Supabase', error)
@@ -193,7 +205,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
-  const unreadCount = notifications.filter((n) => !n.read).length
+  const unreadCount = notifications.filter((n: Notification) => !n.read).length
 
   return (
     <NotificationsContext.Provider
