@@ -1,4 +1,14 @@
-import { createContext, ReactNode, useCallback, useContext, useState } from 'react'
+import { createContext, ReactNode, useCallback, useContext, useEffect, useState } from 'react'
+import { useAuth } from '../auth/hooks/useAuth'
+import { isSupabaseConfigured, requireSupabase } from '../lib/supabase'
+import {
+  clearAllNotifications,
+  createNotification,
+  deleteNotification as deleteNotificationInDb,
+  listNotifications,
+  markAllNotificationsAsRead,
+  markNotificationAsRead,
+} from '../services/notificationService'
 
 export type NotificationType =
   | 'match_added'
@@ -17,6 +27,7 @@ export interface Notification {
   timestamp: Date
   icon: string
   read: boolean
+  createdAt?: string
 }
 
 interface NotificationsContextType {
@@ -37,10 +48,93 @@ interface NotificationsContextType {
 const NotificationsContext = createContext<NotificationsContextType | undefined>(undefined)
 
 export function NotificationsProvider({ children }: { children: ReactNode }) {
+  const { isAuthenticated } = useAuth()
   const [notifications, setNotifications] = useState<Notification[]>([])
+
+  useEffect(() => {
+    if (!isAuthenticated || !isSupabaseConfigured) {
+      setNotifications([])
+      return
+    }
+
+    let isActive = true
+
+    listNotifications()
+      .then((records) => {
+        if (isActive) {
+          setNotifications(
+            records.map((r) => ({
+              id: r.id,
+              type: r.type,
+              title: r.title,
+              message: r.message,
+              icon: r.icon,
+              read: r.read,
+              timestamp: new Date(r.createdAt),
+              createdAt: r.createdAt,
+            })),
+          )
+        }
+      })
+      .catch((error: unknown) => {
+        console.error('Failed to load notifications from Supabase', error)
+      })
+
+    return () => {
+      isActive = false
+    }
+  }, [isAuthenticated])
+
+  useEffect(() => {
+    if (!isAuthenticated || !isSupabaseConfigured) {
+      return
+    }
+
+    const supabase = requireSupabase()
+    const channel = supabase
+      .channel('notifications-realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'notifications' },
+        () => {
+          listNotifications()
+            .then((records) => {
+              setNotifications(
+                records.map((r) => ({
+                  id: r.id,
+                  type: r.type,
+                  title: r.title,
+                  message: r.message,
+                  icon: r.icon,
+                  read: r.read,
+                  timestamp: new Date(r.createdAt),
+                  createdAt: r.createdAt,
+                })),
+              )
+            })
+            .catch((error: unknown) => {
+              console.error('Failed to reload notifications from Supabase', error)
+            })
+        },
+      )
+      .subscribe()
+
+    return () => {
+      void supabase.removeChannel(channel)
+    }
+  }, [isAuthenticated])
 
   const addNotification = useCallback(
     (type: NotificationType, title: string, message: string, icon: string) => {
+      if (isSupabaseConfigured) {
+        createNotification(type, title, message, icon).catch((error: unknown) => {
+          console.error('Failed to create notification in Supabase', error)
+        })
+        // The real-time subscription will update state; no local state update needed
+        return
+      }
+
+      // Fallback: local-only when Supabase is not configured
       const id = `${Date.now()}-${Math.random()}`
       const notification: Notification = {
         id,
@@ -54,7 +148,6 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
 
       setNotifications((prev) => [notification, ...prev])
 
-      // Auto-remove after 10 seconds if not in focus
       setTimeout(() => {
         setNotifications((prev) => prev.filter((n) => n.id !== id))
       }, 10000)
@@ -66,18 +159,38 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
     setNotifications((prev) =>
       prev.map((n) => (n.id === id ? { ...n, read: true } : n)),
     )
+    if (isSupabaseConfigured) {
+      markNotificationAsRead(id).catch((error: unknown) => {
+        console.error('Failed to mark notification as read in Supabase', error)
+      })
+    }
   }, [])
 
   const markAllAsRead = useCallback(() => {
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })))
+    if (isSupabaseConfigured) {
+      markAllNotificationsAsRead().catch((error: unknown) => {
+        console.error('Failed to mark all notifications as read in Supabase', error)
+      })
+    }
   }, [])
 
   const deleteNotification = useCallback((id: string) => {
     setNotifications((prev) => prev.filter((n) => n.id !== id))
+    if (isSupabaseConfigured) {
+      deleteNotificationInDb(id).catch((error: unknown) => {
+        console.error('Failed to delete notification in Supabase', error)
+      })
+    }
   }, [])
 
   const clearNotifications = useCallback(() => {
     setNotifications([])
+    if (isSupabaseConfigured) {
+      clearAllNotifications().catch((error: unknown) => {
+        console.error('Failed to clear notifications in Supabase', error)
+      })
+    }
   }, [])
 
   const unreadCount = notifications.filter((n) => !n.read).length
