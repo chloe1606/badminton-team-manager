@@ -18,6 +18,8 @@ interface SupabaseMatchRow {
   opponent_club_id: string | null
   opponent_team_number: number | null
   venue_id: string | null
+  venue_name: string | null
+  venue_address: string | null
   start_at: string | null
   end_at: string | null
   notes: string | null
@@ -43,6 +45,8 @@ const MATCH_COLUMNS = [
   'opponent_club_id',
   'opponent_team_number',
   'venue_id',
+  'venue_name',
+  'venue_address',
   'start_at',
   'end_at',
   'notes',
@@ -120,6 +124,8 @@ function mapMatchRow(row: SupabaseMatchRow): MatchRecord {
     opponentClubId: row.opponent_club_id,
     opponentTeamNumber: row.opponent_team_number ?? undefined,
     venueId: row.venue_id,
+    venueName: row.venue_name ?? undefined,
+    venueAddress: row.venue_address ?? undefined,
     startAt: row.start_at,
     endAt: row.end_at ?? undefined,
     notes: row.notes ?? undefined,
@@ -148,6 +154,8 @@ function toInsertPayload(match: NewMatchInput) {
     opponent_club_id: match.opponentClubId,
     opponent_team_number: match.opponentTeamNumber ?? null,
     venue_id: match.venueId,
+    venue_name: match.venueName ?? null,
+    venue_address: match.venueAddress ?? null,
     start_at: match.startAt,
     end_at: match.endAt ?? null,
     notes: match.notes ?? null,
@@ -175,6 +183,8 @@ function toDetailsPayload(match: MatchDetailsInput) {
     opponent_club_id: match.opponentClubId,
     opponent_team_number: match.opponentTeamNumber ?? null,
     venue_id: match.venueId,
+    venue_name: match.venueName ?? null,
+    venue_address: match.venueAddress ?? null,
     start_at: match.startAt,
     end_at: match.endAt ?? null,
     notes: match.notes ?? null,

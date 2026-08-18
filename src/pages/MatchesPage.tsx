@@ -1,6 +1,5 @@
 import { FormEvent, Fragment, useEffect, useMemo, useRef, useState } from 'react'
 import { useAppData } from '../app/AppDataProvider'
-import { useNotifications } from '../app/NotificationsProvider'
 import { useAuth } from '../auth/hooks/useAuth'
 import { Button } from '../components/ui/Button'
 import { Card } from '../components/ui/Card'
@@ -146,6 +145,14 @@ function validateMatchDetailsInput(draft: MatchDetailsDraft, teamSettings: TeamS
     return { error: 'End time must be after the start time.' }
   }
 
+  const venueId =
+    draft.location === 'home' ? teamSettings.profile.homeVenueId : draft.venueId
+  const venueClub =
+    draft.location === 'home'
+      ? getClubById(clubDirectory, teamSettings.profile.homeClubId)
+      : getClubById(clubDirectory, draft.opponentClubId)
+  const venue = getAddressById(venueClub, venueId)
+
   return {
     data: {
       matchType: draft.matchType.trim(),
@@ -155,8 +162,9 @@ function validateMatchDetailsInput(draft: MatchDetailsDraft, teamSettings: TeamS
       opponentTeamNumber: parsedTeamNumber,
       startAt: draft.startAt,
       endAt: draft.endAt || undefined,
-      venueId:
-        draft.location === 'home' ? teamSettings.profile.homeVenueId : draft.venueId,
+      venueId,
+      venueName: venue?.venueName?.trim() || undefined,
+      venueAddress: venue?.address?.trim() || undefined,
       notes: draft.notes.trim() || undefined,
     },
   }
@@ -1163,7 +1171,6 @@ export function MatchesPage() {
     updateMatchAvailability,
     updateMatchResult,
   } = useAppData()
-  const { addNotification } = useNotifications()
   const [matchType, setMatchType] = useState('Mixed 6')
   const [divisionNumber, setDivisionNumber] = useState('3')
   const [opponentClubId, setOpponentClubId] = useState('')
@@ -1190,16 +1197,10 @@ export function MatchesPage() {
 
   async function handleAddMatch(input: Parameters<typeof addMatch>[0]) {
     await addMatch(input)
-    const club = getClubById(clubDirectory, input.opponentClubId)
-    const opponentLabel = club?.name ?? input.opponentClubId
-    addNotification('match_added', 'Match added', `New fixture vs ${opponentLabel} added.`, '🏸')
   }
 
   async function handleUpdateMatch(matchId: string, input: MatchDetailsInput) {
     await updateMatch(matchId, input)
-    const club = getClubById(clubDirectory, input.opponentClubId)
-    const opponentLabel = club?.name ?? input.opponentClubId
-    addNotification('match_time_changed', 'Match updated', `Fixture vs ${opponentLabel} has been updated.`, '🕐')
   }
 
   async function handleAssignMatchPlayers(
@@ -1208,9 +1209,6 @@ export function MatchesPage() {
     assignedPairs: MatchPairAssignment[],
   ): Promise<string | undefined> {
     const error = await assignMatchPlayers(matchId, playerIds, assignedPairs)
-    if (!error) {
-      addNotification('player_selected', 'Team selected', `${playerIds.length} player${playerIds.length !== 1 ? 's' : ''} selected for match.`, '👤')
-    }
     return error
   }
   const currentSeason = useMemo(() => getCurrentSeason(), [])
@@ -1619,7 +1617,10 @@ export function MatchesPage() {
                                     type="button"
                                     variant="success"
                                     disabled={isCurrentPlayerAvailable}
-                                    onClick={() =>
+                                    onClick={() => {
+                                      if (!window.confirm('Mark yourself as available for this match?')) {
+                                        return
+                                      }
                                       void updateMatchAvailability(
                                         match.id,
                                         user.playerId!,
@@ -1631,7 +1632,7 @@ export function MatchesPage() {
                                             : 'Unable to update availability.',
                                         )
                                       })
-                                    }
+                                    }}
                                   >
                                     Available
                                   </Button>
@@ -1639,7 +1640,10 @@ export function MatchesPage() {
                                     type="button"
                                     variant={isCurrentPlayerUnavailable ? 'secondary' : 'danger'}
                                     disabled={isCurrentPlayerUnavailable}
-                                    onClick={() =>
+                                    onClick={() => {
+                                      if (!window.confirm('Mark yourself as unavailable for this match?')) {
+                                        return
+                                      }
                                       void updateMatchAvailability(
                                         match.id,
                                         user.playerId!,
@@ -1651,7 +1655,7 @@ export function MatchesPage() {
                                             : 'Unable to update availability.',
                                         )
                                       })
-                                    }
+                                    }}
                                   >
                                     Unavailable
                                   </Button>
