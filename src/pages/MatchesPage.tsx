@@ -1192,7 +1192,13 @@ export function MatchesPage() {
     await addMatch(input)
     const club = getClubById(clubDirectory, input.opponentClubId)
     const opponentLabel = club?.name ?? input.opponentClubId
-    broadcastNotification('match_added', 'Match added', `New fixture vs ${opponentLabel} added.`, '🏸')
+    const venueClubId = input.location === 'home' ? teamSettings?.profile.homeClubId : input.opponentClubId
+    const venueClub = venueClubId ? getClubById(clubDirectory, venueClubId) : undefined
+    const venueAddress = getAddressById(venueClub, input.venueId)
+    const venuePart = venueAddress
+      ? ` at ${venueAddress.venueName}, ${venueAddress.address}`
+      : ''
+    broadcastNotification('match_added', 'Match added', `New fixture vs ${opponentLabel}${venuePart} added.`, '🏸')
   }
 
   async function handleUpdateMatch(matchId: string, input: MatchDetailsInput) {
