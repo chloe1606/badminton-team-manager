@@ -91,6 +91,8 @@ export interface MatchDetailsInput {
   startAt: string
   endAt?: string
   venueId: string
+  venueName?: string
+  venueAddress?: string
   notes?: string
 }
 
@@ -107,6 +109,8 @@ export interface MatchRecord {
   startAt: string
   endAt?: string
   venueId: string
+  venueName?: string
+  venueAddress?: string
   notes?: string
   availablePlayerIds?: string[]
   unavailablePlayerIds?: string[]

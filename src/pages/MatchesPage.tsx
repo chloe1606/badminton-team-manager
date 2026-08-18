@@ -146,6 +146,14 @@ function validateMatchDetailsInput(draft: MatchDetailsDraft, teamSettings: TeamS
     return { error: 'End time must be after the start time.' }
   }
 
+  const venueId =
+    draft.location === 'home' ? teamSettings.profile.homeVenueId : draft.venueId
+  const venueClub =
+    draft.location === 'home'
+      ? getClubById(clubDirectory, teamSettings.profile.homeClubId)
+      : getClubById(clubDirectory, draft.opponentClubId)
+  const venue = getAddressById(venueClub, venueId)
+
   return {
     data: {
       matchType: draft.matchType.trim(),
@@ -155,8 +163,9 @@ function validateMatchDetailsInput(draft: MatchDetailsDraft, teamSettings: TeamS
       opponentTeamNumber: parsedTeamNumber,
       startAt: draft.startAt,
       endAt: draft.endAt || undefined,
-      venueId:
-        draft.location === 'home' ? teamSettings.profile.homeVenueId : draft.venueId,
+      venueId,
+      venueName: venue?.venueName?.trim() || undefined,
+      venueAddress: venue?.address?.trim() || undefined,
       notes: draft.notes.trim() || undefined,
     },
   }
