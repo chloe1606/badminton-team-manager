@@ -1617,7 +1617,10 @@ export function MatchesPage() {
                                     type="button"
                                     variant="success"
                                     disabled={isCurrentPlayerAvailable}
-                                    onClick={() =>
+                                    onClick={() => {
+                                      if (!window.confirm('Mark yourself as available for this match?')) {
+                                        return
+                                      }
                                       void updateMatchAvailability(
                                         match.id,
                                         user.playerId!,
@@ -1629,7 +1632,7 @@ export function MatchesPage() {
                                             : 'Unable to update availability.',
                                         )
                                       })
-                                    }
+                                    }}
                                   >
                                     Available
                                   </Button>
@@ -1637,7 +1640,10 @@ export function MatchesPage() {
                                     type="button"
                                     variant={isCurrentPlayerUnavailable ? 'secondary' : 'danger'}
                                     disabled={isCurrentPlayerUnavailable}
-                                    onClick={() =>
+                                    onClick={() => {
+                                      if (!window.confirm('Mark yourself as unavailable for this match?')) {
+                                        return
+                                      }
                                       void updateMatchAvailability(
                                         match.id,
                                         user.playerId!,
@@ -1649,7 +1655,7 @@ export function MatchesPage() {
                                             : 'Unable to update availability.',
                                         )
                                       })
-                                    }
+                                    }}
                                   >
                                     Unavailable
                                   </Button>
