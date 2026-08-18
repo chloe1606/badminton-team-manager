@@ -1,6 +1,5 @@
 import { FormEvent, Fragment, useEffect, useMemo, useRef, useState } from 'react'
 import { useAppData } from '../app/AppDataProvider'
-import { useNotifications } from '../app/NotificationsProvider'
 import { useAuth } from '../auth/hooks/useAuth'
 import { Button } from '../components/ui/Button'
 import { Card } from '../components/ui/Card'
@@ -1172,7 +1171,6 @@ export function MatchesPage() {
     updateMatchAvailability,
     updateMatchResult,
   } = useAppData()
-  const { addNotification, broadcastNotification } = useNotifications()
   const [matchType, setMatchType] = useState('Mixed 6')
   const [divisionNumber, setDivisionNumber] = useState('3')
   const [opponentClubId, setOpponentClubId] = useState('')
@@ -1199,22 +1197,10 @@ export function MatchesPage() {
 
   async function handleAddMatch(input: Parameters<typeof addMatch>[0]) {
     await addMatch(input)
-    const club = getClubById(clubDirectory, input.opponentClubId)
-    const opponentLabel = club?.name ?? input.opponentClubId
-    const venueClubId = input.location === 'home' ? teamSettings?.profile.homeClubId : input.opponentClubId
-    const venueClub = venueClubId ? getClubById(clubDirectory, venueClubId) : undefined
-    const venueAddress = getAddressById(venueClub, input.venueId)
-    const venuePart = venueAddress
-      ? ` at ${venueAddress.venueName}, ${venueAddress.address}`
-      : ''
-    broadcastNotification('match_added', 'Match added', `New fixture vs ${opponentLabel}${venuePart} added.`, '🏸')
   }
 
   async function handleUpdateMatch(matchId: string, input: MatchDetailsInput) {
     await updateMatch(matchId, input)
-    const club = getClubById(clubDirectory, input.opponentClubId)
-    const opponentLabel = club?.name ?? input.opponentClubId
-    addNotification('match_time_changed', 'Match updated', `Fixture vs ${opponentLabel} has been updated.`, '🕐')
   }
 
   async function handleAssignMatchPlayers(
@@ -1223,9 +1209,6 @@ export function MatchesPage() {
     assignedPairs: MatchPairAssignment[],
   ): Promise<string | undefined> {
     const error = await assignMatchPlayers(matchId, playerIds, assignedPairs)
-    if (!error) {
-      broadcastNotification('player_selected', 'Team selected', `${playerIds.length} player${playerIds.length !== 1 ? 's' : ''} selected for match.`, '👤')
-    }
     return error
   }
   const currentSeason = useMemo(() => getCurrentSeason(), [])
