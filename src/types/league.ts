@@ -9,14 +9,7 @@ export interface TeamMatchSettingsRecord {
   teamNumber: number | null
   teamLabel: string
   format: MatchFormatConfig
-}
-
-export interface LeagueContextDetailsRecord {
-  id: string
-  matchType: string
-  divisionNumber: number
-  matchContextKey: string
-  homeClubId: string
-  homeVenueId: string
-  leagueName: string
+  homeClubId: string | null
+  homeVenueId: string | null
+  leagueName: string | null
 }

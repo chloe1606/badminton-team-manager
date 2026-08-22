@@ -8,11 +8,9 @@ import {
   type ReactNode,
 } from 'react'
 import { useAuth } from '../auth/hooks/useAuth'
-import { listPlayerProfiles } from '../services/playerService'
+import { listPlayerProfiles, deleteUserProfile, updateUserRole } from '../services/playerService'
 import {
-  listLeagueContextDetails,
   listTeamMatchSettings,
-  type LeagueContextDetailsRecord,
   type TeamMatchSettingsRecord,
 } from '../services/leagueService'
 import {
@@ -75,6 +73,9 @@ interface AppDataContextValue {
   ) => Promise<string | undefined>
   updateMatchResult: (matchId: string, result?: MatchResult) => Promise<void>
   updateTeamSettings: (settings: TeamSettings) => void
+  deletePlayer: (userId: string) => Promise<void>
+  updatePlayerRole: (userId: string, role: 'admin' | 'player') => Promise<void>
+  reloadPlayers: () => Promise<void>
 }
 
 const AppDataContext = createContext<AppDataContextValue | undefined>(undefined)
@@ -161,22 +162,19 @@ function normalizePlayersForMatchContext(players: PlayerProfile[]): PlayerProfil
 
 function combineContextSettings(
   teamMatchSettings: TeamMatchSettingsRecord[],
-  leagueDetails: LeagueContextDetailsRecord[],
 ): TeamSettings {
   const defaultContextKey = 'mixed-6__3'
   const teamMatchSetting =
     teamMatchSettings.find((setting) => setting.matchContextKey === defaultContextKey) ?? teamMatchSettings[0]
-  const leagueDetail =
-    leagueDetails.find((detail) => detail.matchContextKey === defaultContextKey) ?? leagueDetails[0]
 
   return normalizeTeamSettings({
     profile: {
       teamName: teamMatchSetting?.teamName ?? defaultTeamSettings.profile.teamName,
       teamNumber: teamMatchSetting?.teamNumber ?? defaultTeamSettings.profile.teamNumber,
       teamLabel: teamMatchSetting?.teamLabel ?? defaultTeamSettings.profile.teamLabel,
-      homeClubId: leagueDetail?.homeClubId ?? defaultTeamSettings.profile.homeClubId,
-      homeVenueId: leagueDetail?.homeVenueId ?? defaultTeamSettings.profile.homeVenueId,
-      leagueName: leagueDetail?.leagueName ?? defaultTeamSettings.profile.leagueName,
+      homeClubId: teamMatchSetting?.homeClubId ?? defaultTeamSettings.profile.homeClubId,
+      homeVenueId: teamMatchSetting?.homeVenueId ?? defaultTeamSettings.profile.homeVenueId,
+      leagueName: teamMatchSetting?.leagueName ?? defaultTeamSettings.profile.leagueName,
     },
     matchFormat: teamMatchSetting?.format ?? defaultTeamSettings.matchFormat,
   })
@@ -338,10 +336,10 @@ export function AppDataProvider({ children }: AppDataProviderProps) {
     let isActive = true
     setIsLoadingLeagueSettings(true)
 
-    Promise.all([listTeamMatchSettings(), listLeagueContextDetails()])
-      .then(([matchSettings, details]) => {
+    listTeamMatchSettings()
+      .then((matchSettings) => {
         if (isActive) {
-          setTeamSettings(combineContextSettings(matchSettings, details))
+          setTeamSettings(combineContextSettings(matchSettings))
         }
       })
       .catch((error: unknown) => {
@@ -368,6 +366,11 @@ export function AppDataProvider({ children }: AppDataProviderProps) {
   const addMatchRecord = useCallback((nextMatch: MatchRecord) => {
     const normalizedMatch = normalizeMatchRecord(nextMatch)
     setMatches((currentMatches) => [...currentMatches, normalizedMatch])
+  }, [])
+
+  const reloadPlayers = useCallback(async () => {
+    const profiles = await listPlayerProfiles()
+    setPlayers(normalizePlayersForMatchContext(profiles))
   }, [])
 
   const value = useMemo<AppDataContextValue>(
@@ -479,6 +482,17 @@ export function AppDataProvider({ children }: AppDataProviderProps) {
       updateTeamSettings: (settings: TeamSettings) => {
         setTeamSettings(normalizeTeamSettings(settings))
       },
+      deletePlayer: async (userId: string) => {
+        await deleteUserProfile(userId)
+        setPlayers((currentPlayers) => currentPlayers.filter((p) => p.id !== userId))
+      },
+      updatePlayerRole: async (userId: string, role: 'admin' | 'player') => {
+        await updateUserRole(userId, role)
+        setPlayers((currentPlayers) =>
+          currentPlayers.map((p) => (p.id === userId ? { ...p, role } : p)),
+        )
+      },
+      reloadPlayers,
     }),
     [
       addMatchRecord,
@@ -490,6 +504,7 @@ export function AppDataProvider({ children }: AppDataProviderProps) {
       playerGenderLookup,
       players,
       playersById,
+      reloadPlayers,
       replaceMatch,
       teamSettings,
     ],
