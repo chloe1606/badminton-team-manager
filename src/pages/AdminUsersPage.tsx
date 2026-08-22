@@ -1,13 +1,12 @@
-import { FormEvent, useCallback, useEffect, useState } from 'react'
+import { FormEvent, useEffect, useState } from 'react'
 import { useAppData } from '../app/AppDataProvider'
 import { useAuth } from '../auth/hooks/useAuth'
 import { Button } from '../components/ui/Button'
 import { Card } from '../components/ui/Card'
 import { createInvitedPlayer } from '../services/playerService'
-import { listAllTeams, listUserTeams, assignUserTeam, removeUserTeam } from '../services/teamService'
+import { listUserTeams } from '../services/teamService'
 import type { PlayerGender } from '../types/matches'
 import type { UserRole } from '../types/auth'
-import type { Team, UserTeam } from '../types/teams'
 import type { PlayerProfile } from '../types/players'
 
 // ─── Delete confirmation modal ───────────────────────────────────────────────
@@ -42,6 +41,31 @@ function DeleteConfirmModal({ player, onConfirm, onCancel, isDeleting }: DeleteM
       </div>
     </div>
   )
+}
+
+// ─── Inline administered-teams display ───────────────────────────────────────
+
+interface AdminTeamsCellProps {
+  userId: string
+}
+
+function AdminTeamsCell({ userId }: AdminTeamsCellProps) {
+  const [names, setNames] = useState<string[]>([])
+
+  useEffect(() => {
+    listUserTeams(userId)
+      .then((uts) =>
+        setNames(
+          uts
+            .filter((ut) => ut.canAdminister && ut.team)
+            .map((ut) => ut.team!.displayName),
+        ),
+      )
+      .catch(() => { /* non-critical */ })
+  }, [userId])
+
+  if (names.length === 0) return <span className="muted">—</span>
+  return <>{names.join(', ')}</>
 }
 
 // ─── Team permissions panel ───────────────────────────────────────────────────
@@ -188,17 +212,6 @@ export function AdminUsersPage() {
   const [roleUpdateError, setRoleUpdateError] = useState('')
   const [roleUpdating, setRoleUpdating] = useState<string | null>(null)
 
-  // Team permissions modal
-  const [teamsTarget, setTeamsTarget] = useState<PlayerProfile | null>(null)
-  const [allTeams, setAllTeams] = useState<Team[]>([])
-
-  useEffect(() => {
-    if (!isAdmin) return
-    listAllTeams()
-      .then(setAllTeams)
-      .catch(() => { /* non-critical */ })
-  }, [isAdmin])
-
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setCreateError('')
@@ -272,14 +285,6 @@ export function AdminUsersPage() {
           onConfirm={() => void handleConfirmDelete()}
           onCancel={() => { setPendingDelete(null); setDeleteError('') }}
           isDeleting={isDeleting}
-        />
-      ) : null}
-
-      {teamsTarget ? (
-        <TeamPermissionsPanel
-          player={teamsTarget}
-          allTeams={allTeams}
-          onClose={() => setTeamsTarget(null)}
         />
       ) : null}
 
@@ -387,13 +392,7 @@ export function AdminUsersPage() {
                   <td>{player.gender ?? '—'}</td>
                   {isAdmin ? (
                     <td>
-                      <Button
-                        variant="ghost"
-                        onClick={() => setTeamsTarget(player)}
-                        aria-label={`Manage teams for ${player.fullName}`}
-                      >
-                        Manage teams
-                      </Button>
+                      <AdminTeamsCell userId={player.id} />
                     </td>
                   ) : null}
                   {isAdmin ? (
