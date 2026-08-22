@@ -144,3 +144,44 @@ export async function createInvitedPlayer(input: CreatePlayerInput): Promise<voi
     throw new Error(await mapInviteFunctionError(error))
   }
 }
+
+export async function updateUserRole(userId: string, role: 'admin' | 'player'): Promise<void> {
+  if (!isSupabaseConfigured) {
+    throw new Error(supabaseConfigError ?? 'Supabase is not configured.')
+  }
+
+  const supabase = requireSupabase()
+  const { error } = await supabase
+    .from('profiles')
+    .update({ role })
+    .eq('id', userId)
+
+  if (error) {
+    throw new Error(error.message)
+  }
+}
+
+export async function deleteUserProfile(userId: string): Promise<void> {
+  if (!isSupabaseConfigured) {
+    throw new Error(supabaseConfigError ?? 'Supabase is not configured.')
+  }
+
+  const supabase = requireSupabase()
+  // Delete the profile row; referential integrity will cascade to user_teams.
+  // The auth.users record is handled by calling the delete-user Edge Function.
+  const { error } = await supabase.functions.invoke('delete-user', {
+    body: { userId },
+  })
+
+  if (error) {
+    // Fall back to profile-only deletion if the Edge Function is not deployed
+    const profileDelete = await supabase
+      .from('profiles')
+      .delete()
+      .eq('id', userId)
+
+    if (profileDelete.error) {
+      throw new Error(profileDelete.error.message)
+    }
+  }
+}
