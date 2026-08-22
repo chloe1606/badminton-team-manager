@@ -10,9 +10,7 @@ import {
 import { useAuth } from '../auth/hooks/useAuth'
 import { listPlayerProfiles, deleteUserProfile, updateUserRole } from '../services/playerService'
 import {
-  listLeagueContextDetails,
   listTeamMatchSettings,
-  type LeagueContextDetailsRecord,
   type TeamMatchSettingsRecord,
 } from '../services/leagueService'
 import {
@@ -164,22 +162,19 @@ function normalizePlayersForMatchContext(players: PlayerProfile[]): PlayerProfil
 
 function combineContextSettings(
   teamMatchSettings: TeamMatchSettingsRecord[],
-  leagueDetails: LeagueContextDetailsRecord[],
 ): TeamSettings {
   const defaultContextKey = 'mixed-6__3'
   const teamMatchSetting =
     teamMatchSettings.find((setting) => setting.matchContextKey === defaultContextKey) ?? teamMatchSettings[0]
-  const leagueDetail =
-    leagueDetails.find((detail) => detail.matchContextKey === defaultContextKey) ?? leagueDetails[0]
 
   return normalizeTeamSettings({
     profile: {
       teamName: teamMatchSetting?.teamName ?? defaultTeamSettings.profile.teamName,
       teamNumber: teamMatchSetting?.teamNumber ?? defaultTeamSettings.profile.teamNumber,
       teamLabel: teamMatchSetting?.teamLabel ?? defaultTeamSettings.profile.teamLabel,
-      homeClubId: leagueDetail?.homeClubId ?? defaultTeamSettings.profile.homeClubId,
-      homeVenueId: leagueDetail?.homeVenueId ?? defaultTeamSettings.profile.homeVenueId,
-      leagueName: leagueDetail?.leagueName ?? defaultTeamSettings.profile.leagueName,
+      homeClubId: teamMatchSetting?.homeClubId ?? defaultTeamSettings.profile.homeClubId,
+      homeVenueId: teamMatchSetting?.homeVenueId ?? defaultTeamSettings.profile.homeVenueId,
+      leagueName: teamMatchSetting?.leagueName ?? defaultTeamSettings.profile.leagueName,
     },
     matchFormat: teamMatchSetting?.format ?? defaultTeamSettings.matchFormat,
   })
@@ -341,10 +336,10 @@ export function AppDataProvider({ children }: AppDataProviderProps) {
     let isActive = true
     setIsLoadingLeagueSettings(true)
 
-    Promise.all([listTeamMatchSettings(), listLeagueContextDetails()])
-      .then(([matchSettings, details]) => {
+    listTeamMatchSettings()
+      .then((matchSettings) => {
         if (isActive) {
-          setTeamSettings(combineContextSettings(matchSettings, details))
+          setTeamSettings(combineContextSettings(matchSettings))
         }
       })
       .catch((error: unknown) => {
