@@ -67,6 +67,10 @@ export function AdminUsersPage() {
   const [roleUpdating, setRoleUpdating] = useState<string | null>(null)
   const [teams, setTeams] = useState<Team[]>([])
 
+  function normalizeTeamId(teamId: string): string {
+    return teamId.trim().toLowerCase()
+  }
+
   useEffect(() => {
     listAllTeams()
       .then(setTeams)
@@ -74,7 +78,7 @@ export function AdminUsersPage() {
   }, [])
 
   const teamNameById = useMemo(
-    () => new Map(teams.map((team) => [team.id, team.displayName] as const)),
+    () => new Map(teams.map((team) => [normalizeTeamId(team.id), team.displayName] as const)),
     [teams],
   )
 
@@ -259,7 +263,7 @@ export function AdminUsersPage() {
                   <td>
                     {player.permittedTeams && player.permittedTeams.length > 0
                       ? player.permittedTeams
-                        .map((teamId) => teamNameById.get(teamId) ?? 'Unknown team')
+                        .map((teamId) => teamNameById.get(normalizeTeamId(teamId)) ?? 'Unknown team')
                         .join(', ')
                       : 'All teams'}
                   </td>
