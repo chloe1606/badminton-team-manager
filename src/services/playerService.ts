@@ -85,7 +85,7 @@ export async function listPlayerProfiles(): Promise<PlayerProfile[]> {
   const supabase = requireSupabase()
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, email, name, username, role, player_id, gender')
+    .select('id, email, name, username, role, player_id, gender, permitted_teams')
     .order('name', { ascending: true })
 
   if (error) {
@@ -107,7 +107,7 @@ export async function getPlayerProfile(userId: string): Promise<PlayerProfile | 
   const supabase = requireSupabase()
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, email, name, username, role, player_id, gender')
+    .select('id, email, name, username, role, player_id, gender, permitted_teams')
     .eq('id', userId)
     .maybeSingle()
 
@@ -167,8 +167,7 @@ export async function deleteUserProfile(userId: string): Promise<void> {
   }
 
   const supabase = requireSupabase()
-  // Delete the profile row; referential integrity will cascade to user_teams.
-  // The auth.users record is handled by calling the delete-user Edge Function.
+  // Delete the profile row; the auth.users record is handled by calling the delete-user Edge Function.
   const { error } = await supabase.functions.invoke('delete-user', {
     body: { userId },
   })
@@ -186,5 +185,21 @@ export async function deleteUserProfile(userId: string): Promise<void> {
         `Profile delete error: ${profileDelete.error.message}`
       )
     }
+  }
+}
+
+export async function updatePermittedTeams(userId: string, teamIds: string[] | null): Promise<void> {
+  if (!isSupabaseConfigured) {
+    throw new Error(supabaseConfigError ?? 'Supabase is not configured.')
+  }
+
+  const supabase = requireSupabase()
+  const { error } = await supabase
+    .from('profiles')
+    .update({ permitted_teams: teamIds })
+    .eq('id', userId)
+
+  if (error) {
+    throw new Error(error.message)
   }
 }

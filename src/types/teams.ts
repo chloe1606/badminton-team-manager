@@ -8,11 +8,3 @@ export interface Team {
   displayName: string
   active: boolean
 }
-
-export interface UserTeam {
-  id: string
-  userId: string
-  teamId: string
-  canAdminister: boolean
-  team?: Team
-}
