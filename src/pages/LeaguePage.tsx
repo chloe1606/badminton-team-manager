@@ -3,7 +3,7 @@ import { useAppData } from '../app/AppDataProvider'
 import { Button } from '../components/ui/Button'
 import { Card } from '../components/ui/Card'
 import { clubDirectory } from '../data/clubContacts'
-import { upsertTeamMatchSettings } from '../services/leagueService'
+import { listTeamMatchSettings, upsertTeamMatchSettings, type TeamMatchSettingsRecord } from '../services/leagueService'
 import { getAddressById, getClubById } from '../utils/matches'
 
 export function LeaguePage() {
@@ -22,6 +22,7 @@ export function LeaguePage() {
   const [capScore, setCapScore] = useState(String(teamSettings.matchFormat.scoring.capScore))
   const [status, setStatus] = useState('')
   const [error, setError] = useState('')
+  const [teamOptions, setTeamOptions] = useState<TeamMatchSettingsRecord[]>([])
 
   const selectedHomeClub = useMemo(() => getClubById(clubDirectory, homeClubId), [homeClubId])
   const homeVenues = selectedHomeClub?.addresses ?? []
@@ -29,6 +30,40 @@ export function LeaguePage() {
     () => getAddressById(selectedHomeClub, homeVenueId),
     [homeVenueId, selectedHomeClub],
   )
+
+  const teamTypeOptions = useMemo(() => {
+    return [...new Set(teamOptions.map((setting) => setting.matchType))]
+      .filter((value) => value.trim().length > 0)
+      .sort((a, b) => a.localeCompare(b))
+  }, [teamOptions])
+
+  const leagueNameOptions = useMemo(() => {
+    return [...new Set(teamOptions.map((setting) => setting.leagueName).filter(Boolean) as string[])]
+      .filter((value) => value.trim().length > 0)
+      .sort((a, b) => a.localeCompare(b))
+  }, [teamOptions])
+
+  const teamNumberOptions = useMemo(() => {
+    const rowsForTeam = teamOptions.filter((setting) => setting.matchType === matchType)
+    const rowsForDivision = rowsForTeam.filter((setting) => String(setting.divisionNumber) === divisionNumber)
+    const source = rowsForDivision.length > 0 ? rowsForDivision : rowsForTeam
+    const values = [...new Set(source.map((setting) => (setting.teamNumber === null ? '' : String(setting.teamNumber))))]
+    const sortedValues = values.sort((a, b) => {
+      if (!a) return -1
+      if (!b) return 1
+      return Number(a) - Number(b)
+    })
+    return sortedValues.length > 0 ? sortedValues : ['']
+  }, [teamOptions, matchType, divisionNumber])
+
+  useEffect(() => {
+    listTeamMatchSettings()
+      .then(setTeamOptions)
+      .catch(() => {
+        setTeamOptions([])
+      })
+  }, [])
+
   useEffect(() => {
     setTeamName(teamSettings.profile.teamName)
     setTeamNumber(teamSettings.profile.teamNumber?.toString() ?? '')
@@ -41,6 +76,24 @@ export function LeaguePage() {
     setWinBy(String(teamSettings.matchFormat.scoring.winBy))
     setCapScore(String(teamSettings.matchFormat.scoring.capScore))
   }, [teamSettings])
+
+  useEffect(() => {
+    if (teamTypeOptions.length > 0 && !teamTypeOptions.includes(matchType)) {
+      setMatchType(teamTypeOptions[0])
+    }
+  }, [teamTypeOptions, matchType])
+
+  useEffect(() => {
+    if (leagueNameOptions.length > 0 && !leagueNameOptions.includes(leagueName)) {
+      setLeagueName(leagueNameOptions[0])
+    }
+  }, [leagueNameOptions, leagueName])
+
+  useEffect(() => {
+    if (!teamNumberOptions.includes(teamNumber)) {
+      setTeamNumber(teamNumberOptions[0] ?? '')
+    }
+  }, [teamNumberOptions, teamNumber])
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -86,11 +139,13 @@ export function LeaguePage() {
       <Card>
         <div className="form-grid">
           <label className="field">
-            <span>Match type</span>
+            <span>Team</span>
             <select className="input" value={matchType} onChange={(event) => setMatchType(event.target.value)}>
-              <option>Mixed 6</option>
-              <option>Mixed 4</option>
-              <option>Mens 6</option>
+              {(teamTypeOptions.length > 0 ? teamTypeOptions : [matchType]).map((value) => (
+                <option key={value} value={value}>
+                  {value}
+                </option>
+              ))}
             </select>
           </label>
           <label className="field">
@@ -99,15 +154,20 @@ export function LeaguePage() {
           </label>
           <label className="field">
             <span>League name</span>
-            <input className="input" value={leagueName} onChange={(event) => setLeagueName(event.target.value)} />
+            <select className="input" value={leagueName} onChange={(event) => setLeagueName(event.target.value)}>
+              {(leagueNameOptions.length > 0 ? leagueNameOptions : [leagueName]).map((value) => (
+                <option key={value} value={value}>
+                  {value}
+                </option>
+              ))}
+            </select>
           </label>
           <label className="field">
             <span>Team number</span>
             <select className="input" value={teamNumber} onChange={(event) => setTeamNumber(event.target.value)}>
-              <option value="">Not set</option>
-              {[1, 2, 3, 4, 5].map((value) => (
+              {teamNumberOptions.map((value) => (
                 <option key={value} value={value}>
-                  {value}
+                  {value ? value : 'Not set'}
                 </option>
               ))}
             </select>
