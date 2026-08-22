@@ -19,9 +19,9 @@ export interface TeamMatchSettingsRecord {
 interface TeamSettingsRow {
   id: string
   club_name: string
-  team_number: string | null
+  team_number: string | number | null
   match_type: string
-  division: string
+  division: string | number
   team_label: string | null
   match_context_key: string | null
   format: MatchFormatConfig | string | null
@@ -34,23 +34,31 @@ function parseFormat(value: MatchFormatConfig | string | null): MatchFormatConfi
   if (!value) {
     return {} as MatchFormatConfig
   }
-  return typeof value === 'string' ? (JSON.parse(value) as MatchFormatConfig) : value
+  if (typeof value !== 'string') {
+    return value
+  }
+
+  try {
+    return JSON.parse(value) as MatchFormatConfig
+  } catch {
+    return {} as MatchFormatConfig
+  }
 }
 
-function parseDivisionNumber(division: string): number {
-  const parsed = Number.parseInt(division, 10)
+function parseDivisionNumber(division: string | number): number {
+  const parsed = Number.parseInt(String(division), 10)
   return Number.isNaN(parsed) ? 1 : parsed
 }
 
-function parseTeamNumber(teamNumber: string | null): number | null {
+function parseTeamNumber(teamNumber: string | number | null): number | null {
   if (!teamNumber) {
     return null
   }
-  const parsed = Number.parseInt(teamNumber, 10)
+  const parsed = Number.parseInt(String(teamNumber), 10)
   return Number.isNaN(parsed) ? null : parsed
 }
 
-function buildTeamLabel(teamName: string, teamNumber: string | null): string {
+function buildTeamLabel(teamName: string, teamNumber: string | number | null): string {
   return `${teamName}${teamNumber ? ` ${teamNumber}` : ''}`
 }
 
