@@ -1,35 +1,216 @@
-import { FormEvent, useState } from 'react'
+import { FormEvent, useCallback, useEffect, useState } from 'react'
 import { useAppData } from '../app/AppDataProvider'
+import { useAuth } from '../auth/hooks/useAuth'
 import { Button } from '../components/ui/Button'
 import { Card } from '../components/ui/Card'
 import { createInvitedPlayer } from '../services/playerService'
+import { listAllTeams, listUserTeams, assignUserTeam, removeUserTeam } from '../services/teamService'
 import type { PlayerGender } from '../types/matches'
 import type { UserRole } from '../types/auth'
+import type { Team, UserTeam } from '../types/teams'
+import type { PlayerProfile } from '../types/players'
+
+// ─── Delete confirmation modal ───────────────────────────────────────────────
+
+interface DeleteModalProps {
+  player: PlayerProfile
+  onConfirm: () => void
+  onCancel: () => void
+  isDeleting: boolean
+}
+
+function DeleteConfirmModal({ player, onConfirm, onCancel, isDeleting }: DeleteModalProps) {
+  return (
+    <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="delete-modal-title">
+      <div className="modal-box">
+        <h2 id="delete-modal-title">Permanently delete user?</h2>
+        <p>
+          You are about to <strong>permanently delete</strong> the account for{' '}
+          <strong>{player.fullName}</strong> ({player.email}).
+        </p>
+        <p className="error-text">
+          ⚠ This action cannot be undone. All data associated with this user will be removed.
+        </p>
+        <div className="form-actions">
+          <Button variant="danger" disabled={isDeleting} onClick={onConfirm}>
+            {isDeleting ? 'Deleting…' : 'Yes, permanently delete'}
+          </Button>
+          <Button variant="secondary" disabled={isDeleting} onClick={onCancel}>
+            Cancel
+          </Button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── Team permissions panel ───────────────────────────────────────────────────
+
+interface TeamPermissionsProps {
+  player: PlayerProfile
+  allTeams: Team[]
+  onClose: () => void
+}
+
+function TeamPermissionsPanel({ player, allTeams, onClose }: TeamPermissionsProps) {
+  const [userTeams, setUserTeams] = useState<UserTeam[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState('')
+
+  const load = useCallback(async () => {
+    setIsLoading(true)
+    setError('')
+    try {
+      const data = await listUserTeams(player.id)
+      setUserTeams(data)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load team memberships.')
+    } finally {
+      setIsLoading(false)
+    }
+  }, [player.id])
+
+  useEffect(() => {
+    void load()
+  }, [load])
+
+  async function handleToggleTeam(teamId: string, currently: boolean) {
+    setError('')
+    try {
+      if (currently) {
+        await removeUserTeam(player.id, teamId)
+      } else {
+        await assignUserTeam(player.id, teamId, false)
+      }
+      await load()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update team membership.')
+    }
+  }
+
+  async function handleToggleAdmin(teamId: string, currentCan: boolean) {
+    setError('')
+    try {
+      await assignUserTeam(player.id, teamId, !currentCan)
+      await load()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update admin permission.')
+    }
+  }
+
+  const membershipByTeamId = new Map(userTeams.map((ut) => [ut.teamId, ut]))
+
+  return (
+    <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="teams-modal-title">
+      <div className="modal-box modal-box--wide">
+        <h2 id="teams-modal-title">Team permissions — {player.fullName}</h2>
+        {error ? <p className="error-text" role="alert">{error}</p> : null}
+        {isLoading ? (
+          <p className="muted">Loading…</p>
+        ) : (
+          <div className="overview-table-wrap">
+            <table className="overview-table">
+              <thead>
+                <tr>
+                  <th>Team</th>
+                  <th>Member</th>
+                  {player.role === 'admin' ? <th>Can administer</th> : null}
+                </tr>
+              </thead>
+              <tbody>
+                {allTeams.map((team) => {
+                  const membership = membershipByTeamId.get(team.id)
+                  const isMember = Boolean(membership)
+                  const canAdmin = membership?.canAdminister ?? false
+                  return (
+                    <tr key={team.id}>
+                      <td>{team.displayName}</td>
+                      <td>
+                        <input
+                          type="checkbox"
+                          checked={isMember}
+                          onChange={() => void handleToggleTeam(team.id, isMember)}
+                          aria-label={`Toggle membership for ${team.displayName}`}
+                        />
+                      </td>
+                      {player.role === 'admin' ? (
+                        <td>
+                          <input
+                            type="checkbox"
+                            checked={canAdmin}
+                            disabled={!isMember}
+                            onChange={() => void handleToggleAdmin(team.id, canAdmin)}
+                            aria-label={`Toggle admin for ${team.displayName}`}
+                          />
+                        </td>
+                      ) : null}
+                    </tr>
+                  )
+                })}
+                {allTeams.length === 0 ? (
+                  <tr>
+                    <td className="muted" colSpan={3}>No teams configured.</td>
+                  </tr>
+                ) : null}
+              </tbody>
+            </table>
+          </div>
+        )}
+        <div className="form-actions">
+          <Button variant="secondary" onClick={onClose}>Close</Button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── Main page ────────────────────────────────────────────────────────────────
 
 export function AdminUsersPage() {
-  const { players } = useAppData()
+  const { players, deletePlayer, updatePlayerRole } = useAppData()
+  const { isAdmin } = useAuth()
+
+  // Create user form state
   const [email, setEmail] = useState('')
   const [fullName, setFullName] = useState('')
   const [firstName, setFirstName] = useState('')
   const [temporaryPassword, setTemporaryPassword] = useState('')
   const [role, setRole] = useState<UserRole>('player')
   const [gender, setGender] = useState<PlayerGender>('lady')
-  const [error, setError] = useState('')
-  const [status, setStatus] = useState('')
+  const [createError, setCreateError] = useState('')
+  const [createStatus, setCreateStatus] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+
+  // Users list action state
+  const [pendingDelete, setPendingDelete] = useState<PlayerProfile | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
+  const [deleteError, setDeleteError] = useState('')
+  const [roleUpdateError, setRoleUpdateError] = useState('')
+  const [roleUpdating, setRoleUpdating] = useState<string | null>(null)
+
+  // Team permissions modal
+  const [teamsTarget, setTeamsTarget] = useState<PlayerProfile | null>(null)
+  const [allTeams, setAllTeams] = useState<Team[]>([])
+
+  useEffect(() => {
+    if (!isAdmin) return
+    listAllTeams()
+      .then(setAllTeams)
+      .catch(() => { /* non-critical */ })
+  }, [isAdmin])
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    setError('')
-    setStatus('')
+    setCreateError('')
+    setCreateStatus('')
 
     if (!email.trim() || !fullName.trim() || !firstName.trim() || !temporaryPassword.trim()) {
-      setError('Email address, full name, first name, and temporary password are required.')
+      setCreateError('Email address, full name, first name, and temporary password are required.')
       return
     }
 
     if (temporaryPassword.trim().length < 8) {
-      setError('Temporary password must be at least 8 characters.')
+      setCreateError('Temporary password must be at least 8 characters.')
       return
     }
 
@@ -43,7 +224,7 @@ export function AdminUsersPage() {
         role,
         gender: role === 'player' ? gender : undefined,
       })
-      setStatus('User created. Share the temporary password so they can log in and change it.')
+      setCreateStatus('User created. Share the temporary password so they can log in and change it.')
       setEmail('')
       setFullName('')
       setFirstName('')
@@ -51,14 +232,57 @@ export function AdminUsersPage() {
       setRole('player')
       setGender('lady')
     } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : 'Unable to create user.')
+      setCreateError(nextError instanceof Error ? nextError.message : 'Unable to create user.')
     } finally {
       setIsSubmitting(false)
     }
   }
 
+  async function handleConfirmDelete() {
+    if (!pendingDelete) return
+    setIsDeleting(true)
+    setDeleteError('')
+    try {
+      await deletePlayer(pendingDelete.id)
+      setPendingDelete(null)
+    } catch (err) {
+      setDeleteError(err instanceof Error ? err.message : 'Failed to delete user.')
+    } finally {
+      setIsDeleting(false)
+    }
+  }
+
+  async function handleRoleChange(player: PlayerProfile, nextRole: UserRole) {
+    setRoleUpdateError('')
+    setRoleUpdating(player.id)
+    try {
+      await updatePlayerRole(player.id, nextRole)
+    } catch (err) {
+      setRoleUpdateError(err instanceof Error ? err.message : 'Failed to update role.')
+    } finally {
+      setRoleUpdating(null)
+    }
+  }
+
   return (
     <div className="stack">
+      {pendingDelete ? (
+        <DeleteConfirmModal
+          player={pendingDelete}
+          onConfirm={() => void handleConfirmDelete()}
+          onCancel={() => { setPendingDelete(null); setDeleteError('') }}
+          isDeleting={isDeleting}
+        />
+      ) : null}
+
+      {teamsTarget ? (
+        <TeamPermissionsPanel
+          player={teamsTarget}
+          allTeams={allTeams}
+          onClose={() => setTeamsTarget(null)}
+        />
+      ) : null}
+
       <Card>
         <h1>User management</h1>
         <p>Create new admins and players with a temporary password. Ask each user to change their password after first login.</p>
@@ -112,8 +336,8 @@ export function AdminUsersPage() {
             ) : null}
           </div>
 
-          {error ? <p className="error-text" role="alert">{error}</p> : null}
-          {status ? <p className="muted">{status}</p> : null}
+          {createError ? <p className="error-text" role="alert">{createError}</p> : null}
+          {createStatus ? <p className="muted">{createStatus}</p> : null}
 
           <div className="form-actions">
             <Button disabled={isSubmitting} type="submit">
@@ -125,6 +349,8 @@ export function AdminUsersPage() {
 
       <Card>
         <h2>Current users</h2>
+        {deleteError ? <p className="error-text" role="alert">{deleteError}</p> : null}
+        {roleUpdateError ? <p className="error-text" role="alert">{roleUpdateError}</p> : null}
         <div className="overview-table-wrap">
           <table className="overview-table">
             <thead>
@@ -133,6 +359,8 @@ export function AdminUsersPage() {
                 <th>Email</th>
                 <th>Role</th>
                 <th>Gender</th>
+                {isAdmin ? <th>Teams</th> : null}
+                {isAdmin ? <th>Actions</th> : null}
               </tr>
             </thead>
             <tbody>
@@ -140,13 +368,50 @@ export function AdminUsersPage() {
                 <tr key={player.id}>
                   <td>{player.fullName}</td>
                   <td>{player.email}</td>
-                  <td>{player.role}</td>
+                  <td>
+                    {isAdmin ? (
+                      <select
+                        className="input"
+                        value={player.role}
+                        disabled={roleUpdating === player.id}
+                        onChange={(event) => void handleRoleChange(player, event.target.value as UserRole)}
+                        aria-label={`Role for ${player.fullName}`}
+                      >
+                        <option value="player">Player</option>
+                        <option value="admin">Admin</option>
+                      </select>
+                    ) : (
+                      player.role
+                    )}
+                  </td>
                   <td>{player.gender ?? '—'}</td>
+                  {isAdmin ? (
+                    <td>
+                      <Button
+                        variant="ghost"
+                        onClick={() => setTeamsTarget(player)}
+                        aria-label={`Manage teams for ${player.fullName}`}
+                      >
+                        Manage teams
+                      </Button>
+                    </td>
+                  ) : null}
+                  {isAdmin ? (
+                    <td>
+                      <Button
+                        variant="danger"
+                        onClick={() => { setDeleteError(''); setPendingDelete(player) }}
+                        aria-label={`Delete ${player.fullName}`}
+                      >
+                        Delete
+                      </Button>
+                    </td>
+                  ) : null}
                 </tr>
               ))}
               {players.length === 0 ? (
                 <tr>
-                  <td className="muted" colSpan={4}>No users found.</td>
+                  <td className="muted" colSpan={isAdmin ? 6 : 4}>No users found.</td>
                 </tr>
               ) : null}
             </tbody>
@@ -156,3 +421,4 @@ export function AdminUsersPage() {
     </div>
   )
 }
+

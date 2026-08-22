@@ -8,7 +8,7 @@ import {
   type ReactNode,
 } from 'react'
 import { useAuth } from '../auth/hooks/useAuth'
-import { listPlayerProfiles } from '../services/playerService'
+import { listPlayerProfiles, deleteUserProfile, updateUserRole } from '../services/playerService'
 import {
   listLeagueContextDetails,
   listTeamMatchSettings,
@@ -75,6 +75,9 @@ interface AppDataContextValue {
   ) => Promise<string | undefined>
   updateMatchResult: (matchId: string, result?: MatchResult) => Promise<void>
   updateTeamSettings: (settings: TeamSettings) => void
+  deletePlayer: (userId: string) => Promise<void>
+  updatePlayerRole: (userId: string, role: 'admin' | 'player') => Promise<void>
+  reloadPlayers: () => Promise<void>
 }
 
 const AppDataContext = createContext<AppDataContextValue | undefined>(undefined)
@@ -370,6 +373,11 @@ export function AppDataProvider({ children }: AppDataProviderProps) {
     setMatches((currentMatches) => [...currentMatches, normalizedMatch])
   }, [])
 
+  const reloadPlayers = useCallback(async () => {
+    const profiles = await listPlayerProfiles()
+    setPlayers(normalizePlayersForMatchContext(profiles))
+  }, [])
+
   const value = useMemo<AppDataContextValue>(
     () => ({
       matches,
@@ -479,6 +487,17 @@ export function AppDataProvider({ children }: AppDataProviderProps) {
       updateTeamSettings: (settings: TeamSettings) => {
         setTeamSettings(normalizeTeamSettings(settings))
       },
+      deletePlayer: async (userId: string) => {
+        await deleteUserProfile(userId)
+        setPlayers((currentPlayers) => currentPlayers.filter((p) => p.id !== userId))
+      },
+      updatePlayerRole: async (userId: string, role: 'admin' | 'player') => {
+        await updateUserRole(userId, role)
+        setPlayers((currentPlayers) =>
+          currentPlayers.map((p) => (p.id === userId ? { ...p, role } : p)),
+        )
+      },
+      reloadPlayers,
     }),
     [
       addMatchRecord,
@@ -490,6 +509,7 @@ export function AppDataProvider({ children }: AppDataProviderProps) {
       playerGenderLookup,
       players,
       playersById,
+      reloadPlayers,
       replaceMatch,
       teamSettings,
     ],
