@@ -181,7 +181,10 @@ export async function deleteUserProfile(userId: string): Promise<void> {
       .eq('id', userId)
 
     if (profileDelete.error) {
-      throw new Error(profileDelete.error.message)
+      throw new Error(
+        `Failed to delete user. Edge Function error: ${error.message}. ` +
+        `Profile delete error: ${profileDelete.error.message}`
+      )
     }
   }
 }
