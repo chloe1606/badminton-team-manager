@@ -3,8 +3,16 @@ import { useAppData } from '../app/AppDataProvider'
 import { Button } from '../components/ui/Button'
 import { Card } from '../components/ui/Card'
 import { clubDirectory } from '../data/clubContacts'
-import { listTeamMatchSettings, upsertTeamMatchSettings, type TeamMatchSettingsRecord } from '../services/leagueService'
+import teamsData from '../data/teams.json'
+import { upsertTeamMatchSettings } from '../services/leagueService'
 import { getAddressById, getClubById } from '../utils/matches'
+
+interface TeamDataOption {
+  club_name: string
+  team_number: string | null
+  match_type: string
+  division: string
+}
 
 export function LeaguePage() {
   const { teamSettings } = useAppData()
@@ -22,7 +30,7 @@ export function LeaguePage() {
   const [capScore, setCapScore] = useState(String(teamSettings.matchFormat.scoring.capScore))
   const [status, setStatus] = useState('')
   const [error, setError] = useState('')
-  const [teamOptions, setTeamOptions] = useState<TeamMatchSettingsRecord[]>([])
+  const teamOptions = useMemo(() => teamsData as TeamDataOption[], [])
 
   const selectedHomeClub = useMemo(() => getClubById(clubDirectory, homeClubId), [homeClubId])
   const homeVenues = selectedHomeClub?.addresses ?? []
@@ -32,22 +40,22 @@ export function LeaguePage() {
   )
 
   const teamTypeOptions = useMemo(() => {
-    return [...new Set(teamOptions.map((setting) => setting.matchType))]
+    return [...new Set(teamOptions.map((setting) => setting.match_type))]
       .filter((value) => value.trim().length > 0)
       .sort((a, b) => a.localeCompare(b))
   }, [teamOptions])
 
   const leagueNameOptions = useMemo(() => {
-    return [...new Set(teamOptions.map((setting) => setting.leagueName).filter(Boolean) as string[])]
+    return [...new Set([leagueName.trim() || 'NWKBA'])]
       .filter((value) => value.trim().length > 0)
       .sort((a, b) => a.localeCompare(b))
-  }, [teamOptions])
+  }, [leagueName])
 
   const teamNumberOptions = useMemo(() => {
-    const rowsForTeam = teamOptions.filter((setting) => setting.matchType === matchType)
-    const rowsForDivision = rowsForTeam.filter((setting) => String(setting.divisionNumber) === divisionNumber)
+    const rowsForTeam = teamOptions.filter((setting) => setting.match_type === matchType)
+    const rowsForDivision = rowsForTeam.filter((setting) => setting.division === divisionNumber)
     const source = rowsForDivision.length > 0 ? rowsForDivision : rowsForTeam
-    const values = [...new Set(source.map((setting) => (setting.teamNumber === null ? '' : String(setting.teamNumber))))]
+    const values = [...new Set(source.map((setting) => (setting.team_number === null ? '' : String(setting.team_number))))]
     const sortedValues = values.sort((a, b) => {
       if (!a) return -1
       if (!b) return 1
@@ -55,14 +63,6 @@ export function LeaguePage() {
     })
     return sortedValues.length > 0 ? sortedValues : ['']
   }, [teamOptions, matchType, divisionNumber])
-
-  useEffect(() => {
-    listTeamMatchSettings()
-      .then(setTeamOptions)
-      .catch(() => {
-        setTeamOptions([])
-      })
-  }, [])
 
   useEffect(() => {
     setTeamName(teamSettings.profile.teamName)

@@ -23,7 +23,6 @@ export async function listAllTeams(): Promise<Team[]> {
   const { data, error } = await supabase
     .from('teams')
     .select('id, club_name, team_number, match_type, division, rubbers, display_name, active')
-    .eq('active', true)
     .order('display_name', { ascending: true })
 
   if (error) {

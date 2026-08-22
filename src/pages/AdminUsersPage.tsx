@@ -259,7 +259,7 @@ export function AdminUsersPage() {
                   <td>
                     {player.permittedTeams && player.permittedTeams.length > 0
                       ? player.permittedTeams
-                        .map((teamId) => teamNameById.get(teamId) ?? teamId)
+                        .map((teamId) => teamNameById.get(teamId) ?? 'Unknown team')
                         .join(', ')
                       : 'All teams'}
                   </td>
