@@ -1,10 +1,9 @@
-import { FormEvent, useEffect, useState } from 'react'
+import { FormEvent, useState } from 'react'
 import { useAppData } from '../app/AppDataProvider'
 import { useAuth } from '../auth/hooks/useAuth'
 import { Button } from '../components/ui/Button'
 import { Card } from '../components/ui/Card'
-import { createInvitedPlayer, updatePermittedTeams } from '../services/playerService'
-import { listTeamMatchSettings, type TeamMatchSettingsRecord } from '../services/leagueService'
+import { createInvitedPlayer } from '../services/playerService'
 import type { PlayerGender } from '../types/matches'
 import type { UserRole } from '../types/auth'
 import type { PlayerProfile } from '../types/players'
@@ -43,100 +42,9 @@ function DeleteConfirmModal({ player, onConfirm, onCancel, isDeleting }: DeleteM
   )
 }
 
-// ─── Permitted teams editor ───────────────────────────────────────────────────
-
-interface PermittedTeamsCellProps {
-  player: PlayerProfile
-  leagueContexts: TeamMatchSettingsRecord[]
-  onUpdated: (userId: string, teamIds: string[]) => void
-}
-
-function PermittedTeamsCell({ player, leagueContexts, onUpdated }: PermittedTeamsCellProps) {
-  const [editing, setEditing] = useState(false)
-  const [saving, setSaving] = useState(false)
-  const [error, setError] = useState('')
-  const [selected, setSelected] = useState<string[]>(player.permittedTeams ?? [])
-
-  if (player.role === 'player') {
-    return <span className="muted">—</span>
-  }
-
-  if (!editing) {
-    const names = leagueContexts
-      .filter((ctx) => selected.includes(ctx.id))
-      .map((ctx) => ctx.teamLabel)
-    return (
-      <span
-        role="button"
-        tabIndex={0}
-        style={{ cursor: 'pointer', textDecoration: 'underline dotted' }}
-        title="Click to edit permitted teams"
-        onClick={() => setEditing(true)}
-        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setEditing(true) }}
-      >
-        {names.length > 0 ? names.join(', ') : <span className="muted">—</span>}
-      </span>
-    )
-  }
-
-  async function handleSave() {
-    setSaving(true)
-    setError('')
-    try {
-      await updatePermittedTeams(player.id, selected.length > 0 ? selected : null)
-      onUpdated(player.id, selected)
-      setEditing(false)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save.')
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  function toggleTeam(id: string) {
-    setSelected((prev) =>
-      prev.includes(id) ? prev.filter((t) => t !== id) : [...prev, id],
-    )
-  }
-
-  return (
-    <div className="stack" style={{ gap: '0.5rem' }}>
-      {leagueContexts.map((ctx) => (
-        <label key={ctx.id} style={{ display: 'flex', gap: '0.4rem', alignItems: 'center', cursor: 'pointer' }}>
-          <input
-            type="checkbox"
-            checked={selected.includes(ctx.id)}
-            onChange={() => toggleTeam(ctx.id)}
-          />
-          {ctx.teamLabel}
-        </label>
-      ))}
-      {error ? <p className="error-text">{error}</p> : null}
-      <div className="form-actions" style={{ marginTop: '0.25rem' }}>
-        <Button disabled={saving} onClick={() => void handleSave()}>
-          {saving ? 'Saving…' : 'Save'}
-        </Button>
-        <Button variant="secondary" disabled={saving} onClick={() => { setSelected(player.permittedTeams ?? []); setEditing(false) }}>
-          Cancel
-        </Button>
-      </div>
-    </div>
-  )
-}
-
-// ─── Main page ────────────────────────────────────────────────────────────────
-
 export function AdminUsersPage() {
-  const { players, deletePlayer, updatePlayerRole, reloadPlayers } = useAppData()
+  const { players, deletePlayer, updatePlayerRole } = useAppData()
   const { isAdmin } = useAuth()
-
-  const [leagueContexts, setLeagueContexts] = useState<TeamMatchSettingsRecord[]>([])
-
-  useEffect(() => {
-    listTeamMatchSettings()
-      .then(setLeagueContexts)
-      .catch(() => { /* non-critical */ })
-  }, [])
 
   // Create user form state
   const [email, setEmail] = useState('')
@@ -219,12 +127,6 @@ export function AdminUsersPage() {
     } finally {
       setRoleUpdating(null)
     }
-  }
-
-  function handlePermittedTeamsUpdated(userId: string, teamIds: string[]) {
-    void reloadPlayers()
-    void userId
-    void teamIds
   }
 
   return (
@@ -314,7 +216,6 @@ export function AdminUsersPage() {
                 <th>Email</th>
                 <th>Role</th>
                 <th>Gender</th>
-                {isAdmin ? <th>Permitted teams</th> : null}
                 {isAdmin ? <th>Actions</th> : null}
               </tr>
             </thead>
@@ -342,15 +243,6 @@ export function AdminUsersPage() {
                   <td>{player.gender ?? '—'}</td>
                   {isAdmin ? (
                     <td>
-                      <PermittedTeamsCell
-                        player={player}
-                        leagueContexts={leagueContexts}
-                        onUpdated={handlePermittedTeamsUpdated}
-                      />
-                    </td>
-                  ) : null}
-                  {isAdmin ? (
-                    <td>
                       <Button
                         variant="danger"
                         onClick={() => { setDeleteError(''); setPendingDelete(player) }}
@@ -364,7 +256,7 @@ export function AdminUsersPage() {
               ))}
               {players.length === 0 ? (
                 <tr>
-                  <td className="muted" colSpan={isAdmin ? 6 : 4}>No users found.</td>
+                  <td className="muted" colSpan={isAdmin ? 5 : 4}>No users found.</td>
                 </tr>
               ) : null}
             </tbody>
@@ -374,4 +266,3 @@ export function AdminUsersPage() {
     </div>
   )
 }
-
