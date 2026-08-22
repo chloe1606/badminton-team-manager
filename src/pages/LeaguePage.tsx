@@ -3,7 +3,7 @@ import { useAppData } from '../app/AppDataProvider'
 import { Button } from '../components/ui/Button'
 import { Card } from '../components/ui/Card'
 import { clubDirectory } from '../data/clubContacts'
-import { upsertLeagueContextDetails, upsertTeamMatchSettings } from '../services/leagueService'
+import { upsertTeamMatchSettings } from '../services/leagueService'
 import { getAddressById, getClubById } from '../utils/matches'
 
 export function LeaguePage() {
@@ -64,10 +64,6 @@ export function LeaguePage() {
             capScore: Number(capScore),
           },
         },
-      })
-      await upsertLeagueContextDetails({
-        matchType,
-        divisionNumber: Number(divisionNumber),
         homeClubId,
         homeVenueId,
         leagueName: leagueName.trim(),

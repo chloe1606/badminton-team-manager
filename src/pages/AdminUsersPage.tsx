@@ -4,7 +4,7 @@ import { useAuth } from '../auth/hooks/useAuth'
 import { Button } from '../components/ui/Button'
 import { Card } from '../components/ui/Card'
 import { createInvitedPlayer, updatePermittedTeams } from '../services/playerService'
-import { listLeagueContextDetails, type LeagueContextDetailsRecord } from '../services/leagueService'
+import { listTeamMatchSettings, type TeamMatchSettingsRecord } from '../services/leagueService'
 import type { PlayerGender } from '../types/matches'
 import type { UserRole } from '../types/auth'
 import type { PlayerProfile } from '../types/players'
@@ -47,7 +47,7 @@ function DeleteConfirmModal({ player, onConfirm, onCancel, isDeleting }: DeleteM
 
 interface PermittedTeamsCellProps {
   player: PlayerProfile
-  leagueContexts: LeagueContextDetailsRecord[]
+  leagueContexts: TeamMatchSettingsRecord[]
   onUpdated: (userId: string, teamIds: string[]) => void
 }
 
@@ -64,7 +64,7 @@ function PermittedTeamsCell({ player, leagueContexts, onUpdated }: PermittedTeam
   if (!editing) {
     const names = leagueContexts
       .filter((ctx) => selected.includes(ctx.id))
-      .map((ctx) => ctx.leagueName || ctx.matchContextKey)
+      .map((ctx) => ctx.teamLabel)
     return (
       <span
         role="button"
@@ -108,7 +108,7 @@ function PermittedTeamsCell({ player, leagueContexts, onUpdated }: PermittedTeam
             checked={selected.includes(ctx.id)}
             onChange={() => toggleTeam(ctx.id)}
           />
-          {ctx.leagueName || ctx.matchContextKey}
+          {ctx.teamLabel}
         </label>
       ))}
       {error ? <p className="error-text">{error}</p> : null}
@@ -130,10 +130,10 @@ export function AdminUsersPage() {
   const { players, deletePlayer, updatePlayerRole, reloadPlayers } = useAppData()
   const { isAdmin } = useAuth()
 
-  const [leagueContexts, setLeagueContexts] = useState<LeagueContextDetailsRecord[]>([])
+  const [leagueContexts, setLeagueContexts] = useState<TeamMatchSettingsRecord[]>([])
 
   useEffect(() => {
-    listLeagueContextDetails()
+    listTeamMatchSettings()
       .then(setLeagueContexts)
       .catch(() => { /* non-critical */ })
   }, [])
