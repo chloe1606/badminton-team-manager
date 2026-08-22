@@ -9,6 +9,7 @@ interface PlayerProfileRow {
   role: UserRole
   player_id: string | null
   gender: 'lady' | 'man' | null
+  permitted_teams: string[] | null
 }
 
 export function mapPlayerProfile(row: PlayerProfileRow): PlayerProfile {
@@ -23,6 +24,7 @@ export function mapPlayerProfile(row: PlayerProfileRow): PlayerProfile {
     role: row.role,
     playerId: row.player_id ?? undefined,
     gender: row.gender ?? undefined,
+    permittedTeams: row.permitted_teams ?? undefined,
   }
 }
 

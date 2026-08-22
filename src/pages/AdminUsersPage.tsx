@@ -3,8 +3,8 @@ import { useAppData } from '../app/AppDataProvider'
 import { useAuth } from '../auth/hooks/useAuth'
 import { Button } from '../components/ui/Button'
 import { Card } from '../components/ui/Card'
-import { createInvitedPlayer } from '../services/playerService'
-import { listUserTeams } from '../services/teamService'
+import { createInvitedPlayer, updatePermittedTeams } from '../services/playerService'
+import { listLeagueContextDetails, type LeagueContextDetailsRecord } from '../services/leagueService'
 import type { PlayerGender } from '../types/matches'
 import type { UserRole } from '../types/auth'
 import type { PlayerProfile } from '../types/players'
@@ -43,36 +43,100 @@ function DeleteConfirmModal({ player, onConfirm, onCancel, isDeleting }: DeleteM
   )
 }
 
-// ─── Inline administered-teams display ───────────────────────────────────────
+// ─── Permitted teams editor ───────────────────────────────────────────────────
 
-interface AdminTeamsCellProps {
-  userId: string
+interface PermittedTeamsCellProps {
+  player: PlayerProfile
+  leagueContexts: LeagueContextDetailsRecord[]
+  onUpdated: (userId: string, teamIds: string[]) => void
 }
 
-function AdminTeamsCell({ userId }: AdminTeamsCellProps) {
-  const [names, setNames] = useState<string[]>([])
+function PermittedTeamsCell({ player, leagueContexts, onUpdated }: PermittedTeamsCellProps) {
+  const [editing, setEditing] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+  const [selected, setSelected] = useState<string[]>(player.permittedTeams ?? [])
 
-  useEffect(() => {
-    listUserTeams(userId)
-      .then((uts) =>
-        setNames(
-          uts
-            .filter((ut) => ut.canAdminister && ut.team)
-            .map((ut) => ut.team!.displayName),
-        ),
-      )
-      .catch(() => { /* non-critical */ })
-  }, [userId])
+  if (player.role === 'player') {
+    return <span className="muted">—</span>
+  }
 
-  if (names.length === 0) return <span className="muted">—</span>
-  return <>{names.join(', ')}</>
+  if (!editing) {
+    const names = leagueContexts
+      .filter((ctx) => selected.includes(ctx.id))
+      .map((ctx) => ctx.leagueName || ctx.matchContextKey)
+    return (
+      <span
+        role="button"
+        tabIndex={0}
+        style={{ cursor: 'pointer', textDecoration: 'underline dotted' }}
+        title="Click to edit permitted teams"
+        onClick={() => setEditing(true)}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setEditing(true) }}
+      >
+        {names.length > 0 ? names.join(', ') : <span className="muted">—</span>}
+      </span>
+    )
+  }
+
+  async function handleSave() {
+    setSaving(true)
+    setError('')
+    try {
+      await updatePermittedTeams(player.id, selected.length > 0 ? selected : null)
+      onUpdated(player.id, selected)
+      setEditing(false)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to save.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  function toggleTeam(id: string) {
+    setSelected((prev) =>
+      prev.includes(id) ? prev.filter((t) => t !== id) : [...prev, id],
+    )
+  }
+
+  return (
+    <div className="stack" style={{ gap: '0.5rem' }}>
+      {leagueContexts.map((ctx) => (
+        <label key={ctx.id} style={{ display: 'flex', gap: '0.4rem', alignItems: 'center', cursor: 'pointer' }}>
+          <input
+            type="checkbox"
+            checked={selected.includes(ctx.id)}
+            onChange={() => toggleTeam(ctx.id)}
+          />
+          {ctx.leagueName || ctx.matchContextKey}
+        </label>
+      ))}
+      {error ? <p className="error-text">{error}</p> : null}
+      <div className="form-actions" style={{ marginTop: '0.25rem' }}>
+        <Button disabled={saving} onClick={() => void handleSave()}>
+          {saving ? 'Saving…' : 'Save'}
+        </Button>
+        <Button variant="secondary" disabled={saving} onClick={() => { setSelected(player.permittedTeams ?? []); setEditing(false) }}>
+          Cancel
+        </Button>
+      </div>
+    </div>
+  )
 }
 
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export function AdminUsersPage() {
-  const { players, deletePlayer, updatePlayerRole } = useAppData()
+  const { players, deletePlayer, updatePlayerRole, reloadPlayers } = useAppData()
   const { isAdmin } = useAuth()
+
+  const [leagueContexts, setLeagueContexts] = useState<LeagueContextDetailsRecord[]>([])
+
+  useEffect(() => {
+    listLeagueContextDetails()
+      .then(setLeagueContexts)
+      .catch(() => { /* non-critical */ })
+  }, [])
 
   // Create user form state
   const [email, setEmail] = useState('')
@@ -155,6 +219,12 @@ export function AdminUsersPage() {
     } finally {
       setRoleUpdating(null)
     }
+  }
+
+  function handlePermittedTeamsUpdated(userId: string, teamIds: string[]) {
+    void reloadPlayers()
+    void userId
+    void teamIds
   }
 
   return (
@@ -244,7 +314,7 @@ export function AdminUsersPage() {
                 <th>Email</th>
                 <th>Role</th>
                 <th>Gender</th>
-                {isAdmin ? <th>Teams</th> : null}
+                {isAdmin ? <th>Permitted teams</th> : null}
                 {isAdmin ? <th>Actions</th> : null}
               </tr>
             </thead>
@@ -272,7 +342,11 @@ export function AdminUsersPage() {
                   <td>{player.gender ?? '—'}</td>
                   {isAdmin ? (
                     <td>
-                      <AdminTeamsCell userId={player.id} />
+                      <PermittedTeamsCell
+                        player={player}
+                        leagueContexts={leagueContexts}
+                        onUpdated={handlePermittedTeamsUpdated}
+                      />
                     </td>
                   ) : null}
                   {isAdmin ? (
