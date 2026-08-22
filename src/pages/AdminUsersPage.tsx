@@ -1,12 +1,14 @@
-import { FormEvent, useState } from 'react'
+import { FormEvent, useEffect, useMemo, useState } from 'react'
 import { useAppData } from '../app/AppDataProvider'
 import { useAuth } from '../auth/hooks/useAuth'
 import { Button } from '../components/ui/Button'
 import { Card } from '../components/ui/Card'
 import { createInvitedPlayer } from '../services/playerService'
+import { listAllTeams } from '../services/teamService'
 import type { PlayerGender } from '../types/matches'
 import type { UserRole } from '../types/auth'
 import type { PlayerProfile } from '../types/players'
+import type { Team } from '../types/teams'
 
 // ─── Delete confirmation modal ───────────────────────────────────────────────
 
@@ -63,6 +65,18 @@ export function AdminUsersPage() {
   const [deleteError, setDeleteError] = useState('')
   const [roleUpdateError, setRoleUpdateError] = useState('')
   const [roleUpdating, setRoleUpdating] = useState<string | null>(null)
+  const [teams, setTeams] = useState<Team[]>([])
+
+  useEffect(() => {
+    listAllTeams()
+      .then(setTeams)
+      .catch(() => setTeams([]))
+  }, [])
+
+  const teamNameById = useMemo(
+    () => new Map(teams.map((team) => [team.id, team.displayName] as const)),
+    [teams],
+  )
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -216,6 +230,7 @@ export function AdminUsersPage() {
                 <th>Email</th>
                 <th>Role</th>
                 <th>Gender</th>
+                <th>Permitted teams</th>
                 {isAdmin ? <th>Actions</th> : null}
               </tr>
             </thead>
@@ -241,6 +256,13 @@ export function AdminUsersPage() {
                     )}
                   </td>
                   <td>{player.gender ?? '—'}</td>
+                  <td>
+                    {player.permittedTeams && player.permittedTeams.length > 0
+                      ? player.permittedTeams
+                        .map((teamId) => teamNameById.get(teamId) ?? teamId)
+                        .join(', ')
+                      : 'All teams'}
+                  </td>
                   {isAdmin ? (
                     <td>
                       <Button
@@ -256,7 +278,7 @@ export function AdminUsersPage() {
               ))}
               {players.length === 0 ? (
                 <tr>
-                  <td className="muted" colSpan={isAdmin ? 5 : 4}>No users found.</td>
+                  <td className="muted" colSpan={isAdmin ? 6 : 5}>No users found.</td>
                 </tr>
               ) : null}
             </tbody>
