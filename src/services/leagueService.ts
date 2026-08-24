@@ -30,6 +30,14 @@ interface TeamSettingsRow {
   league_name: string | null
 }
 
+interface TeamMatchSettingsFormatRow {
+  match_context_key?: string | null
+  division_number?: number | string | null
+  division?: number | string | null
+  format: MatchFormatConfig | string | null
+  rubbers?: number | string | null
+}
+
 function parseFormat(value: MatchFormatConfig | string | null): MatchFormatConfig {
   if (!value) {
     return {} as MatchFormatConfig
@@ -56,6 +64,19 @@ function parseTeamNumber(teamNumber: string | number | null): number | null {
   }
   const parsed = Number.parseInt(String(teamNumber), 10)
   return Number.isNaN(parsed) ? null : parsed
+}
+
+function parsePositiveInt(value: number | string | null | undefined): number | undefined {
+  if (value === null || value === undefined) {
+    return undefined
+  }
+
+  const parsed = Number.parseInt(String(value), 10)
+  if (Number.isNaN(parsed) || parsed <= 0) {
+    return undefined
+  }
+
+  return parsed
 }
 
 function buildTeamLabel(teamName: string, teamNumber: string | number | null): string {
@@ -112,6 +133,59 @@ export async function listTeamMatchSettings(): Promise<TeamMatchSettingsRecord[]
   }
 
   return (data ?? []).map((row) => mapTeamSettingsRow(row as TeamSettingsRow))
+}
+
+export async function getTeamMatchSettingsFormat(
+  matchType: string,
+  divisionNumber: number,
+): Promise<MatchFormatConfig | undefined> {
+  if (!isSupabaseConfigured) {
+    return undefined
+  }
+
+  const requestedContextKey = createMatchContextKey(matchType, divisionNumber)
+  const supabase = requireSupabase()
+  const { data, error } = await supabase
+    .from('team_match_settings')
+    .select('match_context_key, division_number, division, format, rubbers')
+    .eq('match_type', matchType)
+    .limit(50)
+
+  if (error) {
+    const normalizedMessage = error.message.toLowerCase()
+    if (
+      normalizedMessage.includes("could not find the table 'public.team_match_settings'") ||
+      normalizedMessage.includes('relation "team_match_settings" does not exist')
+    ) {
+      return undefined
+    }
+
+    throw new Error(error.message)
+  }
+
+  const rows = (data ?? []) as TeamMatchSettingsFormatRow[]
+  const row =
+    rows.find((candidate) => candidate.match_context_key === requestedContextKey) ??
+    rows.find((candidate) => {
+      const candidateDivision =
+        parsePositiveInt(candidate.division_number) ?? parsePositiveInt(candidate.division)
+      return candidateDivision === divisionNumber
+    }) ??
+    null
+
+  if (!row?.format) {
+    return undefined
+  }
+
+  const parsedFormat = parseFormat(row.format)
+  const rubbers = parsePositiveInt(row.rubbers)
+
+  return rubbers
+    ? {
+      ...parsedFormat,
+      numberOfRubbers: rubbers,
+    }
+    : parsedFormat
 }
 
 export async function upsertTeamMatchSettings(input: {

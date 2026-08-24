@@ -5,6 +5,7 @@ import { Button } from '../components/ui/Button'
 import { Card } from '../components/ui/Card'
 import { clubDirectory } from '../data/clubContacts'
 import { defaultTeamSettings } from '../data/matches'
+import { getTeamMatchSettingsFormat } from '../services/leagueService'
 import type {
   MatchDetailsInput,
   MatchFormatConfig,
@@ -1390,12 +1391,18 @@ export function MatchesPage() {
     }
 
     try {
+      const requestedDivision = data.divisionNumber ?? Number.parseInt(divisionNumber, 10)
+      const selectedFormat = await getTeamMatchSettingsFormat(
+        data.matchType ?? matchType,
+        Number.isNaN(requestedDivision) ? 3 : requestedDivision,
+      )
+
       await handleAddMatch({
         ...data,
         teamDisplayName,
         leagueName: (teamSettings.profile.leagueName ?? 'NWKBA').trim(),
         matchContextKey: selectedMatchContextKey,
-        format: cloneFormat(teamSettings.matchFormat),
+        format: cloneFormat(selectedFormat ?? teamSettings.matchFormat),
       })
 
       setOpponentClubId('')
