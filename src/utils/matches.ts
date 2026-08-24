@@ -178,6 +178,29 @@ export function formatOpponentName(match: MatchRecord, club: ClubDirectoryEntry 
   return `${club.name} ${match.opponentTeamNumber}`
 }
 
+export function getPlayerMatchAvailabilityStatus(
+  match: MatchRecord,
+  playerId: string | undefined,
+): 'AVAILABLE' | 'SELECTED' | 'UNAVAILABLE' | null {
+  if (!playerId) {
+    return null
+  }
+
+  if ((match.assignedPlayerIds ?? []).includes(playerId)) {
+    return 'SELECTED'
+  }
+
+  if ((match.availablePlayerIds ?? []).includes(playerId)) {
+    return 'AVAILABLE'
+  }
+
+  if ((match.unavailablePlayerIds ?? []).includes(playerId)) {
+    return 'UNAVAILABLE'
+  }
+
+  return null
+}
+
 export function gamesNeededToWin(bestOf: number): number {
   return Math.floor(bestOf / 2) + 1
 }

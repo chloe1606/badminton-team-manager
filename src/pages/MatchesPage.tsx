@@ -4,6 +4,7 @@ import { useAuth } from '../auth/hooks/useAuth'
 import { Button } from '../components/ui/Button'
 import { Card } from '../components/ui/Card'
 import { clubDirectory } from '../data/clubContacts'
+import { defaultTeamSettings } from '../data/matches'
 import type {
   MatchDetailsInput,
   MatchFormatConfig,
@@ -23,6 +24,7 @@ import {
   gamesNeededToWin,
   getAddressById,
   getClubById,
+  getPlayerMatchAvailabilityStatus,
   normalizeAssignedPairs,
   suggestAssignedPairs,
   sortMatchesChronologically,
@@ -186,25 +188,46 @@ function getVenueClub(match: MatchRecord, teamSettings: TeamSettings) {
   return getClubById(clubDirectory, match.opponentClubId)
 }
 
-function createCalendarFixture(match: MatchRecord, teamSettings: TeamSettings): CalendarFixture {
+function createCalendarFixture(
+  match: MatchRecord,
+  teamSettings: TeamSettings,
+  playerId?: string,
+): CalendarFixture {
   const venueClub = getVenueClub(match, teamSettings)
   const address = getAddressById(venueClub, match.venueId)
+  const fallbackHomeClub = getClubById(clubDirectory, defaultTeamSettings.profile.homeClubId)
+  const fallbackHomeVenue = getAddressById(fallbackHomeClub, defaultTeamSettings.profile.homeVenueId)
   const club = getClubById(clubDirectory, match.opponentClubId)
   const opponentName = formatOpponentName(match, club)
   const summary = summarizeMatchResult(match.result, match.format)
   const descriptionParts = [match.notes?.trim(), match.result?.notes?.trim()]
+  const availabilityStatus = getPlayerMatchAvailabilityStatus(match, playerId)
+
+  if (availabilityStatus) {
+    descriptionParts.unshift(`Your status: ${availabilityStatus}`)
+  }
 
   if (summary.completedRubbers > 0) {
     descriptionParts.push(`Rubbers: ${summary.rubbersWon} won / ${summary.rubbersLost} lost`)
   }
+
+  const venueName =
+    match.location === 'home'
+      ? address?.venueName ?? fallbackHomeVenue?.venueName ?? 'Venue TBC'
+      : address?.venueName ?? 'Venue TBC'
+  const venueAddress =
+    match.location === 'home'
+      ? [address?.address, address?.notes].filter(Boolean).join(' · ') ||
+        [fallbackHomeVenue?.address, fallbackHomeVenue?.notes].filter(Boolean).join(' · ')
+      : [address?.address, address?.notes].filter(Boolean).join(' · ')
 
   return {
     id: match.id,
     title: `${match.teamDisplayName} vs ${opponentName}`,
     startAt: match.startAt,
     endAt: match.endAt,
-    venueName: address?.venueName ?? 'Venue TBC',
-    venueAddress: [address?.address, address?.notes].filter(Boolean).join(' · '),
+    venueName,
+    venueAddress,
     description: descriptionParts.filter(Boolean).join('\n'),
   }
 }
@@ -1309,13 +1332,18 @@ export function MatchesPage() {
       return
     }
 
-    downloadIcs(`${match.id}.ics`, createMatchesCalendarIcs([createCalendarFixture(match, teamSettings)]))
+    downloadIcs(
+      `${match.id}.ics`,
+      createMatchesCalendarIcs([createCalendarFixture(match, teamSettings, user?.playerId)]),
+    )
   }
 
   function exportAllMatches() {
     downloadIcs(
       'badminton-match-fixtures.ics',
-      createMatchesCalendarIcs(sortedMatches.map((match) => createCalendarFixture(match, teamSettings))),
+      createMatchesCalendarIcs(
+        sortedMatches.map((match) => createCalendarFixture(match, teamSettings, user?.playerId)),
+      ),
     )
   }
 

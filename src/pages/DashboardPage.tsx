@@ -4,12 +4,15 @@ import { useAuth } from '../auth/hooks/useAuth'
 import { Button } from '../components/ui/Button'
 import { Card } from '../components/ui/Card'
 import { clubDirectory } from '../data/clubContacts'
+import { defaultTeamSettings } from '../data/matches'
 import type { MatchRecord } from '../types/matches'
 import { createMatchesCalendarIcs, downloadIcs, type CalendarFixture } from '../utils/calendar'
 import {
   formatOpponentName,
   getClubById,
+  getAddressById,
   isMatchExpired,
+  getPlayerMatchAvailabilityStatus,
   sortMatchesChronologically,
 } from '../utils/matches'
 
@@ -32,18 +35,36 @@ interface CalendarMonthGroup {
   matches: MatchRecord[]
 }
 
-function createDashboardCalendarFixture(match: MatchRecord): CalendarFixture {
+function createDashboardCalendarFixture(
+  match: MatchRecord,
+  playerId: string | undefined,
+): CalendarFixture {
   const opponentClub = getClubById(clubDirectory, match.opponentClubId)
   const opponentName = formatOpponentName(match, opponentClub)
+  const fallbackHomeClub = getClubById(clubDirectory, defaultTeamSettings.profile.homeClubId)
+  const fallbackHomeVenue = getAddressById(fallbackHomeClub, defaultTeamSettings.profile.homeVenueId)
+  const availabilityStatus = getPlayerMatchAvailabilityStatus(match, playerId)
+  const venueAddress =
+    match.location === 'home'
+      ? [match.venueAddress, match.notes].filter(Boolean).join(' · ') ||
+        [fallbackHomeVenue?.address, fallbackHomeVenue?.notes].filter(Boolean).join(' · ')
+      : [match.venueAddress, match.notes].filter(Boolean).join(' · ')
 
   return {
     id: match.id,
     title: `${match.teamDisplayName} vs ${opponentName}`,
     startAt: match.startAt,
     endAt: match.endAt,
-    venueName: match.venueName ?? 'Venue TBC',
-    venueAddress: [match.venueAddress, match.notes].filter(Boolean).join(' · '),
-    description: [match.location === 'home' ? 'Home match' : 'Away match', match.notes?.trim()]
+    venueName:
+      match.location === 'home'
+        ? match.venueName ?? fallbackHomeVenue?.venueName ?? 'Venue TBC'
+        : match.venueName ?? 'Venue TBC',
+    venueAddress,
+    description: [
+      availabilityStatus ? `Your status: ${availabilityStatus}` : null,
+      match.location === 'home' ? 'Home match' : 'Away match',
+      match.notes?.trim(),
+    ]
       .filter(Boolean)
       .join('\n'),
   }
@@ -141,7 +162,9 @@ export function DashboardPage() {
 
     downloadIcs(
       'dashboard-match-fixtures.ics',
-      createMatchesCalendarIcs(playerMatches.map((match) => createDashboardCalendarFixture(match))),
+      createMatchesCalendarIcs(
+        playerMatches.map((match) => createDashboardCalendarFixture(match, playerId)),
+      ),
     )
   }
 
