@@ -8,7 +8,12 @@ import {
   type ReactNode,
 } from 'react'
 import { useAuth } from '../auth/hooks/useAuth'
-import { listPlayerProfiles, deleteUserProfile, updateUserRole } from '../services/playerService'
+import {
+  listPlayerProfiles,
+  deleteUserProfile,
+  updateUserNotificationPreference,
+  updateUserRole,
+} from '../services/playerService'
 import {
   listTeamMatchSettings,
   type TeamMatchSettingsRecord,
@@ -75,6 +80,7 @@ interface AppDataContextValue {
   updateTeamSettings: (settings: TeamSettings) => void
   deletePlayer: (userId: string) => Promise<void>
   updatePlayerRole: (userId: string, role: 'admin' | 'player') => Promise<void>
+  updatePlayerNotificationPreference: (userId: string, notifyByEmail: boolean) => Promise<void>
   reloadPlayers: () => Promise<void>
 }
 
@@ -490,6 +496,12 @@ export function AppDataProvider({ children }: AppDataProviderProps) {
         await updateUserRole(userId, role)
         setPlayers((currentPlayers) =>
           currentPlayers.map((p) => (p.id === userId ? { ...p, role } : p)),
+        )
+      },
+      updatePlayerNotificationPreference: async (userId: string, notifyByEmail: boolean) => {
+        await updateUserNotificationPreference(userId, notifyByEmail)
+        setPlayers((currentPlayers) =>
+          currentPlayers.map((p) => (p.id === userId ? { ...p, notifyByEmail } : p)),
         )
       },
       reloadPlayers,

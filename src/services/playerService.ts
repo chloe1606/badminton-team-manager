@@ -161,6 +161,25 @@ export async function updateUserRole(userId: string, role: 'admin' | 'player'): 
   }
 }
 
+export async function updateUserNotificationPreference(
+  userId: string,
+  notifyByEmail: boolean,
+): Promise<void> {
+  if (!isSupabaseConfigured) {
+    throw new Error(supabaseConfigError ?? 'Supabase is not configured.')
+  }
+
+  const supabase = requireSupabase()
+  const { error } = await supabase
+    .from('profiles')
+    .update({ notify_by_email: notifyByEmail })
+    .eq('id', userId)
+
+  if (error) {
+    throw new Error(error.message)
+  }
+}
+
 export async function deleteUserProfile(userId: string): Promise<void> {
   if (!isSupabaseConfigured) {
     throw new Error(supabaseConfigError ?? 'Supabase is not configured.')

@@ -43,7 +43,12 @@ function DeleteConfirmModal({ player, onConfirm, onCancel, isDeleting }: DeleteM
 }
 
 export function AdminUsersPage() {
-  const { players, deletePlayer, updatePlayerRole } = useAppData()
+  const {
+    players,
+    deletePlayer,
+    updatePlayerRole,
+    updatePlayerNotificationPreference,
+  } = useAppData()
   const { isAdmin } = useAuth()
 
   // Create user form state
@@ -63,6 +68,8 @@ export function AdminUsersPage() {
   const [deleteError, setDeleteError] = useState('')
   const [roleUpdateError, setRoleUpdateError] = useState('')
   const [roleUpdating, setRoleUpdating] = useState<string | null>(null)
+  const [notifyUpdateError, setNotifyUpdateError] = useState('')
+  const [notifyUpdating, setNotifyUpdating] = useState<string | null>(null)
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -126,6 +133,18 @@ export function AdminUsersPage() {
       setRoleUpdateError(err instanceof Error ? err.message : 'Failed to update role.')
     } finally {
       setRoleUpdating(null)
+    }
+  }
+
+  async function handleNotifyToggle(player: PlayerProfile, nextValue: boolean) {
+    setNotifyUpdateError('')
+    setNotifyUpdating(player.id)
+    try {
+      await updatePlayerNotificationPreference(player.id, nextValue)
+    } catch (err) {
+      setNotifyUpdateError(err instanceof Error ? err.message : 'Failed to update notifications.')
+    } finally {
+      setNotifyUpdating(null)
     }
   }
 
@@ -208,6 +227,7 @@ export function AdminUsersPage() {
         <h2>Current users</h2>
         {deleteError ? <p className="error-text" role="alert">{deleteError}</p> : null}
         {roleUpdateError ? <p className="error-text" role="alert">{roleUpdateError}</p> : null}
+        {notifyUpdateError ? <p className="error-text" role="alert">{notifyUpdateError}</p> : null}
         <div className="overview-table-wrap">
           <table className="overview-table">
             <thead>
@@ -242,7 +262,22 @@ export function AdminUsersPage() {
                     )}
                   </td>
                   <td>{player.gender ?? '—'}</td>
-                  <td>{player.notifyByEmail ? 'Yes' : 'No'}</td>
+                  <td>
+                    {isAdmin ? (
+                      <select
+                        className="input"
+                        value={String(player.notifyByEmail)}
+                        disabled={notifyUpdating === player.id}
+                        onChange={(event) => void handleNotifyToggle(player, event.target.value === 'true')}
+                        aria-label={`Email notifications for ${player.fullName}`}
+                      >
+                        <option value="true">Yes</option>
+                        <option value="false">No</option>
+                      </select>
+                    ) : (
+                      player.notifyByEmail ? 'Yes' : 'No'
+                    )}
+                  </td>
                   {isAdmin ? (
                     <td>
                       <Button
