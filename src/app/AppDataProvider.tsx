@@ -191,7 +191,7 @@ interface AppDataProviderProps {
 }
 
 export function AppDataProvider({ children }: AppDataProviderProps) {
-  const { isAuthenticated } = useAuth()
+  const { isAuthenticated, isLoading: isAuthLoading } = useAuth()
   const [matches, setMatches] = useState<MatchRecord[]>([])
   const [isLoadingMatches, setIsLoadingMatches] = useState(isSupabaseConfigured)
   const [matchesError, setMatchesError] = useState<string | null>(
@@ -334,6 +334,16 @@ export function AppDataProvider({ children }: AppDataProviderProps) {
   }, [isAuthenticated, isLoadingPlayers, playersById])
 
   useEffect(() => {
+    if (isAuthLoading) {
+      return
+    }
+
+    if (!isAuthenticated) {
+      setTeamSettings(normalizeTeamSettings(defaultTeamSettings))
+      setIsLoadingLeagueSettings(false)
+      return
+    }
+
     if (!isSupabaseConfigured) {
       setIsLoadingLeagueSettings(false)
       return
@@ -349,6 +359,12 @@ export function AppDataProvider({ children }: AppDataProviderProps) {
         }
       })
       .catch((error: unknown) => {
+        const message = error instanceof Error ? error.message : 'Unknown error'
+        if (message.toLowerCase().includes('permission denied')) {
+          console.warn('League settings unavailable due to database permissions. Using defaults.')
+          return
+        }
+
         console.error('Failed to load league context settings', error)
       })
       .finally(() => {
@@ -360,7 +376,7 @@ export function AppDataProvider({ children }: AppDataProviderProps) {
     return () => {
       isActive = false
     }
-  }, [])
+  }, [isAuthLoading, isAuthenticated])
 
   const replaceMatch = useCallback((nextMatch: MatchRecord) => {
     const normalizedMatch = normalizeMatchRecord(nextMatch)
