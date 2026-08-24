@@ -1,6 +1,8 @@
 # badminton-team-manager
 
 React + TypeScript foundation for a badminton team management system.
+<img width="1230" height="551" alt="image" src="https://github.com/user-attachments/assets/a1045b38-41c5-4982-a3e4-3bd6b6353326" />
+
 
 ## Features
 
