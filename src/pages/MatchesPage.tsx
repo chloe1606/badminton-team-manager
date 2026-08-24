@@ -258,17 +258,43 @@ function MatchResultEditor({
   onSave: (matchId: string, result?: MatchResult) => Promise<void>
   onSaveSuccess: () => void
 }) {
-  const [rubbers, setRubbers] = useState(() => createRubberDrafts(match.result, match.format))
+  const [activeFormat, setActiveFormat] = useState<MatchFormatConfig>(() => cloneFormat(match.format))
+  const [rubbers, setRubbers] = useState(() => createRubberDrafts(match.result, activeFormat))
   const [notes, setNotes] = useState(match.result?.notes ?? '')
   const [error, setError] = useState('')
   const [status, setStatus] = useState('')
 
   useEffect(() => {
-    setRubbers(createRubberDrafts(match.result, match.format))
+    let isActive = true
+
+    setActiveFormat(cloneFormat(match.format))
+    if (!match.matchType || !match.divisionNumber) {
+      return () => {
+        isActive = false
+      }
+    }
+
+    void getTeamMatchSettingsFormat(match.matchType, match.divisionNumber)
+      .then((formatFromSettings) => {
+        if (isActive && formatFromSettings) {
+          setActiveFormat(cloneFormat(formatFromSettings))
+        }
+      })
+      .catch(() => {
+        // Fall back to the match's stored format if settings cannot be loaded.
+      })
+
+    return () => {
+      isActive = false
+    }
+  }, [match.divisionNumber, match.format, match.matchType])
+
+  useEffect(() => {
+    setRubbers(createRubberDrafts(match.result, activeFormat))
     setNotes(match.result?.notes ?? '')
     setError('')
     setStatus('')
-  }, [match])
+  }, [activeFormat, match.result])
 
   function updateGameValue(
     rubberIndex: number,
@@ -331,7 +357,7 @@ function MatchResultEditor({
         parsedGames.push({ ourScore, theirScore })
       }
 
-      const validationError = validateRubberGames(parsedGames, match.format)
+      const validationError = validateRubberGames(parsedGames, activeFormat)
       if (validationError) {
         setError(`${rubber.pairSlot}: ${validationError}`)
         return
@@ -373,7 +399,7 @@ function MatchResultEditor({
                 Rubber {rubberIndex + 1} · {rubber.pairSlot}
               </strong>
               <span className="muted">
-                First to {gamesNeededToWin(match.format.scoring.bestOf)} games
+                First to {gamesNeededToWin(activeFormat.scoring.bestOf)} games
               </span>
             </div>
 
