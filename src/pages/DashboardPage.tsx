@@ -5,6 +5,7 @@ import { Button } from '../components/ui/Button'
 import { Card } from '../components/ui/Card'
 import { clubDirectory } from '../data/clubContacts'
 import type { MatchRecord } from '../types/matches'
+import { createMatchesCalendarIcs, downloadIcs, type CalendarFixture } from '../utils/calendar'
 import {
   formatOpponentName,
   getClubById,
@@ -29,6 +30,23 @@ interface CalendarMonthGroup {
   monthKey: string
   monthLabel: string
   matches: MatchRecord[]
+}
+
+function createDashboardCalendarFixture(match: MatchRecord): CalendarFixture {
+  const opponentClub = getClubById(clubDirectory, match.opponentClubId)
+  const opponentName = formatOpponentName(match, opponentClub)
+
+  return {
+    id: match.id,
+    title: `${match.teamDisplayName} vs ${opponentName}`,
+    startAt: match.startAt,
+    endAt: match.endAt,
+    venueName: match.venueName ?? 'Venue TBC',
+    venueAddress: [match.venueAddress, match.notes].filter(Boolean).join(' · '),
+    description: [match.location === 'home' ? 'Home match' : 'Away match', match.notes?.trim()]
+      .filter(Boolean)
+      .join('\n'),
+  }
 }
 
 export function DashboardPage() {
@@ -116,6 +134,17 @@ export function DashboardPage() {
     }
   }
 
+  function exportAllMatchesToCalendar() {
+    if (playerMatches.length === 0) {
+      return
+    }
+
+    downloadIcs(
+      'dashboard-match-fixtures.ics',
+      createMatchesCalendarIcs(playerMatches.map((match) => createDashboardCalendarFixture(match))),
+    )
+  }
+
   return (
     <div className="stack">
       <Card>
@@ -164,6 +193,13 @@ export function DashboardPage() {
             <h2>Your Matches</h2>
             <p className="muted">Matches you have marked available for or been selected to play.</p>
           </div>
+          <Button
+            onClick={exportAllMatchesToCalendar}
+            variant="secondary"
+            disabled={playerMatches.length === 0}
+          >
+            Export all to calendar
+          </Button>
         </div>
         {isLoadingMatches ? (
           <p className="muted">Loading matches...</p>
