@@ -170,10 +170,36 @@ export async function updateUserNotificationPreference(
   }
 
   const supabase = requireSupabase()
+
+  const { data: userData, error: userError } = await supabase.auth.getUser()
+  console.info('debug: updateUserNotificationPreference user', {
+    userId,
+    currentUserId: userData?.user?.id ?? null,
+    userError: userError ? { message: userError.message, status: userError.status } : null,
+  })
+
+  const { data: profileData, error: profileError } = await supabase
+    .from('profiles')
+    .select('id, role, notify_by_email')
+    .eq('id', userId)
+    .maybeSingle()
+
+  console.info('debug: updateUserNotificationPreference profile lookup', {
+    targetUserId: userId,
+    profileData,
+    profileError: profileError ? { message: profileError.message, details: profileError.details, hint: profileError.hint, code: profileError.code } : null,
+  })
+
   const { error } = await supabase
     .from('profiles')
     .update({ notify_by_email: notifyByEmail })
     .eq('id', userId)
+
+  console.info('debug: updateUserNotificationPreference update result', {
+    targetUserId: userId,
+    notifyByEmail,
+    error: error ? { message: error.message, details: error.details, hint: error.hint, code: error.code } : null,
+  })
 
   if (error) {
     throw new Error(error.message)
