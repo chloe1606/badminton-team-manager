@@ -830,6 +830,27 @@ a {
   color: var(--color-primary-strong);
 }
 
+.user-name--available,
+.user-name--selected {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  background: rgba(34, 197, 94, 0.15);
+  color: #166534;
+  border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+.user-name--unavailable {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  background: rgba(239, 68, 68, 0.14);
+  color: #991b1b;
+  border: 1px solid rgba(239, 68, 68, 0.28);
+}
+
 /* Finished matches section */
 .finished-matches-section {
   margin-top: var(--space-8);

@@ -1537,7 +1537,9 @@ export function MatchesPage() {
                                           {playerIndex > 0 && ', '}
                                           <span
                                             className={
-                                              playerId === user?.playerId ? 'user-name user-name--current' : 'user-name'
+                                              playerId === user?.playerId
+                                                ? 'user-name user-name--current user-name--available'
+                                                : 'user-name'
                                             }
                                           >
                                             {playersById.get(playerId)?.fullName ?? 'Unknown player'}
@@ -1558,7 +1560,9 @@ export function MatchesPage() {
                                           {playerIndex > 0 && ', '}
                                           <span
                                             className={
-                                              playerId === user?.playerId ? 'user-name user-name--current' : 'user-name'
+                                              playerId === user?.playerId
+                                                ? 'user-name user-name--current user-name--unavailable'
+                                                : 'user-name'
                                             }
                                           >
                                             {playersById.get(playerId)?.fullName ?? 'Unknown player'}
@@ -1580,7 +1584,9 @@ export function MatchesPage() {
                                             {playerIndex > 0 && ', '}
                                             <span
                                               className={
-                                                playerId === user?.playerId ? 'user-name user-name--current' : 'user-name'
+                                                  playerId === user?.playerId
+                                                    ? 'user-name user-name--current user-name--selected'
+                                                    : 'user-name'
                                               }
                                             >
                                               {playersById.get(playerId)?.fullName ?? 'Unknown player'}
