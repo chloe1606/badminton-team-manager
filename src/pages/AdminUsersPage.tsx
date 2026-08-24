@@ -1,14 +1,12 @@
-import { FormEvent, useEffect, useMemo, useState } from 'react'
+import { FormEvent, useState } from 'react'
 import { useAppData } from '../app/AppDataProvider'
 import { useAuth } from '../auth/hooks/useAuth'
 import { Button } from '../components/ui/Button'
 import { Card } from '../components/ui/Card'
 import { createInvitedPlayer } from '../services/playerService'
-import { listAllTeams } from '../services/teamService'
 import type { PlayerGender } from '../types/matches'
 import type { UserRole } from '../types/auth'
 import type { PlayerProfile } from '../types/players'
-import type { Team } from '../types/teams'
 
 // ─── Delete confirmation modal ───────────────────────────────────────────────
 
@@ -65,22 +63,6 @@ export function AdminUsersPage() {
   const [deleteError, setDeleteError] = useState('')
   const [roleUpdateError, setRoleUpdateError] = useState('')
   const [roleUpdating, setRoleUpdating] = useState<string | null>(null)
-  const [teams, setTeams] = useState<Team[]>([])
-
-  function normalizeTeamId(teamId: string): string {
-    return teamId.trim().toLowerCase()
-  }
-
-  useEffect(() => {
-    listAllTeams()
-      .then(setTeams)
-      .catch(() => setTeams([]))
-  }, [])
-
-  const teamNameById = useMemo(
-    () => new Map(teams.map((team) => [normalizeTeamId(team.id), team.displayName] as const)),
-    [teams],
-  )
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()

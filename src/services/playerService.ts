@@ -85,7 +85,7 @@ export async function listPlayerProfiles(): Promise<PlayerProfile[]> {
   const supabase = requireSupabase()
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, email, name, username, role, player_id, gender, permitted_teams')
+    .select('id, email, name, username, role, player_id, gender, notify_by_email')
     .order('name', { ascending: true })
 
   if (error) {
@@ -107,7 +107,7 @@ export async function getPlayerProfile(userId: string): Promise<PlayerProfile | 
   const supabase = requireSupabase()
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, email, name, username, role, player_id, gender, permitted_teams')
+    .select('id, email, name, username, role, player_id, gender, notify_by_email, permitted_teams')
     .eq('id', userId)
     .maybeSingle()
 
@@ -185,21 +185,5 @@ export async function deleteUserProfile(userId: string): Promise<void> {
         `Profile delete error: ${profileDelete.error.message}`
       )
     }
-  }
-}
-
-export async function updatePermittedTeams(userId: string, teamIds: string[] | null): Promise<void> {
-  if (!isSupabaseConfigured) {
-    throw new Error(supabaseConfigError ?? 'Supabase is not configured.')
-  }
-
-  const supabase = requireSupabase()
-  const { error } = await supabase
-    .from('profiles')
-    .update({ permitted_teams: teamIds })
-    .eq('id', userId)
-
-  if (error) {
-    throw new Error(error.message)
   }
 }
