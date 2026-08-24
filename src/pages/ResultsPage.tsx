@@ -40,7 +40,12 @@ export function ResultsPage() {
 
   const scopedMatches = useMemo(() => {
     if (showAllDivisions) {
-      return matches
+      return matches.filter((match) => {
+        const normalizedMatchType = (match.matchType ?? '').trim().toLowerCase()
+        const contextKey = match.matchContextKey ?? createMatchContextKey(match.matchType ?? '', match.divisionNumber ?? 0)
+
+        return normalizedMatchType === 'mixed 6' || contextKey.startsWith('mixed-6__')
+      })
     }
 
     return matches.filter(
@@ -83,7 +88,7 @@ export function ResultsPage() {
             <h1>Results</h1>
             <p>
               Results for <strong>{teamDisplayName}</strong> in{' '}
-              <strong>{showAllDivisions ? 'All divisions' : 'Mixed 6 Div 3'}</strong>.
+              <strong>{showAllDivisions ? 'Mixed 6 - All Divisions' : 'Mixed 6 Div 3'}</strong>.
             </p>
           </div>
           <label className="checkbox-row">

@@ -1212,7 +1212,12 @@ export function MatchesPage() {
   const selectedMatches = useMemo(
     () => {
       if (showAllDivisions) {
-        return matches
+        return matches.filter((match) => {
+          const normalizedMatchType = (match.matchType ?? '').trim().toLowerCase()
+          const contextKey = match.matchContextKey ?? createMatchContextKey(match.matchType ?? '', match.divisionNumber ?? 0)
+
+          return normalizedMatchType === 'mixed 6' || contextKey.startsWith('mixed-6__')
+        })
       }
 
       const targetContextKey = isAdmin ? selectedMatchContextKey : playerDefaultContextKey
@@ -1416,7 +1421,7 @@ export function MatchesPage() {
             <h1>Matches</h1>
             <p>
               Fixtures for <strong>{teamDisplayName}</strong> in{' '}
-              <strong>{showAllDivisions ? 'All divisions' : `${matchType} Div ${divisionNumber}`}</strong>.
+              <strong>{showAllDivisions ? 'Mixed 6 - All Divisions' : `${matchType} Div ${divisionNumber}`}</strong>.
             </p>
           </div>
           <div className="form-actions">
