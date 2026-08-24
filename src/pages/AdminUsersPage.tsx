@@ -1,4 +1,4 @@
-import { FormEvent, useState } from 'react'
+import { FormEvent, useMemo, useState } from 'react'
 import { useAppData } from '../app/AppDataProvider'
 import { useAuth } from '../auth/hooks/useAuth'
 import { Button } from '../components/ui/Button'
@@ -70,6 +70,15 @@ export function AdminUsersPage() {
   const [roleUpdating, setRoleUpdating] = useState<string | null>(null)
   const [notifyUpdateError, setNotifyUpdateError] = useState('')
   const [notifyUpdating, setNotifyUpdating] = useState<string | null>(null)
+
+  const adminPlayers = useMemo(
+    () => players.filter((player) => player.role === 'admin'),
+    [players],
+  )
+  const nonAdminPlayers = useMemo(
+    () => players.filter((player) => player.role !== 'admin'),
+    [players],
+  )
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -228,7 +237,8 @@ export function AdminUsersPage() {
         {deleteError ? <p className="error-text" role="alert">{deleteError}</p> : null}
         {roleUpdateError ? <p className="error-text" role="alert">{roleUpdateError}</p> : null}
         {notifyUpdateError ? <p className="error-text" role="alert">{notifyUpdateError}</p> : null}
-        <div className="overview-table-wrap">
+        <h3 className="user-role-group-title">Admins ({adminPlayers.length})</h3>
+        <div className="overview-table-wrap overview-table-wrap--stacked overview-table-wrap--role overview-table-wrap--admin">
           <table className="overview-table">
             <thead>
               <tr>
@@ -241,11 +251,11 @@ export function AdminUsersPage() {
               </tr>
             </thead>
             <tbody>
-              {players.map((player) => (
+              {adminPlayers.map((player) => (
                 <tr key={player.id}>
-                  <td>{player.fullName}</td>
-                  <td>{player.email}</td>
-                  <td>
+                  <td data-label="Name">{player.fullName}</td>
+                  <td data-label="Email">{player.email}</td>
+                  <td data-label="Role">
                     {isAdmin ? (
                       <select
                         className="input"
@@ -261,8 +271,8 @@ export function AdminUsersPage() {
                       player.role
                     )}
                   </td>
-                  <td>{player.gender ?? '—'}</td>
-                  <td>
+                  <td data-label="Gender">{player.gender ?? '—'}</td>
+                  <td data-label="Notify?">
                     {isAdmin ? (
                       <select
                         className="input"
@@ -279,7 +289,7 @@ export function AdminUsersPage() {
                     )}
                   </td>
                   {isAdmin ? (
-                    <td>
+                    <td data-label="Actions">
                       <Button
                         variant="danger"
                         onClick={() => { setDeleteError(''); setPendingDelete(player) }}
@@ -291,9 +301,82 @@ export function AdminUsersPage() {
                   ) : null}
                 </tr>
               ))}
-              {players.length === 0 ? (
+              {adminPlayers.length === 0 ? (
                 <tr>
-                  <td className="muted" colSpan={isAdmin ? 6 : 5}>No users found.</td>
+                  <td className="muted" colSpan={isAdmin ? 6 : 5}>No admins found.</td>
+                </tr>
+              ) : null}
+            </tbody>
+          </table>
+        </div>
+
+        <h3 className="user-role-group-title">Players ({nonAdminPlayers.length})</h3>
+        <div className="overview-table-wrap overview-table-wrap--stacked overview-table-wrap--role overview-table-wrap--player">
+          <table className="overview-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Role</th>
+                <th>Gender</th>
+                <th>Notify?</th>
+                {isAdmin ? <th>Actions</th> : null}
+              </tr>
+            </thead>
+            <tbody>
+              {nonAdminPlayers.map((player) => (
+                <tr key={player.id}>
+                  <td data-label="Name">{player.fullName}</td>
+                  <td data-label="Email">{player.email}</td>
+                  <td data-label="Role">
+                    {isAdmin ? (
+                      <select
+                        className="input"
+                        value={player.role}
+                        disabled={roleUpdating === player.id}
+                        onChange={(event) => void handleRoleChange(player, event.target.value as UserRole)}
+                        aria-label={`Role for ${player.fullName}`}
+                      >
+                        <option value="player">Player</option>
+                        <option value="admin">Admin</option>
+                      </select>
+                    ) : (
+                      player.role
+                    )}
+                  </td>
+                  <td data-label="Gender">{player.gender ?? '—'}</td>
+                  <td data-label="Notify?">
+                    {isAdmin ? (
+                      <select
+                        className="input"
+                        value={String(player.notifyByEmail)}
+                        disabled={notifyUpdating === player.id}
+                        onChange={(event) => void handleNotifyToggle(player, event.target.value === 'true')}
+                        aria-label={`Email notifications for ${player.fullName}`}
+                      >
+                        <option value="true">Yes</option>
+                        <option value="false">No</option>
+                      </select>
+                    ) : (
+                      player.notifyByEmail ? 'Yes' : 'No'
+                    )}
+                  </td>
+                  {isAdmin ? (
+                    <td data-label="Actions">
+                      <Button
+                        variant="danger"
+                        onClick={() => { setDeleteError(''); setPendingDelete(player) }}
+                        aria-label={`Delete ${player.fullName}`}
+                      >
+                        Delete
+                      </Button>
+                    </td>
+                  ) : null}
+                </tr>
+              ))}
+              {nonAdminPlayers.length === 0 ? (
+                <tr>
+                  <td className="muted" colSpan={isAdmin ? 6 : 5}>No players found.</td>
                 </tr>
               ) : null}
             </tbody>
