@@ -1205,16 +1205,24 @@ export function MatchesPage() {
   const [notes, setNotes] = useState('')
   const [error, setError] = useState('')
   const [status, setStatus] = useState('')
+  const [showAllDivisions, setShowAllDivisions] = useState(false)
   const [collapsedSeasons, setCollapsedSeasons] = useState<Record<string, boolean>>({})
   const selectedMatchContextKey = createMatchContextKey(matchType, Number(divisionNumber))
+  const playerDefaultContextKey = createMatchContextKey('Mixed 6', 3)
   const selectedMatches = useMemo(
-    () =>
-      matches.filter(
+    () => {
+      if (showAllDivisions) {
+        return matches
+      }
+
+      const targetContextKey = isAdmin ? selectedMatchContextKey : playerDefaultContextKey
+      return matches.filter(
         (match) =>
           (match.matchContextKey ?? createMatchContextKey(match.matchType ?? '', match.divisionNumber ?? 0)) ===
-          (isAdmin ? selectedMatchContextKey : createMatchContextKey('Mixed 6', 3)),
-      ),
-    [isAdmin, matches, selectedMatchContextKey],
+          targetContextKey,
+      )
+    },
+    [isAdmin, matches, playerDefaultContextKey, selectedMatchContextKey, showAllDivisions],
   )
   const visibleMatches = useMemo(() => selectedMatches, [selectedMatches])
 
@@ -1408,12 +1416,22 @@ export function MatchesPage() {
             <h1>Matches</h1>
             <p>
               Fixtures for <strong>{teamDisplayName}</strong> in{' '}
-              <strong>{matchType} Div {divisionNumber}</strong>.
+              <strong>{showAllDivisions ? 'All divisions' : `${matchType} Div ${divisionNumber}`}</strong>.
             </p>
           </div>
-          <Button onClick={exportAllMatches} variant="secondary">
-            Export all to calendar
-          </Button>
+          <div className="form-actions">
+            <label className="checkbox-row">
+              <input
+                type="checkbox"
+                checked={showAllDivisions}
+                onChange={(event) => setShowAllDivisions(event.target.checked)}
+              />
+              <span>All Divisions</span>
+            </label>
+            <Button onClick={exportAllMatches} variant="secondary">
+              Export all to calendar
+            </Button>
+          </div>
         </div>
       </Card>
 
