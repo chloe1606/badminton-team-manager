@@ -447,11 +447,13 @@ function createPlayerGenderLookup(playersById: PlayerLookup): Map<string, { gend
 function MatchPlayerSelectionEditor({
   match,
   playersById,
+  currentPlayerId,
   onSave,
   onSaveSuccess,
 }: {
   match: MatchRecord
   playersById: PlayerLookup
+  currentPlayerId?: string
   onSave: (
     matchId: string,
     playerIds: string[],
@@ -477,6 +479,7 @@ function MatchPlayerSelectionEditor({
     ),
   )
   const [draggedPlayerId, setDraggedPlayerId] = useState<string | null>(null)
+  const [tapSelectedPlayerId, setTapSelectedPlayerId] = useState<string | null>(null)
   const [error, setError] = useState('')
   const [status, setStatus] = useState('')
   const selectedPlayerIdSet = useMemo(() => new Set(selectedPlayerIds), [selectedPlayerIds])
@@ -513,6 +516,7 @@ function MatchPlayerSelectionEditor({
         playerIds: pair.playerIds.filter((playerId) => nextSelectedPlayerIds.includes(playerId)),
       })),
     )
+    setTapSelectedPlayerId(null)
     setError('')
     setStatus('')
   }, [availablePlayers, match.assignedPlayerIds, match.assignedPairs, match.format, playerGenderLookup])
@@ -523,6 +527,9 @@ function MatchPlayerSelectionEditor({
       checked ? [...currentIds, playerId] : currentIds.filter((id) => id !== playerId),
     )
     if (!checked) {
+      if (tapSelectedPlayerId === playerId) {
+        setTapSelectedPlayerId(null)
+      }
       setAssignedPairs((currentPairs) =>
         currentPairs.map((pair) => ({
           ...pair,
@@ -655,7 +662,7 @@ function MatchPlayerSelectionEditor({
         <div className="card-heading">
           <h4>Configured pairs</h4>
           <p className="muted">
-            Drag selected players into each pair.{' '}
+            Drag selected players into each pair. On mobile, tap a player then tap a slot.{' '}
             {match.format.squad.allowPlayerReuseAcrossPairs
               ? 'Players can be reused across pair slots.'
               : 'Each selected player can only appear once.'}
@@ -667,11 +674,17 @@ function MatchPlayerSelectionEditor({
             {unassignedSelectedPlayers.map((player) => (
               <button
                 key={player.id}
-                className={`player-pill player-pill--${player.gender ?? 'lady'}`}
+                className={`player-pill player-pill--${player.gender ?? 'lady'}${tapSelectedPlayerId === player.id ? ' player-pill--active' : ''}`}
                 draggable
                 type="button"
                 onDragStart={() => setDraggedPlayerId(player.id)}
                 onDragEnd={() => setDraggedPlayerId(null)}
+                onClick={() => {
+                  setError('')
+                  setTapSelectedPlayerId((currentPlayerId) =>
+                    currentPlayerId === player.id ? null : player.id,
+                  )
+                }}
               >
                 {player.fullName}
               </button>
@@ -692,6 +705,14 @@ function MatchPlayerSelectionEditor({
                     <div
                       key={`${pair.pairSlot}-${positionIndex}`}
                       className="pair-drop-zone"
+                      onClick={() => {
+                        if (!tapSelectedPlayerId) {
+                          return
+                        }
+
+                        assignPlayerToSlot(tapSelectedPlayerId, pair.pairSlot, positionIndex)
+                        setTapSelectedPlayerId(null)
+                      }}
                       onDragOver={(event) => {
                         if (draggedPlayerId && canDropPlayerIntoSlot(draggedPlayerId, positionIndex)) {
                           event.preventDefault()
@@ -708,8 +729,22 @@ function MatchPlayerSelectionEditor({
                       <span className="muted">{getSlotLabel(positionIndex)}</span>
                       {playerId ? (
                         <div className="pair-drop-zone-content">
-                          <span className={`player-gender-indicator player-gender-indicator--${playersById.get(playerId)?.gender ?? ''}`}>{playersById.get(playerId)?.fullName ?? 'Unknown player'}</span>
-                          <Button type="button" variant="ghost" onClick={() => clearSlot(pair.pairSlot, positionIndex)}>
+                          <span
+                            className={
+                              `${playerId === currentPlayerId ? 'user-name user-name--current user-name--selected ' : ''}` +
+                              `player-gender-indicator player-gender-indicator--${playersById.get(playerId)?.gender ?? ''}`
+                            }
+                          >
+                            {playersById.get(playerId)?.fullName ?? 'Unknown player'}
+                          </span>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            onClick={(event) => {
+                              event.stopPropagation()
+                              clearSlot(pair.pairSlot, positionIndex)
+                            }}
+                          >
                             Clear
                           </Button>
                         </div>
@@ -748,10 +783,12 @@ function MatchPlayerSelectionEditor({
 function SelectPlayersPanel({
   match,
   playersById,
+  currentPlayerId,
   onSave,
 }: {
   match: MatchRecord
   playersById: PlayerLookup
+  currentPlayerId?: string
   onSave: (
     matchId: string,
     playerIds: string[],
@@ -770,7 +807,13 @@ function SelectPlayersPanel({
     <details ref={detailsRef}>
       <summary className="details-summary">Select players</summary>
       <div className="details-panel">
-        <MatchPlayerSelectionEditor match={match} playersById={playersById} onSave={onSave} onSaveSuccess={handleSaveSuccess} />
+        <MatchPlayerSelectionEditor
+          match={match}
+          playersById={playersById}
+          currentPlayerId={currentPlayerId}
+          onSave={onSave}
+          onSaveSuccess={handleSaveSuccess}
+        />
       </div>
     </details>
   )
@@ -1776,6 +1819,7 @@ export function MatchesPage() {
                                 <SelectPlayersPanel
                                   match={match}
                                   playersById={playersById}
+                                  currentPlayerId={user?.playerId}
                                   onSave={handleAssignMatchPlayers}
                                 />
                                 <MatchResultPanel match={match} onSave={updateMatchResult} />

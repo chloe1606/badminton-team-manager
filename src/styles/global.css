@@ -775,6 +775,10 @@ a {
   line-height: 1.4;
 }
 
+.player-pill--active {
+  box-shadow: 0 0 0 2px var(--color-primary-strong);
+}
+
 .player-pill--man {
   background: #dbeafe;
   color: #1e40af;
