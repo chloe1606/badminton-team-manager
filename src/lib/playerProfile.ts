@@ -10,6 +10,7 @@ interface PlayerProfileRow {
   player_id: string | null
   gender: 'lady' | 'man' | null
   permitted_teams: string[] | string | null
+  notify_by_email: boolean
 }
 
 function normalizePermittedTeams(value: PlayerProfileRow['permitted_teams']): string[] | undefined {
@@ -54,6 +55,7 @@ export function mapPlayerProfile(row: PlayerProfileRow): PlayerProfile {
     playerId: row.player_id ?? undefined,
     gender: row.gender ?? undefined,
     permittedTeams: normalizePermittedTeams(row.permitted_teams),
+    notifyByEmail: row.notify_by_email,
   }
 }
 

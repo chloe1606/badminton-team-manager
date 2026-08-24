@@ -11,4 +11,5 @@ export interface PlayerProfile {
   playerId?: string
   gender?: PlayerGender
   permittedTeams?: string[]
+  notifyByEmail: boolean
 }

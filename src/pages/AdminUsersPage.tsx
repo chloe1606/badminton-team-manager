@@ -234,7 +234,7 @@ export function AdminUsersPage() {
                 <th>Email</th>
                 <th>Role</th>
                 <th>Gender</th>
-                <th>Permitted teams</th>
+                <th>Notify?</th>
                 {isAdmin ? <th>Actions</th> : null}
               </tr>
             </thead>
@@ -260,13 +260,7 @@ export function AdminUsersPage() {
                     )}
                   </td>
                   <td>{player.gender ?? '—'}</td>
-                  <td>
-                    {player.permittedTeams && player.permittedTeams.length > 0
-                      ? player.permittedTeams
-                        .map((teamId) => teamNameById.get(normalizeTeamId(teamId)) ?? 'Unknown team')
-                        .join(', ')
-                      : 'All teams'}
-                  </td>
+                  <td>{player.notifyByEmail ? 'Yes' : 'No'}</td>
                   {isAdmin ? (
                     <td>
                       <Button
