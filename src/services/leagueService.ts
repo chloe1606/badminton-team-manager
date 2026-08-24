@@ -33,7 +33,6 @@ interface TeamSettingsRow {
 interface TeamMatchSettingsFormatRow {
   match_context_key?: string | null
   division_number?: number | string | null
-  division?: number | string | null
   format: MatchFormatConfig | string | null
   rubbers?: number | string | null
 }
@@ -147,7 +146,7 @@ export async function getTeamMatchSettingsFormat(
   const supabase = requireSupabase()
   const { data, error } = await supabase
     .from('team_match_settings')
-    .select('match_context_key, division_number, division, format, rubbers')
+    .select('match_context_key, division_number, format, rubbers')
     .eq('match_type', matchType)
     .limit(50)
 
@@ -167,8 +166,7 @@ export async function getTeamMatchSettingsFormat(
   const row =
     rows.find((candidate) => candidate.match_context_key === requestedContextKey) ??
     rows.find((candidate) => {
-      const candidateDivision =
-        parsePositiveInt(candidate.division_number) ?? parsePositiveInt(candidate.division)
+      const candidateDivision = parsePositiveInt(candidate.division_number)
       return candidateDivision === divisionNumber
     }) ??
     null
