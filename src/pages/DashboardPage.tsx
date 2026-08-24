@@ -158,12 +158,66 @@ export function DashboardPage() {
           )}
         </Card>
       ) : null}
+      <Card>
+        <div className="card-heading">
+          <div>
+            <h2>Your Matches</h2>
+            <p className="muted">Matches you have marked available for or been selected to play.</p>
+          </div>
+        </div>
+        {isLoadingMatches ? (
+          <p className="muted">Loading matches...</p>
+        ) : playerMatches.length > 0 ? (
+          <div className="dashboard-match-grid">
+            {playerMatches.map((match, index) => {
+              const opponentClub = getClubById(clubDirectory, match.opponentClubId)
+              const opponentName = formatOpponentName(match, opponentClub)
+              const isAvailable = (match.availablePlayerIds ?? []).includes(playerId ?? '')
+              const isSelected = (match.assignedPlayerIds ?? []).includes(playerId ?? '')
 
+              return (
+                <section
+                  key={match.id}
+                  className={`dashboard-match-card${isSelected ? ' dashboard-match-card--selected' : ''}`}
+                  aria-label={`Match ${index + 1}`}
+                >
+                  <p className="eyebrow">Match {index + 1}</p>
+                  <h3 className="dashboard-match-title">{match.teamDisplayName} vs {opponentName}</h3>
+                  <dl className="dashboard-match-meta">
+                    <div>
+                      <dt>Location</dt>
+                      <dd>{match.location === 'home' ? 'Home' : 'Away'}</dd>
+                    </div>
+                    <div>
+                      <dt>Date and time</dt>
+                      <dd>{formatMatchDateRange(match.startAt)}</dd>
+                    </div>
+                    <div>
+                      <dt>Available</dt>
+                      <dd>{isAvailable ? 'Yes' : 'No'}</dd>
+                    </div>
+                    <div>
+                      <dt>Selected</dt>
+                      <dd>{isSelected ? 'Yes' : 'No'}</dd>
+                    </div>
+                  </dl>
+                </section>
+              )
+            })}
+          </div>
+        ) : (
+          <p className="muted">
+            {playerId
+              ? 'You are not currently available for or selected for any future matches.'
+              : 'This account is not linked to a player.'}
+          </p>
+        )}
+      </Card>
       {isAdmin ? (
         <Card>
           <div className="card-heading">
             <div>
-              <h2>Send match summary email</h2>
+              <h2>Send Match Fees</h2>
               <p className="muted">Prepare a copyable summary for your selected match.</p>
             </div>
             <Button
@@ -222,62 +276,6 @@ export function DashboardPage() {
           ) : null}
         </Card>
       ) : null}
-
-      <Card>
-        <div className="card-heading">
-          <div>
-            <h2>Your Matches</h2>
-            <p className="muted">Matches you have marked available for or been selected to play.</p>
-          </div>
-        </div>
-        {isLoadingMatches ? (
-          <p className="muted">Loading matches...</p>
-        ) : playerMatches.length > 0 ? (
-          <div className="dashboard-match-grid">
-            {playerMatches.map((match, index) => {
-              const opponentClub = getClubById(clubDirectory, match.opponentClubId)
-              const opponentName = formatOpponentName(match, opponentClub)
-              const isAvailable = (match.availablePlayerIds ?? []).includes(playerId ?? '')
-              const isSelected = (match.assignedPlayerIds ?? []).includes(playerId ?? '')
-
-              return (
-                <section
-                  key={match.id}
-                  className={`dashboard-match-card${isSelected ? ' dashboard-match-card--selected' : ''}`}
-                  aria-label={`Match ${index + 1}`}
-                >
-                  <p className="eyebrow">Match {index + 1}</p>
-                  <h3 className="dashboard-match-title">{match.teamDisplayName} vs {opponentName}</h3>
-                  <dl className="dashboard-match-meta">
-                    <div>
-                      <dt>Location</dt>
-                      <dd>{match.location === 'home' ? 'Home' : 'Away'}</dd>
-                    </div>
-                    <div>
-                      <dt>Date and time</dt>
-                      <dd>{formatMatchDateRange(match.startAt)}</dd>
-                    </div>
-                    <div>
-                      <dt>Available</dt>
-                      <dd>{isAvailable ? 'Yes' : 'No'}</dd>
-                    </div>
-                    <div>
-                      <dt>Selected</dt>
-                      <dd>{isSelected ? 'Yes' : 'No'}</dd>
-                    </div>
-                  </dl>
-                </section>
-              )
-            })}
-          </div>
-        ) : (
-          <p className="muted">
-            {playerId
-              ? 'You are not currently available for or selected for any future matches.'
-              : 'This account is not linked to a player.'}
-          </p>
-        )}
-      </Card>
     </div>
   )
-}
+} 
