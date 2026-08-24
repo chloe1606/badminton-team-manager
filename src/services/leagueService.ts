@@ -1,4 +1,4 @@
-import { requireSupabase } from '../lib/supabase'
+import { isSupabaseConfigured, requireSupabase } from '../lib/supabase'
 import { createMatchContextKey } from '../lib/matchContext'
 import type { MatchFormatConfig } from '../types/matches'
 
@@ -80,7 +80,25 @@ function mapTeamSettingsRow(row: TeamSettingsRow): TeamMatchSettingsRecord {
 }
 
 export async function listTeamMatchSettings(): Promise<TeamMatchSettingsRecord[]> {
+  if (!isSupabaseConfigured) {
+    return []
+  }
+
   const supabase = requireSupabase()
+  const {
+    data: { session },
+  } = await supabase.auth.getSession()
+
+  if (!session?.access_token) {
+    const {
+      data: { session: refreshedSession },
+    } = await supabase.auth.refreshSession()
+
+    if (!refreshedSession?.access_token) {
+      return []
+    }
+  }
+
   const { data, error } = await supabase
     .from('teams')
     .select('id, club_name, team_number, match_type, division, team_label, match_context_key, format, home_club_id, home_venue_id, league_name')

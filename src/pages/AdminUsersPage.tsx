@@ -1,14 +1,12 @@
-import { FormEvent, useEffect, useMemo, useState } from 'react'
+import { FormEvent, useMemo, useState } from 'react'
 import { useAppData } from '../app/AppDataProvider'
 import { useAuth } from '../auth/hooks/useAuth'
 import { Button } from '../components/ui/Button'
 import { Card } from '../components/ui/Card'
 import { createInvitedPlayer } from '../services/playerService'
-import { listAllTeams } from '../services/teamService'
 import type { PlayerGender } from '../types/matches'
 import type { UserRole } from '../types/auth'
 import type { PlayerProfile } from '../types/players'
-import type { Team } from '../types/teams'
 
 // ─── Delete confirmation modal ───────────────────────────────────────────────
 
@@ -45,7 +43,12 @@ function DeleteConfirmModal({ player, onConfirm, onCancel, isDeleting }: DeleteM
 }
 
 export function AdminUsersPage() {
-  const { players, deletePlayer, updatePlayerRole } = useAppData()
+  const {
+    players,
+    deletePlayer,
+    updatePlayerRole,
+    updatePlayerNotificationPreference,
+  } = useAppData()
   const { isAdmin } = useAuth()
 
   // Create user form state
@@ -65,21 +68,16 @@ export function AdminUsersPage() {
   const [deleteError, setDeleteError] = useState('')
   const [roleUpdateError, setRoleUpdateError] = useState('')
   const [roleUpdating, setRoleUpdating] = useState<string | null>(null)
-  const [teams, setTeams] = useState<Team[]>([])
+  const [notifyUpdateError, setNotifyUpdateError] = useState('')
+  const [notifyUpdating, setNotifyUpdating] = useState<string | null>(null)
 
-  function normalizeTeamId(teamId: string): string {
-    return teamId.trim().toLowerCase()
-  }
-
-  useEffect(() => {
-    listAllTeams()
-      .then(setTeams)
-      .catch(() => setTeams([]))
-  }, [])
-
-  const teamNameById = useMemo(
-    () => new Map(teams.map((team) => [normalizeTeamId(team.id), team.displayName] as const)),
-    [teams],
+  const adminPlayers = useMemo(
+    () => players.filter((player) => player.role === 'admin'),
+    [players],
+  )
+  const nonAdminPlayers = useMemo(
+    () => players.filter((player) => player.role !== 'admin'),
+    [players],
   )
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -144,6 +142,18 @@ export function AdminUsersPage() {
       setRoleUpdateError(err instanceof Error ? err.message : 'Failed to update role.')
     } finally {
       setRoleUpdating(null)
+    }
+  }
+
+  async function handleNotifyToggle(player: PlayerProfile, nextValue: boolean) {
+    setNotifyUpdateError('')
+    setNotifyUpdating(player.id)
+    try {
+      await updatePlayerNotificationPreference(player.id, nextValue)
+    } catch (err) {
+      setNotifyUpdateError(err instanceof Error ? err.message : 'Failed to update notifications.')
+    } finally {
+      setNotifyUpdating(null)
     }
   }
 
@@ -226,7 +236,9 @@ export function AdminUsersPage() {
         <h2>Current users</h2>
         {deleteError ? <p className="error-text" role="alert">{deleteError}</p> : null}
         {roleUpdateError ? <p className="error-text" role="alert">{roleUpdateError}</p> : null}
-        <div className="overview-table-wrap">
+        {notifyUpdateError ? <p className="error-text" role="alert">{notifyUpdateError}</p> : null}
+        <h3 className="user-role-group-title">Admins ({adminPlayers.length})</h3>
+        <div className="overview-table-wrap overview-table-wrap--stacked overview-table-wrap--role overview-table-wrap--admin">
           <table className="overview-table">
             <thead>
               <tr>
@@ -234,16 +246,16 @@ export function AdminUsersPage() {
                 <th>Email</th>
                 <th>Role</th>
                 <th>Gender</th>
-                <th>Permitted teams</th>
+                <th>Notify?</th>
                 {isAdmin ? <th>Actions</th> : null}
               </tr>
             </thead>
             <tbody>
-              {players.map((player) => (
+              {adminPlayers.map((player) => (
                 <tr key={player.id}>
-                  <td>{player.fullName}</td>
-                  <td>{player.email}</td>
-                  <td>
+                  <td data-label="Name">{player.fullName}</td>
+                  <td data-label="Email">{player.email}</td>
+                  <td data-label="Role">
                     {isAdmin ? (
                       <select
                         className="input"
@@ -259,16 +271,25 @@ export function AdminUsersPage() {
                       player.role
                     )}
                   </td>
-                  <td>{player.gender ?? '—'}</td>
-                  <td>
-                    {player.permittedTeams && player.permittedTeams.length > 0
-                      ? player.permittedTeams
-                        .map((teamId) => teamNameById.get(normalizeTeamId(teamId)) ?? 'Unknown team')
-                        .join(', ')
-                      : 'All teams'}
+                  <td data-label="Gender">{player.gender ?? '—'}</td>
+                  <td data-label="Notify?">
+                    {isAdmin ? (
+                      <select
+                        className="input"
+                        value={String(player.notifyByEmail)}
+                        disabled={notifyUpdating === player.id}
+                        onChange={(event) => void handleNotifyToggle(player, event.target.value === 'true')}
+                        aria-label={`Email notifications for ${player.fullName}`}
+                      >
+                        <option value="true">Yes</option>
+                        <option value="false">No</option>
+                      </select>
+                    ) : (
+                      player.notifyByEmail ? 'Yes' : 'No'
+                    )}
                   </td>
                   {isAdmin ? (
-                    <td>
+                    <td data-label="Actions">
                       <Button
                         variant="danger"
                         onClick={() => { setDeleteError(''); setPendingDelete(player) }}
@@ -280,9 +301,82 @@ export function AdminUsersPage() {
                   ) : null}
                 </tr>
               ))}
-              {players.length === 0 ? (
+              {adminPlayers.length === 0 ? (
                 <tr>
-                  <td className="muted" colSpan={isAdmin ? 6 : 5}>No users found.</td>
+                  <td className="muted" colSpan={isAdmin ? 6 : 5}>No admins found.</td>
+                </tr>
+              ) : null}
+            </tbody>
+          </table>
+        </div>
+
+        <h3 className="user-role-group-title">Players ({nonAdminPlayers.length})</h3>
+        <div className="overview-table-wrap overview-table-wrap--stacked overview-table-wrap--role overview-table-wrap--player">
+          <table className="overview-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Role</th>
+                <th>Gender</th>
+                <th>Notify?</th>
+                {isAdmin ? <th>Actions</th> : null}
+              </tr>
+            </thead>
+            <tbody>
+              {nonAdminPlayers.map((player) => (
+                <tr key={player.id}>
+                  <td data-label="Name">{player.fullName}</td>
+                  <td data-label="Email">{player.email}</td>
+                  <td data-label="Role">
+                    {isAdmin ? (
+                      <select
+                        className="input"
+                        value={player.role}
+                        disabled={roleUpdating === player.id}
+                        onChange={(event) => void handleRoleChange(player, event.target.value as UserRole)}
+                        aria-label={`Role for ${player.fullName}`}
+                      >
+                        <option value="player">Player</option>
+                        <option value="admin">Admin</option>
+                      </select>
+                    ) : (
+                      player.role
+                    )}
+                  </td>
+                  <td data-label="Gender">{player.gender ?? '—'}</td>
+                  <td data-label="Notify?">
+                    {isAdmin ? (
+                      <select
+                        className="input"
+                        value={String(player.notifyByEmail)}
+                        disabled={notifyUpdating === player.id}
+                        onChange={(event) => void handleNotifyToggle(player, event.target.value === 'true')}
+                        aria-label={`Email notifications for ${player.fullName}`}
+                      >
+                        <option value="true">Yes</option>
+                        <option value="false">No</option>
+                      </select>
+                    ) : (
+                      player.notifyByEmail ? 'Yes' : 'No'
+                    )}
+                  </td>
+                  {isAdmin ? (
+                    <td data-label="Actions">
+                      <Button
+                        variant="danger"
+                        onClick={() => { setDeleteError(''); setPendingDelete(player) }}
+                        aria-label={`Delete ${player.fullName}`}
+                      >
+                        Delete
+                      </Button>
+                    </td>
+                  ) : null}
+                </tr>
+              ))}
+              {nonAdminPlayers.length === 0 ? (
+                <tr>
+                  <td className="muted" colSpan={isAdmin ? 6 : 5}>No players found.</td>
                 </tr>
               ) : null}
             </tbody>

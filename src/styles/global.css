@@ -557,6 +557,30 @@ a {
   overflow-x: auto;
 }
 
+.overview-table-wrap--role {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-2);
+  margin-bottom: var(--space-4);
+}
+
+.overview-table-wrap--admin {
+  background: rgba(15, 118, 110, 0.08);
+  border-color: rgba(15, 118, 110, 0.28);
+}
+
+.overview-table-wrap--player {
+  background: rgba(30, 64, 175, 0.08);
+  border-color: rgba(30, 64, 175, 0.24);
+}
+
+.user-role-group-title {
+  margin: var(--space-4) 0 var(--space-2);
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
 .overview-table {
   width: 100%;
   border-collapse: collapse;
@@ -591,6 +615,73 @@ a {
 
 .overview-table .col-venue {
   width: 10rem;
+}
+
+@media (max-width: 47.99rem) {
+  .overview-table-wrap--stacked {
+    overflow-x: visible;
+  }
+
+  .overview-table-wrap--role {
+    padding: var(--space-2);
+  }
+
+  .overview-table-wrap--stacked .overview-table,
+  .overview-table-wrap--stacked .overview-table tbody,
+  .overview-table-wrap--stacked .overview-table tr,
+  .overview-table-wrap--stacked .overview-table td {
+    display: block;
+    width: 100%;
+  }
+
+  .overview-table-wrap--stacked .overview-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    border: 0;
+  }
+
+  .overview-table-wrap--stacked .overview-table tr {
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    padding: var(--space-2);
+    background: var(--color-surface);
+    margin-bottom: var(--space-3);
+  }
+
+  .overview-table-wrap--stacked .overview-table td {
+    border-bottom: 1px solid var(--color-border);
+    padding: var(--space-2);
+    font-size: 0.875rem;
+  }
+
+  .overview-table-wrap--stacked .overview-table td:last-child {
+    border-bottom: 0;
+  }
+
+  .overview-table-wrap--stacked .overview-table td[data-label] {
+    display: grid;
+    grid-template-columns: minmax(6rem, 7.5rem) minmax(0, 1fr);
+    gap: var(--space-2);
+    align-items: center;
+  }
+
+  .overview-table-wrap--stacked .overview-table td[data-label]::before {
+    content: attr(data-label);
+    color: var(--color-muted);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-weight: 600;
+  }
+
+  .overview-table-wrap--stacked .overview-table td[data-label='Actions'] .btn {
+    width: 100%;
+  }
 }
 
 @media (min-width: 48rem) {

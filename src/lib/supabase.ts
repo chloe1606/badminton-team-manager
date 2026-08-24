@@ -1,7 +1,11 @@
 import { createClient } from '@supabase/supabase-js'
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+function normalizeEnvVar(value: string | undefined): string {
+  return value?.trim() ?? ''
+}
+
+const supabaseUrl = normalizeEnvVar(import.meta.env.VITE_SUPABASE_URL)
+const supabaseAnonKey = normalizeEnvVar(import.meta.env.VITE_SUPABASE_ANON_KEY)
 
 const supabaseMissingUrlError = 'Missing VITE_SUPABASE_URL environment variable.'
 const supabaseMissingAnonKeyError = 'Missing VITE_SUPABASE_ANON_KEY environment variable.'
@@ -19,7 +23,13 @@ if (supabaseConfigError) {
 }
 
 export const supabase = isSupabaseConfigured
-  ? createClient(supabaseUrl as string, supabaseAnonKey as string)
+  ? createClient(supabaseUrl, supabaseAnonKey, {
+    global: {
+      headers: {
+        apikey: supabaseAnonKey,
+      },
+    },
+  })
   : null
 
 export function requireSupabase() {

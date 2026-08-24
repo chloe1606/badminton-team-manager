@@ -85,7 +85,7 @@ export async function listPlayerProfiles(): Promise<PlayerProfile[]> {
   const supabase = requireSupabase()
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, email, name, username, role, player_id, gender, permitted_teams')
+    .select('id, email, name, username, role, player_id, gender, notify_by_email')
     .order('name', { ascending: true })
 
   if (error) {
@@ -107,7 +107,7 @@ export async function getPlayerProfile(userId: string): Promise<PlayerProfile | 
   const supabase = requireSupabase()
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, email, name, username, role, player_id, gender, permitted_teams')
+    .select('id, email, name, username, role, player_id, gender, notify_by_email')
     .eq('id', userId)
     .maybeSingle()
 
@@ -161,6 +161,51 @@ export async function updateUserRole(userId: string, role: 'admin' | 'player'): 
   }
 }
 
+export async function updateUserNotificationPreference(
+  userId: string,
+  notifyByEmail: boolean,
+): Promise<void> {
+  if (!isSupabaseConfigured) {
+    throw new Error(supabaseConfigError ?? 'Supabase is not configured.')
+  }
+
+  const supabase = requireSupabase()
+
+  const { data: userData, error: userError } = await supabase.auth.getUser()
+  console.info('debug: updateUserNotificationPreference user', {
+    userId,
+    currentUserId: userData?.user?.id ?? null,
+    userError: userError ? { message: userError.message, status: userError.status } : null,
+  })
+
+  const { data: profileData, error: profileError } = await supabase
+    .from('profiles')
+    .select('id, role, notify_by_email')
+    .eq('id', userId)
+    .maybeSingle()
+
+  console.info('debug: updateUserNotificationPreference profile lookup', {
+    targetUserId: userId,
+    profileData,
+    profileError: profileError ? { message: profileError.message, details: profileError.details, hint: profileError.hint, code: profileError.code } : null,
+  })
+
+  const { error } = await supabase
+    .from('profiles')
+    .update({ notify_by_email: notifyByEmail })
+    .eq('id', userId)
+
+  console.info('debug: updateUserNotificationPreference update result', {
+    targetUserId: userId,
+    notifyByEmail,
+    error: error ? { message: error.message, details: error.details, hint: error.hint, code: error.code } : null,
+  })
+
+  if (error) {
+    throw new Error(error.message)
+  }
+}
+
 export async function deleteUserProfile(userId: string): Promise<void> {
   if (!isSupabaseConfigured) {
     throw new Error(supabaseConfigError ?? 'Supabase is not configured.')
@@ -185,21 +230,5 @@ export async function deleteUserProfile(userId: string): Promise<void> {
         `Profile delete error: ${profileDelete.error.message}`
       )
     }
-  }
-}
-
-export async function updatePermittedTeams(userId: string, teamIds: string[] | null): Promise<void> {
-  if (!isSupabaseConfigured) {
-    throw new Error(supabaseConfigError ?? 'Supabase is not configured.')
-  }
-
-  const supabase = requireSupabase()
-  const { error } = await supabase
-    .from('profiles')
-    .update({ permitted_teams: teamIds })
-    .eq('id', userId)
-
-  if (error) {
-    throw new Error(error.message)
   }
 }

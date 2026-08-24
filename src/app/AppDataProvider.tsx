@@ -8,7 +8,12 @@ import {
   type ReactNode,
 } from 'react'
 import { useAuth } from '../auth/hooks/useAuth'
-import { listPlayerProfiles, deleteUserProfile, updateUserRole } from '../services/playerService'
+import {
+  listPlayerProfiles,
+  deleteUserProfile,
+  updateUserNotificationPreference,
+  updateUserRole,
+} from '../services/playerService'
 import {
   listTeamMatchSettings,
   type TeamMatchSettingsRecord,
@@ -75,6 +80,7 @@ interface AppDataContextValue {
   updateTeamSettings: (settings: TeamSettings) => void
   deletePlayer: (userId: string) => Promise<void>
   updatePlayerRole: (userId: string, role: 'admin' | 'player') => Promise<void>
+  updatePlayerNotificationPreference: (userId: string, notifyByEmail: boolean) => Promise<void>
   reloadPlayers: () => Promise<void>
 }
 
@@ -185,7 +191,7 @@ interface AppDataProviderProps {
 }
 
 export function AppDataProvider({ children }: AppDataProviderProps) {
-  const { isAuthenticated } = useAuth()
+  const { isAuthenticated, isAdmin, isLoading: isAuthLoading } = useAuth()
   const [matches, setMatches] = useState<MatchRecord[]>([])
   const [isLoadingMatches, setIsLoadingMatches] = useState(isSupabaseConfigured)
   const [matchesError, setMatchesError] = useState<string | null>(
@@ -328,6 +334,22 @@ export function AppDataProvider({ children }: AppDataProviderProps) {
   }, [isAuthenticated, isLoadingPlayers, playersById])
 
   useEffect(() => {
+    if (isAuthLoading) {
+      return
+    }
+
+    if (!isAuthenticated) {
+      setTeamSettings(normalizeTeamSettings(defaultTeamSettings))
+      setIsLoadingLeagueSettings(false)
+      return
+    }
+
+    if (!isAdmin) {
+      setTeamSettings(normalizeTeamSettings(defaultTeamSettings))
+      setIsLoadingLeagueSettings(false)
+      return
+    }
+
     if (!isSupabaseConfigured) {
       setIsLoadingLeagueSettings(false)
       return
@@ -343,6 +365,12 @@ export function AppDataProvider({ children }: AppDataProviderProps) {
         }
       })
       .catch((error: unknown) => {
+        const message = error instanceof Error ? error.message : 'Unknown error'
+        if (message.toLowerCase().includes('permission denied')) {
+          console.warn('League settings unavailable due to database permissions. Using defaults.')
+          return
+        }
+
         console.error('Failed to load league context settings', error)
       })
       .finally(() => {
@@ -354,7 +382,7 @@ export function AppDataProvider({ children }: AppDataProviderProps) {
     return () => {
       isActive = false
     }
-  }, [])
+  }, [isAuthLoading, isAuthenticated, isAdmin])
 
   const replaceMatch = useCallback((nextMatch: MatchRecord) => {
     const normalizedMatch = normalizeMatchRecord(nextMatch)
@@ -490,6 +518,12 @@ export function AppDataProvider({ children }: AppDataProviderProps) {
         await updateUserRole(userId, role)
         setPlayers((currentPlayers) =>
           currentPlayers.map((p) => (p.id === userId ? { ...p, role } : p)),
+        )
+      },
+      updatePlayerNotificationPreference: async (userId: string, notifyByEmail: boolean) => {
+        await updateUserNotificationPreference(userId, notifyByEmail)
+        setPlayers((currentPlayers) =>
+          currentPlayers.map((p) => (p.id === userId ? { ...p, notifyByEmail } : p)),
         )
       },
       reloadPlayers,
