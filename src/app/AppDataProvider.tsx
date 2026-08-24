@@ -191,7 +191,7 @@ interface AppDataProviderProps {
 }
 
 export function AppDataProvider({ children }: AppDataProviderProps) {
-  const { isAuthenticated, isLoading: isAuthLoading } = useAuth()
+  const { isAuthenticated, isAdmin, isLoading: isAuthLoading } = useAuth()
   const [matches, setMatches] = useState<MatchRecord[]>([])
   const [isLoadingMatches, setIsLoadingMatches] = useState(isSupabaseConfigured)
   const [matchesError, setMatchesError] = useState<string | null>(
@@ -344,6 +344,12 @@ export function AppDataProvider({ children }: AppDataProviderProps) {
       return
     }
 
+    if (!isAdmin) {
+      setTeamSettings(normalizeTeamSettings(defaultTeamSettings))
+      setIsLoadingLeagueSettings(false)
+      return
+    }
+
     if (!isSupabaseConfigured) {
       setIsLoadingLeagueSettings(false)
       return
@@ -376,7 +382,7 @@ export function AppDataProvider({ children }: AppDataProviderProps) {
     return () => {
       isActive = false
     }
-  }, [isAuthLoading, isAuthenticated])
+  }, [isAuthLoading, isAuthenticated, isAdmin])
 
   const replaceMatch = useCallback((nextMatch: MatchRecord) => {
     const normalizedMatch = normalizeMatchRecord(nextMatch)
