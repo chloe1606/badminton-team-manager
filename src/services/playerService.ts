@@ -107,7 +107,7 @@ export async function getPlayerProfile(userId: string): Promise<PlayerProfile | 
   const supabase = requireSupabase()
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, email, name, username, role, player_id, gender, notify_by_email, permitted_teams')
+    .select('id, email, name, username, role, player_id, gender, notify_by_email')
     .eq('id', userId)
     .maybeSingle()
 
