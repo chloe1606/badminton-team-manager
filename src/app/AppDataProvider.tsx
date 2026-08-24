@@ -123,6 +123,27 @@ function normalizeFormat(format: MatchFormatConfig | undefined): MatchFormatConf
   }
 }
 
+function normalizeMatchResult(result: MatchResult | undefined, format: MatchFormatConfig): MatchResult | undefined {
+  if (!result) {
+    return undefined
+  }
+
+  return {
+    ...result,
+    rubbers: Array.from({ length: format.numberOfRubbers }, (_, rubberIndex) => {
+      const existingRubber = result.rubbers[rubberIndex]
+      return {
+        id: existingRubber?.id ?? `rubber-${rubberIndex + 1}`,
+        pairSlot:
+          format.pairingSlots[rubberIndex % format.pairingSlots.length] ??
+          existingRubber?.pairSlot ??
+          `Pair ${rubberIndex + 1}`,
+        games: (existingRubber?.games ?? []).slice(0, format.scoring.bestOf),
+      }
+    }),
+  }
+}
+
 function normalizeMatchRecord(match: MatchRecord): MatchRecord {
   const format = normalizeFormat(match.format)
   const availablePlayerIds = [...new Set(match.availablePlayerIds ?? [])]
@@ -143,6 +164,7 @@ function normalizeMatchRecord(match: MatchRecord): MatchRecord {
       ...pair,
       playerIds: pair.playerIds.filter((playerId) => assignedPlayerIds.includes(playerId)),
     })),
+    result: normalizeMatchResult(match.result, format),
     format,
   }
 }
