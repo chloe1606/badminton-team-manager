@@ -22,7 +22,6 @@ import {
   deriveRubberWinner,
   formatOpponentName,
   formatTeamDisplayName,
-  gamesNeededToWin,
   getAddressById,
   getClubById,
   getPlayerMatchAvailabilityStatus,
