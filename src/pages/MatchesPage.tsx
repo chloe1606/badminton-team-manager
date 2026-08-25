@@ -394,43 +394,41 @@ function MatchResultEditor({
       <div className="stack">
         {rubbers.map((rubber, rubberIndex) => (
           <div className="result-editor" key={`${match.id}-${rubber.pairSlot}-${rubberIndex}`}>
-            <div className="card-heading">
-              <strong>
-                Rubber {rubberIndex + 1} · {rubber.pairSlot}
-              </strong>
-              <span className="muted">
-                First to {gamesNeededToWin(activeFormat.scoring.bestOf)} games
-              </span>
-            </div>
+            <div className="rubber-result-row">
+              <div className="card-heading rubber-result-heading">
+                <strong>
+                  Rubber {rubberIndex + 1} · {rubber.pairSlot}
+                </strong>
+              </div>
 
-            <div className="game-grid">
-              {rubber.games.map((game, gameIndex) => (
-                <div className="game-row" key={`${rubber.pairSlot}-game-${gameIndex + 1}`}>
-                  <span>Game {gameIndex + 1}</span>
-                  <input
-                    aria-label={`${rubber.pairSlot} game ${gameIndex + 1} our score`}
-                    className="input"
-                    inputMode="numeric"
-                    min={0}
-                    type="number"
-                    value={game.ourScore}
-                    onChange={(event) =>
-                      updateGameValue(rubberIndex, gameIndex, 'ourScore', event.target.value)
-                    }
-                  />
-                  <input
-                    aria-label={`${rubber.pairSlot} game ${gameIndex + 1} their score`}
-                    className="input"
-                    inputMode="numeric"
-                    min={0}
-                    type="number"
-                    value={game.theirScore}
-                    onChange={(event) =>
-                      updateGameValue(rubberIndex, gameIndex, 'theirScore', event.target.value)
-                    }
-                  />
-                </div>
-              ))}
+              <div className="game-grid game-grid-inline">
+                {rubber.games.map((game, gameIndex) => (
+                  <div className="game-row game-row-inline" key={`${rubber.pairSlot}-game-${gameIndex + 1}`}>
+                    <input
+                      aria-label={`${rubber.pairSlot} game ${gameIndex + 1} our score`}
+                      className="input"
+                      inputMode="numeric"
+                      min={0}
+                      type="number"
+                      value={game.ourScore}
+                      onChange={(event) =>
+                        updateGameValue(rubberIndex, gameIndex, 'ourScore', event.target.value)
+                      }
+                    />
+                    <input
+                      aria-label={`${rubber.pairSlot} game ${gameIndex + 1} their score`}
+                      className="input"
+                      inputMode="numeric"
+                      min={0}
+                      type="number"
+                      value={game.theirScore}
+                      onChange={(event) =>
+                        updateGameValue(rubberIndex, gameIndex, 'theirScore', event.target.value)
+                      }
+                    />
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         ))}

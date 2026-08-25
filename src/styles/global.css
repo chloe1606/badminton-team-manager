@@ -377,6 +377,25 @@ a {
   background: rgba(255, 255, 255, 0.6);
 }
 
+.rubber-result-row {
+  display: grid;
+  grid-template-columns: minmax(12rem, 16rem) minmax(0, 1fr);
+  gap: var(--space-3);
+  align-items: center;
+}
+
+.rubber-result-heading {
+  margin-bottom: 0;
+}
+
+.rubber-result-heading strong {
+  display: block;
+}
+
+.game-grid-inline {
+  margin-top: 0;
+}
+
 .game-grid {
   display: grid;
   gap: var(--space-2);
@@ -388,6 +407,10 @@ a {
   grid-template-columns: minmax(0, 1fr) 4.5rem 4.5rem;
   gap: var(--space-2);
   align-items: center;
+}
+
+.game-row-inline {
+  grid-template-columns: 4.5rem 4.5rem;
 }
 
 .game-row .input {
@@ -745,6 +768,19 @@ a {
 
   .game-row {
     grid-template-columns: minmax(0, 1fr) 8rem 8rem;
+  }
+
+  .rubber-result-row {
+    grid-template-columns: minmax(0, 1fr);
+    align-items: start;
+  }
+
+  .game-grid-inline {
+    gap: var(--space-2);
+  }
+
+  .game-row-inline {
+    grid-template-columns: 8rem 8rem;
   }
 
   .dashboard-match-grid {
