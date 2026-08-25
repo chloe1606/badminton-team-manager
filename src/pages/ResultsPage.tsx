@@ -3,10 +3,11 @@ import { useAppData } from '../app/AppDataProvider'
 import { MatchFilters, type MatchFiltersValue } from '../components/matches/MatchFilters'
 import { Card } from '../components/ui/Card'
 import { clubDirectory } from '../data/clubContacts'
-import type { MatchRecord } from '../types/matches'
+import type { MatchGameScore, MatchRecord } from '../types/matches'
 import { createMatchContextKey } from '../lib/matchContext'
 import { createDefaultMatchFilters, filterMatches, getMatchSeasonOptions } from '../utils/matchFilters'
 import {
+  deriveRubberWinner,
   formatTeamDisplayName,
   formatOpponentName,
   getAddressById,
@@ -29,6 +30,42 @@ function getVenueClub(match: MatchRecord, homeClubId: string) {
   }
 
   return getClubById(clubDirectory, match.opponentClubId)
+}
+
+function getCompletedRubberGames(match: MatchRecord, rubberIndex: number): MatchGameScore[] {
+  const games = match.result?.rubbers[rubberIndex]?.games ?? []
+  return games.filter((game) => Number.isFinite(game.ourScore) && Number.isFinite(game.theirScore))
+}
+
+function formatRubberGames(match: MatchRecord, rubberIndex: number): string {
+  const completedGames = getCompletedRubberGames(match, rubberIndex)
+
+  if (completedGames.length === 0) {
+    return 'No scores recorded'
+  }
+
+  return completedGames.map((game) => `${game.ourScore}-${game.theirScore}`).join(' · ')
+}
+
+function getRubberOutcomeBadge(match: MatchRecord, rubberIndex: number): {
+  label: string
+  className: string
+} {
+  const completedGames = getCompletedRubberGames(match, rubberIndex)
+  if (completedGames.length === 0) {
+    return { label: 'Pending', className: 'result-rubber-badge result-rubber-badge--pending' }
+  }
+
+  const winner = deriveRubberWinner(completedGames, match.format)
+  if (winner === 'us') {
+    return { label: 'Win', className: 'result-rubber-badge result-rubber-badge--win' }
+  }
+
+  if (winner === 'them') {
+    return { label: 'Loss', className: 'result-rubber-badge result-rubber-badge--loss' }
+  }
+
+  return { label: 'Pending', className: 'result-rubber-badge result-rubber-badge--pending' }
 }
 
 export function ResultsPage() {
@@ -223,6 +260,30 @@ export function ResultsPage() {
                     </div>
                   </dl>
                 </div>
+
+                {match.result?.rubbers.length ? (
+                  <div className="result-rubbers-section">
+                    <p className="result-rubbers-label">Individual Rubbers</p>
+                    <div className="result-rubbers-grid">
+                      {match.result.rubbers.map((rubber, rubberIndex) => {
+                        const badge = getRubberOutcomeBadge(match, rubberIndex)
+
+                        return (
+                          <div className="result-rubber-row" key={`${match.id}-${rubber.id}`}>
+                            <span className="result-rubber-name-row">
+                              <span className="result-rubber-name">
+                                Rubber {rubberIndex + 1}
+                                {rubber.pairSlot ? ` · ${rubber.pairSlot}` : ''}
+                              </span>
+                              <span className={badge.className}>{badge.label}</span>
+                            </span>
+                            <span className="result-rubber-score">{formatRubberGames(match, rubberIndex)}</span>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                ) : null}
 
                 {match.result?.notes && (
                   <div className="result-notes-section">
