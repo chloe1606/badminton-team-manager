@@ -393,6 +393,9 @@ a {
 }
 
 .game-grid-inline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
   margin-top: 0;
 }
 
@@ -410,7 +413,40 @@ a {
 }
 
 .game-row-inline {
-  grid-template-columns: 4.5rem 4.5rem;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.8);
+}
+
+.game-chip-label {
+  min-width: 2rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--color-primary-strong);
+  text-align: center;
+}
+
+.game-score-pair {
+  display: grid;
+  grid-template-columns: 3.25rem auto 3.25rem;
+  gap: var(--space-1);
+  align-items: center;
+}
+
+.game-score-separator {
+  color: var(--color-muted);
+  font-weight: 600;
+  text-align: center;
+}
+
+.game-score-pair .input {
+  min-height: 2rem;
+  padding: 0 var(--space-1);
+  text-align: center;
 }
 
 .game-row .input {
@@ -780,7 +816,11 @@ a {
   }
 
   .game-row-inline {
-    grid-template-columns: 8rem 8rem;
+    justify-content: space-between;
+  }
+
+  .game-score-pair {
+    grid-template-columns: 3.5rem auto 3.5rem;
   }
 
   .dashboard-match-grid {
@@ -798,11 +838,25 @@ a {
   }
 
   .game-grid-inline {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: var(--space-2);
   }
 
   .game-row-inline {
-    grid-template-columns: minmax(0, 1fr);
+    width: auto;
+    justify-content: center;
+    padding: var(--space-1);
+  }
+
+  .game-score-pair {
+    grid-template-columns: minmax(0, 2.5rem) auto minmax(0, 2.5rem);
+    width: 100%;
+  }
+
+  .game-score-pair .input {
+    min-height: 1.9rem;
+    font-size: 0.875rem;
   }
 }
 

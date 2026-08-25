@@ -403,28 +403,34 @@ function MatchResultEditor({
               <div className="game-grid game-grid-inline">
                 {rubber.games.map((game, gameIndex) => (
                   <div className="game-row game-row-inline" key={`${rubber.pairSlot}-game-${gameIndex + 1}`}>
-                    <input
-                      aria-label={`${rubber.pairSlot} game ${gameIndex + 1} our score`}
-                      className="input"
-                      inputMode="numeric"
-                      min={0}
-                      type="number"
-                      value={game.ourScore}
-                      onChange={(event) =>
-                        updateGameValue(rubberIndex, gameIndex, 'ourScore', event.target.value)
-                      }
-                    />
-                    <input
-                      aria-label={`${rubber.pairSlot} game ${gameIndex + 1} their score`}
-                      className="input"
-                      inputMode="numeric"
-                      min={0}
-                      type="number"
-                      value={game.theirScore}
-                      onChange={(event) =>
-                        updateGameValue(rubberIndex, gameIndex, 'theirScore', event.target.value)
-                      }
-                    />
+                    <span className="game-chip-label">G{gameIndex + 1}</span>
+                    <div className="game-score-pair">
+                      <input
+                        aria-label={`${rubber.pairSlot} game ${gameIndex + 1} our score`}
+                        className="input"
+                        inputMode="numeric"
+                        min={0}
+                        type="number"
+                        value={game.ourScore}
+                        onChange={(event) =>
+                          updateGameValue(rubberIndex, gameIndex, 'ourScore', event.target.value)
+                        }
+                      />
+                      <span className="game-score-separator" aria-hidden="true">
+                        -
+                      </span>
+                      <input
+                        aria-label={`${rubber.pairSlot} game ${gameIndex + 1} their score`}
+                        className="input"
+                        inputMode="numeric"
+                        min={0}
+                        type="number"
+                        value={game.theirScore}
+                        onChange={(event) =>
+                          updateGameValue(rubberIndex, gameIndex, 'theirScore', event.target.value)
+                        }
+                      />
+                    </div>
                   </div>
                 ))}
               </div>
