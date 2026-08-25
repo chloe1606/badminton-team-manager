@@ -792,6 +792,20 @@ a {
   }
 }
 
+@media (max-width: 47.999rem) {
+  .rubber-result-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .game-grid-inline {
+    gap: var(--space-2);
+  }
+
+  .game-row-inline {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 @media (min-width: 64rem) {
   .module-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1119,11 +1133,15 @@ a {
 .results-summary {
   display: grid;
   gap: var(--space-4);
-  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   padding: var(--space-4);
-  background: rgba(15, 118, 110, 0.08);
+  background: var(--color-primary-soft);
   border-radius: var(--radius-md);
   margin-top: var(--space-4);
+}
+
+.results-summary .summary-stat {
+  background: rgba(255, 255, 255, 0.6);
 }
 
 .result-card {
