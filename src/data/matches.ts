@@ -19,7 +19,7 @@ export const defaultTeamSettings: TeamSettings = {
     homeVenueId: 'park-langley-the-parklangley-club',
   },
   matchFormat: {
-    numberOfRubbers: 6,
+    numberOfRubbers: 9,
     rubbersPerPlayer: 3,
     pairingSlots: ['Pair 1', 'Pair 2', 'Pair 3'],
     squad: {

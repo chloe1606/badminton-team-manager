@@ -4,6 +4,7 @@ import { MatchFilters, type MatchFiltersValue } from '../components/matches/Matc
 import { Card } from '../components/ui/Card'
 import { clubDirectory } from '../data/clubContacts'
 import type { MatchRecord } from '../types/matches'
+import { createMatchContextKey } from '../lib/matchContext'
 import { createDefaultMatchFilters, filterMatches, getMatchSeasonOptions } from '../utils/matchFilters'
 import {
   formatTeamDisplayName,
@@ -33,14 +34,33 @@ function getVenueClub(match: MatchRecord, homeClubId: string) {
 export function ResultsPage() {
   const { matches, playersById, teamSettings } = useAppData()
   const [filters, setFilters] = useState<MatchFiltersValue>(() => createDefaultMatchFilters('2026/2027'))
+  const [showAllDivisions, setShowAllDivisions] = useState(false)
   const teamDisplayName = useMemo(() => formatTeamDisplayName(teamSettings.profile), [teamSettings.profile])
+  const defaultContextKey = createMatchContextKey('Mixed 6', 3)
 
-  const seasonOptions = useMemo(() => getMatchSeasonOptions(matches), [matches])
+  const scopedMatches = useMemo(() => {
+    if (showAllDivisions) {
+      return matches.filter((match) => {
+        const normalizedMatchType = (match.matchType ?? '').trim().toLowerCase()
+        const contextKey = match.matchContextKey ?? createMatchContextKey(match.matchType ?? '', match.divisionNumber ?? 0)
+
+        return normalizedMatchType === 'mixed 6' || contextKey.startsWith('mixed-6__')
+      })
+    }
+
+    return matches.filter(
+      (match) =>
+        (match.matchContextKey ?? createMatchContextKey(match.matchType ?? '', match.divisionNumber ?? 0)) ===
+        defaultContextKey,
+    )
+  }, [defaultContextKey, matches, showAllDivisions])
+
+  const seasonOptions = useMemo(() => getMatchSeasonOptions(scopedMatches), [scopedMatches])
   const completedMatches = useMemo(() => {
-    return sortMatchesChronologically(filterMatches(matches, filters))
+    return sortMatchesChronologically(filterMatches(scopedMatches, filters))
       .filter((match) => match.result)
       .sort((a, b) => new Date(b.startAt).getTime() - new Date(a.startAt).getTime())
-  }, [filters, matches])
+  }, [filters, scopedMatches])
 
   const totalMatches = completedMatches.length
   const summaryTotals = completedMatches.reduce(
@@ -68,9 +88,17 @@ export function ResultsPage() {
             <h1>Results</h1>
             <p>
               Results for <strong>{teamDisplayName}</strong> in{' '}
-              <strong>Mixed 6 Div 3</strong>.
+              <strong>{showAllDivisions ? 'Mixed 6 - All Divisions' : 'Mixed 6 Div 3'}</strong>.
             </p>
           </div>
+          <label className="checkbox-row">
+            <input
+              type="checkbox"
+              checked={showAllDivisions}
+              onChange={(event) => setShowAllDivisions(event.target.checked)}
+            />
+            <span>All Divisions</span>
+          </label>
         </div>
 
         {totalMatches > 0 && (

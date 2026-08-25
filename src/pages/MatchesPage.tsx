@@ -5,6 +5,7 @@ import { Button } from '../components/ui/Button'
 import { Card } from '../components/ui/Card'
 import { clubDirectory } from '../data/clubContacts'
 import { defaultTeamSettings } from '../data/matches'
+import { getTeamMatchSettingsFormat } from '../services/leagueService'
 import type {
   MatchDetailsInput,
   MatchFormatConfig,
@@ -21,7 +22,6 @@ import {
   deriveRubberWinner,
   formatOpponentName,
   formatTeamDisplayName,
-  gamesNeededToWin,
   getAddressById,
   getClubById,
   getPlayerMatchAvailabilityStatus,
@@ -257,17 +257,43 @@ function MatchResultEditor({
   onSave: (matchId: string, result?: MatchResult) => Promise<void>
   onSaveSuccess: () => void
 }) {
-  const [rubbers, setRubbers] = useState(() => createRubberDrafts(match.result, match.format))
+  const [activeFormat, setActiveFormat] = useState<MatchFormatConfig>(() => cloneFormat(match.format))
+  const [rubbers, setRubbers] = useState(() => createRubberDrafts(match.result, activeFormat))
   const [notes, setNotes] = useState(match.result?.notes ?? '')
   const [error, setError] = useState('')
   const [status, setStatus] = useState('')
 
   useEffect(() => {
-    setRubbers(createRubberDrafts(match.result, match.format))
+    let isActive = true
+
+    setActiveFormat(cloneFormat(match.format))
+    if (!match.matchType || !match.divisionNumber) {
+      return () => {
+        isActive = false
+      }
+    }
+
+    void getTeamMatchSettingsFormat(match.matchType, match.divisionNumber)
+      .then((formatFromSettings) => {
+        if (isActive && formatFromSettings) {
+          setActiveFormat(cloneFormat(formatFromSettings))
+        }
+      })
+      .catch(() => {
+        // Fall back to the match's stored format if settings cannot be loaded.
+      })
+
+    return () => {
+      isActive = false
+    }
+  }, [match.divisionNumber, match.format, match.matchType])
+
+  useEffect(() => {
+    setRubbers(createRubberDrafts(match.result, activeFormat))
     setNotes(match.result?.notes ?? '')
     setError('')
     setStatus('')
-  }, [match])
+  }, [activeFormat, match.result])
 
   function updateGameValue(
     rubberIndex: number,
@@ -330,7 +356,7 @@ function MatchResultEditor({
         parsedGames.push({ ourScore, theirScore })
       }
 
-      const validationError = validateRubberGames(parsedGames, match.format)
+      const validationError = validateRubberGames(parsedGames, activeFormat)
       if (validationError) {
         setError(`${rubber.pairSlot}: ${validationError}`)
         return
@@ -367,43 +393,47 @@ function MatchResultEditor({
       <div className="stack">
         {rubbers.map((rubber, rubberIndex) => (
           <div className="result-editor" key={`${match.id}-${rubber.pairSlot}-${rubberIndex}`}>
-            <div className="card-heading">
-              <strong>
-                Rubber {rubberIndex + 1} · {rubber.pairSlot}
-              </strong>
-              <span className="muted">
-                First to {gamesNeededToWin(match.format.scoring.bestOf)} games
-              </span>
-            </div>
+            <div className="rubber-result-row">
+              <div className="card-heading rubber-result-heading">
+                <strong>
+                  Rubber {rubberIndex + 1} · {rubber.pairSlot}
+                </strong>
+              </div>
 
-            <div className="game-grid">
-              {rubber.games.map((game, gameIndex) => (
-                <div className="game-row" key={`${rubber.pairSlot}-game-${gameIndex + 1}`}>
-                  <span>Game {gameIndex + 1}</span>
-                  <input
-                    aria-label={`${rubber.pairSlot} game ${gameIndex + 1} our score`}
-                    className="input"
-                    inputMode="numeric"
-                    min={0}
-                    type="number"
-                    value={game.ourScore}
-                    onChange={(event) =>
-                      updateGameValue(rubberIndex, gameIndex, 'ourScore', event.target.value)
-                    }
-                  />
-                  <input
-                    aria-label={`${rubber.pairSlot} game ${gameIndex + 1} their score`}
-                    className="input"
-                    inputMode="numeric"
-                    min={0}
-                    type="number"
-                    value={game.theirScore}
-                    onChange={(event) =>
-                      updateGameValue(rubberIndex, gameIndex, 'theirScore', event.target.value)
-                    }
-                  />
-                </div>
-              ))}
+              <div className="game-grid game-grid-inline">
+                {rubber.games.map((game, gameIndex) => (
+                  <div className="game-row game-row-inline" key={`${rubber.pairSlot}-game-${gameIndex + 1}`}>
+                    <span className="game-chip-label">G{gameIndex + 1}</span>
+                    <div className="game-score-pair">
+                      <input
+                        aria-label={`${rubber.pairSlot} game ${gameIndex + 1} our score`}
+                        className="input"
+                        inputMode="numeric"
+                        min={0}
+                        type="number"
+                        value={game.ourScore}
+                        onChange={(event) =>
+                          updateGameValue(rubberIndex, gameIndex, 'ourScore', event.target.value)
+                        }
+                      />
+                      <span className="game-score-separator" aria-hidden="true">
+                        -
+                      </span>
+                      <input
+                        aria-label={`${rubber.pairSlot} game ${gameIndex + 1} their score`}
+                        className="input"
+                        inputMode="numeric"
+                        min={0}
+                        type="number"
+                        value={game.theirScore}
+                        onChange={(event) =>
+                          updateGameValue(rubberIndex, gameIndex, 'theirScore', event.target.value)
+                        }
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         ))}
@@ -446,11 +476,13 @@ function createPlayerGenderLookup(playersById: PlayerLookup): Map<string, { gend
 function MatchPlayerSelectionEditor({
   match,
   playersById,
+  currentPlayerId,
   onSave,
   onSaveSuccess,
 }: {
   match: MatchRecord
   playersById: PlayerLookup
+  currentPlayerId?: string
   onSave: (
     matchId: string,
     playerIds: string[],
@@ -476,6 +508,7 @@ function MatchPlayerSelectionEditor({
     ),
   )
   const [draggedPlayerId, setDraggedPlayerId] = useState<string | null>(null)
+  const [tapSelectedPlayerId, setTapSelectedPlayerId] = useState<string | null>(null)
   const [error, setError] = useState('')
   const [status, setStatus] = useState('')
   const selectedPlayerIdSet = useMemo(() => new Set(selectedPlayerIds), [selectedPlayerIds])
@@ -512,6 +545,7 @@ function MatchPlayerSelectionEditor({
         playerIds: pair.playerIds.filter((playerId) => nextSelectedPlayerIds.includes(playerId)),
       })),
     )
+    setTapSelectedPlayerId(null)
     setError('')
     setStatus('')
   }, [availablePlayers, match.assignedPlayerIds, match.assignedPairs, match.format, playerGenderLookup])
@@ -522,6 +556,9 @@ function MatchPlayerSelectionEditor({
       checked ? [...currentIds, playerId] : currentIds.filter((id) => id !== playerId),
     )
     if (!checked) {
+      if (tapSelectedPlayerId === playerId) {
+        setTapSelectedPlayerId(null)
+      }
       setAssignedPairs((currentPairs) =>
         currentPairs.map((pair) => ({
           ...pair,
@@ -654,7 +691,7 @@ function MatchPlayerSelectionEditor({
         <div className="card-heading">
           <h4>Configured pairs</h4>
           <p className="muted">
-            Drag selected players into each pair.{' '}
+            Drag selected players into each pair. On mobile, tap a player then tap a slot.{' '}
             {match.format.squad.allowPlayerReuseAcrossPairs
               ? 'Players can be reused across pair slots.'
               : 'Each selected player can only appear once.'}
@@ -666,11 +703,17 @@ function MatchPlayerSelectionEditor({
             {unassignedSelectedPlayers.map((player) => (
               <button
                 key={player.id}
-                className={`player-pill player-pill--${player.gender ?? 'lady'}`}
+                className={`player-pill player-pill--${player.gender ?? 'lady'}${tapSelectedPlayerId === player.id ? ' player-pill--active' : ''}`}
                 draggable
                 type="button"
                 onDragStart={() => setDraggedPlayerId(player.id)}
                 onDragEnd={() => setDraggedPlayerId(null)}
+                onClick={() => {
+                  setError('')
+                  setTapSelectedPlayerId((currentPlayerId) =>
+                    currentPlayerId === player.id ? null : player.id,
+                  )
+                }}
               >
                 {player.fullName}
               </button>
@@ -691,6 +734,14 @@ function MatchPlayerSelectionEditor({
                     <div
                       key={`${pair.pairSlot}-${positionIndex}`}
                       className="pair-drop-zone"
+                      onClick={() => {
+                        if (!tapSelectedPlayerId) {
+                          return
+                        }
+
+                        assignPlayerToSlot(tapSelectedPlayerId, pair.pairSlot, positionIndex)
+                        setTapSelectedPlayerId(null)
+                      }}
                       onDragOver={(event) => {
                         if (draggedPlayerId && canDropPlayerIntoSlot(draggedPlayerId, positionIndex)) {
                           event.preventDefault()
@@ -707,8 +758,22 @@ function MatchPlayerSelectionEditor({
                       <span className="muted">{getSlotLabel(positionIndex)}</span>
                       {playerId ? (
                         <div className="pair-drop-zone-content">
-                          <span className={`player-gender-indicator player-gender-indicator--${playersById.get(playerId)?.gender ?? ''}`}>{playersById.get(playerId)?.fullName ?? 'Unknown player'}</span>
-                          <Button type="button" variant="ghost" onClick={() => clearSlot(pair.pairSlot, positionIndex)}>
+                          <span
+                            className={
+                              `${playerId === currentPlayerId ? 'user-name user-name--current user-name--selected ' : ''}` +
+                              `player-gender-indicator player-gender-indicator--${playersById.get(playerId)?.gender ?? ''}`
+                            }
+                          >
+                            {playersById.get(playerId)?.fullName ?? 'Unknown player'}
+                          </span>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            onClick={(event) => {
+                              event.stopPropagation()
+                              clearSlot(pair.pairSlot, positionIndex)
+                            }}
+                          >
                             Clear
                           </Button>
                         </div>
@@ -747,10 +812,12 @@ function MatchPlayerSelectionEditor({
 function SelectPlayersPanel({
   match,
   playersById,
+  currentPlayerId,
   onSave,
 }: {
   match: MatchRecord
   playersById: PlayerLookup
+  currentPlayerId?: string
   onSave: (
     matchId: string,
     playerIds: string[],
@@ -769,7 +836,13 @@ function SelectPlayersPanel({
     <details ref={detailsRef}>
       <summary className="details-summary">Select players</summary>
       <div className="details-panel">
-        <MatchPlayerSelectionEditor match={match} playersById={playersById} onSave={onSave} onSaveSuccess={handleSaveSuccess} />
+        <MatchPlayerSelectionEditor
+          match={match}
+          playersById={playersById}
+          currentPlayerId={currentPlayerId}
+          onSave={onSave}
+          onSaveSuccess={handleSaveSuccess}
+        />
       </div>
     </details>
   )
@@ -1205,16 +1278,29 @@ export function MatchesPage() {
   const [notes, setNotes] = useState('')
   const [error, setError] = useState('')
   const [status, setStatus] = useState('')
+  const [showAllDivisions, setShowAllDivisions] = useState(false)
   const [collapsedSeasons, setCollapsedSeasons] = useState<Record<string, boolean>>({})
   const selectedMatchContextKey = createMatchContextKey(matchType, Number(divisionNumber))
+  const playerDefaultContextKey = createMatchContextKey('Mixed 6', 3)
   const selectedMatches = useMemo(
-    () =>
-      matches.filter(
+    () => {
+      if (showAllDivisions) {
+        return matches.filter((match) => {
+          const normalizedMatchType = (match.matchType ?? '').trim().toLowerCase()
+          const contextKey = match.matchContextKey ?? createMatchContextKey(match.matchType ?? '', match.divisionNumber ?? 0)
+
+          return normalizedMatchType === 'mixed 6' || contextKey.startsWith('mixed-6__')
+        })
+      }
+
+      const targetContextKey = isAdmin ? selectedMatchContextKey : playerDefaultContextKey
+      return matches.filter(
         (match) =>
           (match.matchContextKey ?? createMatchContextKey(match.matchType ?? '', match.divisionNumber ?? 0)) ===
-          (isAdmin ? selectedMatchContextKey : createMatchContextKey('Mixed 6', 3)),
-      ),
-    [isAdmin, matches, selectedMatchContextKey],
+          targetContextKey,
+      )
+    },
+    [isAdmin, matches, playerDefaultContextKey, selectedMatchContextKey, showAllDivisions],
   )
   const visibleMatches = useMemo(() => selectedMatches, [selectedMatches])
 
@@ -1377,12 +1463,18 @@ export function MatchesPage() {
     }
 
     try {
+      const requestedDivision = data.divisionNumber ?? Number.parseInt(divisionNumber, 10)
+      const selectedFormat = await getTeamMatchSettingsFormat(
+        data.matchType ?? matchType,
+        Number.isNaN(requestedDivision) ? 3 : requestedDivision,
+      )
+
       await handleAddMatch({
         ...data,
         teamDisplayName,
         leagueName: (teamSettings.profile.leagueName ?? 'NWKBA').trim(),
         matchContextKey: selectedMatchContextKey,
-        format: cloneFormat(teamSettings.matchFormat),
+        format: cloneFormat(selectedFormat ?? teamSettings.matchFormat),
       })
 
       setOpponentClubId('')
@@ -1408,12 +1500,22 @@ export function MatchesPage() {
             <h1>Matches</h1>
             <p>
               Fixtures for <strong>{teamDisplayName}</strong> in{' '}
-              <strong>{matchType} Div {divisionNumber}</strong>.
+              <strong>{showAllDivisions ? 'Mixed 6 - All Divisions' : `${matchType} Div ${divisionNumber}`}</strong>.
             </p>
           </div>
-          <Button onClick={exportAllMatches} variant="secondary">
-            Export all to calendar
-          </Button>
+          <div className="form-actions">
+            <label className="checkbox-row">
+              <input
+                type="checkbox"
+                checked={showAllDivisions}
+                onChange={(event) => setShowAllDivisions(event.target.checked)}
+              />
+              <span>All Divisions</span>
+            </label>
+            <Button onClick={exportAllMatches} variant="secondary">
+              Export all to calendar
+            </Button>
+          </div>
         </div>
       </Card>
 
@@ -1746,6 +1848,7 @@ export function MatchesPage() {
                                 <SelectPlayersPanel
                                   match={match}
                                   playersById={playersById}
+                                  currentPlayerId={user?.playerId}
                                   onSave={handleAssignMatchPlayers}
                                 />
                                 <MatchResultPanel match={match} onSave={updateMatchResult} />
