@@ -428,6 +428,7 @@ a {
   font-weight: 700;
   color: var(--color-primary-strong);
   text-align: center;
+  display: none;
 }
 
 .game-score-pair {
