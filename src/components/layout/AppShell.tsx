@@ -1,6 +1,7 @@
 import { Link, NavLink, Outlet } from 'react-router-dom'
 import { useAuth } from '../../auth/hooks/useAuth'
 import { Button } from '../ui/Button'
+import { ThemeToggle } from '../ui/ThemeToggle'
 
 const baseNavItems = [
   { to: '/', label: 'Dashboard', adminOnly: false },
@@ -57,6 +58,7 @@ export function AppShell() {
           </nav>
           <div className="auth-actions" aria-live="polite">
             <span className="user-chip">{user?.name}</span>
+            <ThemeToggle />
             <Button onClick={() => void logout()} variant="secondary">
               Log out
             </Button>
