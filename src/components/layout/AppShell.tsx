@@ -7,9 +7,9 @@ const baseNavItems = [
   { to: '/matches', label: 'Matches', adminOnly: false },
   { to: '/results', label: 'Results', adminOnly: false },
   { to: '/club-contacts', label: 'Club Contacts', adminOnly: false },
+  { to: '/user-settings', label: 'User Settings', adminOnly: false },
   { to: '/admin/users', label: 'Users', adminOnly: true },
   { to: '/league', label: 'League', adminOnly: true },
-  { to: '/user-settings', label: 'User Settings', adminOnly: false },
 ]
 
 export function AppShell() {
@@ -25,19 +25,34 @@ export function AppShell() {
           </Link>
           <nav aria-label="Primary" className="app-nav">
             <ul>
-              {navItems.map((item) => (
-                <li key={item.to}>
-                  <NavLink
-                    className={({ isActive }) =>
-                      isActive ? 'nav-link nav-link-active' : 'nav-link'
-                    }
-                    to={item.to}
-                    end={item.to === '/'}
+              {navItems.map((item, index) => {
+                const isFirstAdminItem =
+                  item.adminOnly && !navItems[index - 1]?.adminOnly && index > 0
+
+                return (
+                  <li
+                    className={isFirstAdminItem ? 'nav-item nav-item--admin-start' : 'nav-item'}
+                    key={item.to}
                   >
-                    {item.label}
-                  </NavLink>
-                </li>
-              ))}
+                    <NavLink
+                      className={({ isActive }) =>
+                        [
+                          'nav-link',
+                          item.adminOnly ? 'nav-link-admin' : '',
+                          isActive ? 'nav-link-active' : '',
+                        ]
+                          .filter(Boolean)
+                          .join(' ')
+                      }
+                      to={item.to}
+                      end={item.to === '/'}
+                    >
+                      {item.label}
+                      {item.adminOnly ? <span className="visually-hidden"> (admin)</span> : null}
+                    </NavLink>
+                  </li>
+                )
+              })}
             </ul>
           </nav>
           <div className="auth-actions" aria-live="polite">

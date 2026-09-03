@@ -166,6 +166,45 @@ export function getAddressById(
   return club?.addresses.find((address) => address.id === addressId)
 }
 
+export function getMatchVenueClub(
+  clubs: ClubDirectoryEntry[],
+  match: MatchRecord,
+  homeClubId: string,
+): ClubDirectoryEntry | undefined {
+  return match.location === 'home'
+    ? getClubById(clubs, homeClubId)
+    : getClubById(clubs, match.opponentClubId)
+}
+
+export function getMatchVenue(
+  clubs: ClubDirectoryEntry[],
+  match: MatchRecord,
+  homeClubId: string,
+): ClubAddress | undefined {
+  const venue = getAddressById(getMatchVenueClub(clubs, match, homeClubId), match.venueId)
+  if (venue) {
+    return venue
+  }
+
+  if (match.venueName || match.venueAddress) {
+    return {
+      id: match.venueId,
+      venueName: match.venueName ?? '',
+      address: match.venueAddress ?? '',
+    }
+  }
+
+  return undefined
+}
+
+export function formatVenueSummary(venue: ClubAddress | undefined): string {
+  return [venue?.venueName, venue?.address].filter(Boolean).join(', ') || 'Venue TBC'
+}
+
+export function formatMatchLocationLabel(location: MatchLocation): string {
+  return location === 'home' ? 'Home' : 'Away'
+}
+
 export function formatMatchTime(value: string | Date): string {
   const date = value instanceof Date ? value : new Date(value)
   if (Number.isNaN(date.getTime())) {
@@ -241,6 +280,55 @@ export function getPlayerMatchAvailabilityStatus(
   }
 
   return null
+}
+
+export type PlayerMatchResponse = 'SELECTED' | 'AVAILABLE' | 'UNAVAILABLE' | 'NO_RESPONSE'
+
+export function getPlayerMatchResponse(
+  match: MatchRecord,
+  playerId: string | undefined,
+): PlayerMatchResponse {
+  return getPlayerMatchAvailabilityStatus(match, playerId) ?? 'NO_RESPONSE'
+}
+
+export function formatPlayerMatchResponse(response: PlayerMatchResponse): string {
+  switch (response) {
+    case 'SELECTED':
+      return "You're selected"
+    case 'AVAILABLE':
+      return "You're available"
+    case 'UNAVAILABLE':
+      return "You're unavailable"
+    default:
+      return "You haven't responded"
+  }
+}
+
+export interface PlayerPairAssignment {
+  pairSlot: string
+  partnerIds: string[]
+}
+
+export function getPlayerPairAssignment(
+  match: MatchRecord,
+  playerId: string | undefined,
+): PlayerPairAssignment | undefined {
+  if (!playerId) {
+    return undefined
+  }
+
+  const pair = (match.assignedPairs ?? []).find((candidate) =>
+    candidate.playerIds.includes(playerId),
+  )
+
+  if (!pair) {
+    return undefined
+  }
+
+  return {
+    pairSlot: pair.pairSlot,
+    partnerIds: pair.playerIds.filter((candidateId) => candidateId !== playerId),
+  }
 }
 
 export function gamesNeededToWin(bestOf: number): number {
