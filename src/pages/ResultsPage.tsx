@@ -1,59 +1,51 @@
 import { Fragment, useMemo, useState } from 'react'
 import { useAppData } from '../app/AppDataProvider'
+import { useAuth } from '../auth/hooks/useAuth'
 import { MatchFilters, type MatchFiltersValue } from '../components/matches/MatchFilters'
+import { MatchLocationDetails } from '../components/matches/MatchLocationDetails'
 import { Card } from '../components/ui/Card'
 import { clubDirectory } from '../data/clubContacts'
-import type { MatchRecord } from '../types/matches'
-import { createMatchContextKey } from '../lib/matchContext'
+import {
+  DEFAULT_DIVISION_NUMBER,
+  DEFAULT_MATCH_CONTEXT_KEY,
+  DEFAULT_MATCH_TYPE,
+  createMatchContextKey,
+  isDefaultMatchType,
+} from '../lib/matchContext'
 import { createDefaultMatchFilters, filterMatches, getMatchSeasonOptions } from '../utils/matchFilters'
 import {
+  formatMatchDateTime,
   formatTeamDisplayName,
   formatOpponentName,
-  getAddressById,
   getClubById,
+  getCurrentSeason,
   sortMatchesChronologically,
   summarizeMatchResult,
 } from '../utils/matches'
 
-function formatMatchDateRange(startAt: string): string {
-  const formatter = new Intl.DateTimeFormat(undefined, {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  })
-  return formatter.format(new Date(startAt))
-}
-
-function getVenueClub(match: MatchRecord, homeClubId: string) {
-  if (match.location === 'home') {
-    return getClubById(clubDirectory, homeClubId)
-  }
-
-  return getClubById(clubDirectory, match.opponentClubId)
-}
-
 export function ResultsPage() {
-  const { matches, playersById, teamSettings } = useAppData()
-  const [filters, setFilters] = useState<MatchFiltersValue>(() => createDefaultMatchFilters('2026/2027'))
+  const { matches, isLoadingMatches, playersById, teamSettings } = useAppData()
+  const { isAdmin } = useAuth()
+  const [filters, setFilters] = useState<MatchFiltersValue>(() =>
+    createDefaultMatchFilters(getCurrentSeason()),
+  )
   const [showAllDivisions, setShowAllDivisions] = useState(false)
   const teamDisplayName = useMemo(() => formatTeamDisplayName(teamSettings.profile), [teamSettings.profile])
-  const defaultContextKey = createMatchContextKey('Mixed 6', 3)
+  const canShowAllDivisions = isAdmin && showAllDivisions
 
   const scopedMatches = useMemo(() => {
-    if (showAllDivisions) {
-      return matches.filter((match) => {
-        const normalizedMatchType = (match.matchType ?? '').trim().toLowerCase()
-        const contextKey = match.matchContextKey ?? createMatchContextKey(match.matchType ?? '', match.divisionNumber ?? 0)
-
-        return normalizedMatchType === 'mixed 6' || contextKey.startsWith('mixed-6__')
-      })
+    if (canShowAllDivisions) {
+      return matches.filter((match) =>
+        isDefaultMatchType(match.matchType, match.matchContextKey),
+      )
     }
 
     return matches.filter(
       (match) =>
         (match.matchContextKey ?? createMatchContextKey(match.matchType ?? '', match.divisionNumber ?? 0)) ===
-        defaultContextKey,
+        DEFAULT_MATCH_CONTEXT_KEY,
     )
-  }, [defaultContextKey, matches, showAllDivisions])
+  }, [canShowAllDivisions, matches])
 
   const seasonOptions = useMemo(() => getMatchSeasonOptions(scopedMatches), [scopedMatches])
   const completedMatches = useMemo(() => {
@@ -66,8 +58,8 @@ export function ResultsPage() {
   const summaryTotals = completedMatches.reduce(
     (acc, match) => {
       const summary = summarizeMatchResult(match.result, match.format)
-      acc.gamesWon += summary.rubbersWon
-      acc.gamesLost += summary.rubbersLost
+      acc.rubbersWon += summary.rubbersWon
+      acc.rubbersLost += summary.rubbersLost
 
       if (summary.rubbersWon > summary.rubbersLost) {
         acc.matchesWon += 1
@@ -77,7 +69,7 @@ export function ResultsPage() {
 
       return acc
     },
-    { gamesWon: 0, gamesLost: 0, matchesWon: 0, matchesLost: 0 },
+    { rubbersWon: 0, rubbersLost: 0, matchesWon: 0, matchesLost: 0 },
   )
 
   return (
@@ -88,17 +80,23 @@ export function ResultsPage() {
             <h1>Results</h1>
             <p>
               Results for <strong>{teamDisplayName}</strong> in{' '}
-              <strong>{showAllDivisions ? 'Mixed 6 - All Divisions' : 'Mixed 6 Div 3'}</strong>.
+              <strong>
+                {canShowAllDivisions
+                  ? `${DEFAULT_MATCH_TYPE} - All Divisions`
+                  : `${DEFAULT_MATCH_TYPE} Div ${DEFAULT_DIVISION_NUMBER}`}
+              </strong>.
             </p>
           </div>
-          <label className="checkbox-row">
-            <input
-              type="checkbox"
-              checked={showAllDivisions}
-              onChange={(event) => setShowAllDivisions(event.target.checked)}
-            />
-            <span>All Divisions</span>
-          </label>
+          {isAdmin ? (
+            <label className="checkbox-row">
+              <input
+                type="checkbox"
+                checked={showAllDivisions}
+                onChange={(event) => setShowAllDivisions(event.target.checked)}
+              />
+              <span>All Divisions</span>
+            </label>
+          ) : null}
         </div>
 
         {totalMatches > 0 && (
@@ -108,12 +106,12 @@ export function ResultsPage() {
               <p className="summary-value">{totalMatches}</p>
             </div>
             <div className="summary-stat">
-              <p className="summary-label">Games Won</p>
-              <p className="summary-value">{summaryTotals.gamesWon}</p>
+              <p className="summary-label">Rubbers Won</p>
+              <p className="summary-value">{summaryTotals.rubbersWon}</p>
             </div>
             <div className="summary-stat">
-              <p className="summary-label">Games Lost</p>
-              <p className="summary-value">{summaryTotals.gamesLost}</p>
+              <p className="summary-label">Rubbers Lost</p>
+              <p className="summary-value">{summaryTotals.rubbersLost}</p>
             </div>
             <div className="summary-stat">
               <p className="summary-label">Matches Won</p>
@@ -149,8 +147,6 @@ export function ResultsPage() {
         {completedMatches.length > 0 ? (
           completedMatches.map((match, index) => {
             const club = getClubById(clubDirectory, match.opponentClubId)
-            const venueClub = getVenueClub(match, teamSettings.profile.homeClubId)
-            const address = getAddressById(venueClub, match.venueId)
             const opponentName = formatOpponentName(match, club)
             const resultSummary = summarizeMatchResult(match.result, match.format)
             const pendingRubbers = match.format.numberOfRubbers - resultSummary.completedRubbers
@@ -176,21 +172,12 @@ export function ResultsPage() {
                 <dl className="match-info-grid">
                   <div>
                     <dt>Date &amp; Time</dt>
-                    <dd>{formatMatchDateRange(match.startAt)}</dd>
+                    <dd>{formatMatchDateTime(match.startAt, 'medium')}</dd>
                   </div>
                   <div>
                     <dt>Location</dt>
                     <dd>
-                      {match.location === 'home' ? 'Home' : 'Away'}
-                      {match.notes ? <p className="muted match-notes">{match.notes}</p> : null}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt>Venue</dt>
-                    <dd>
-                      <strong>{address?.venueName ?? 'Venue TBC'}</strong>
-                      {address?.address ? <><br />{address.address}</> : null}
-                      {address?.notes ? <><br /><span className="muted">{address.notes}</span></> : null}
+                      <MatchLocationDetails match={match} homeClubId={teamSettings.profile.homeClubId} />
                     </dd>
                   </div>
                   <div>
@@ -233,6 +220,12 @@ export function ResultsPage() {
               </Card>
             )
           })
+        ) : isLoadingMatches ? (
+          <Card>
+            <p className="muted" role="status">
+              Loading results…
+            </p>
+          </Card>
         ) : (
           <Card>
             <p className="muted">No results logged yet.</p>

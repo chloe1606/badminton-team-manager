@@ -63,8 +63,33 @@
     <!-- Browser / PWA theme -->
     <meta
       name="theme-color"
+      media="(prefers-color-scheme: light)"
       content="#ffffff"
     />
+
+    <meta
+      name="theme-color"
+      media="(prefers-color-scheme: dark)"
+      content="#0f1720"
+    />
+
+    <!-- Apply the stored theme before first paint to avoid a flash of the wrong theme -->
+    <script>
+      (function () {
+        try {
+          var storedPreference = window.localStorage.getItem('btm.theme-preference')
+          var preference =
+            storedPreference === 'light' || storedPreference === 'dark' ? storedPreference : 'system'
+          var isDark =
+            preference === 'dark' ||
+            (preference === 'system' &&
+              window.matchMedia('(prefers-color-scheme: dark)').matches)
+          document.documentElement.dataset.theme = isDark ? 'dark' : 'light'
+        } catch (error) {
+          document.documentElement.dataset.theme = 'light'
+        }
+      })()
+    </script>
 
     <!-- iOS web app settings -->
     <meta

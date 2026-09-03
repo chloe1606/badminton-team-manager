@@ -2,6 +2,7 @@ import { FormEvent, useState } from 'react'
 import { Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/hooks/useAuth'
 import { Button } from '../components/ui/Button'
+import { ThemeToggle } from '../components/ui/ThemeToggle'
 import { Card } from '../components/ui/Card'
 import { Input } from '../components/ui/Input'
 import { isSupabaseConfigured, supabaseConfigError } from '../lib/supabase'
@@ -39,8 +40,11 @@ export function LoginPage() {
   return (
     <main className="auth-layout">
       <Card className="auth-card" aria-labelledby="login-heading">
-        <h1 id="login-heading">Badminton Team Manager</h1>
-        <p className="muted">Sign in with your Supabase email address and password.</p>
+        <div className="auth-card-heading">
+          <h1 id="login-heading">Badminton Team Manager</h1>
+          <ThemeToggle />
+        </div>
+        <p className="muted">Sign in with your email address and password.</p>
         {!isSupabaseConfigured && (
           <p role="alert" className="error-text">
             Supabase is not configured. {supabaseConfigError}

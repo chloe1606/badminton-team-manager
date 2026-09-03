@@ -34,6 +34,7 @@ export function mapAuthUser(profile: PlayerProfile): AuthUser {
     email: profile.email,
     name: profile.fullName,
     role: profile.role,
-    playerId: profile.playerId ?? (profile.role === 'player' ? profile.id : undefined),
+    // Admins are players too, so every account links to a player record by default.
+    playerId: profile.playerId ?? profile.id,
   }
 }

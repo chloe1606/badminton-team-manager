@@ -166,6 +166,87 @@ export function getAddressById(
   return club?.addresses.find((address) => address.id === addressId)
 }
 
+export function getMatchVenueClub(
+  clubs: ClubDirectoryEntry[],
+  match: MatchRecord,
+  homeClubId: string,
+): ClubDirectoryEntry | undefined {
+  return match.location === 'home'
+    ? getClubById(clubs, homeClubId)
+    : getClubById(clubs, match.opponentClubId)
+}
+
+export function getMatchVenue(
+  clubs: ClubDirectoryEntry[],
+  match: MatchRecord,
+  homeClubId: string,
+): ClubAddress | undefined {
+  const venue = getAddressById(getMatchVenueClub(clubs, match, homeClubId), match.venueId)
+  if (venue) {
+    return venue
+  }
+
+  if (match.venueName || match.venueAddress) {
+    return {
+      id: match.venueId,
+      venueName: match.venueName ?? '',
+      address: match.venueAddress ?? '',
+    }
+  }
+
+  return undefined
+}
+
+export function formatVenueSummary(venue: ClubAddress | undefined): string {
+  return [venue?.venueName, venue?.address].filter(Boolean).join(', ') || 'Venue TBC'
+}
+
+export function formatMatchLocationLabel(location: MatchLocation): string {
+  return location === 'home' ? 'Home' : 'Away'
+}
+
+export function formatMatchTime(value: string | Date): string {
+  const date = value instanceof Date ? value : new Date(value)
+  if (Number.isNaN(date.getTime())) {
+    return ''
+  }
+
+  const hours = date.getHours()
+  const minutes = date.getMinutes()
+  const suffix = hours < 12 ? 'am' : 'pm'
+  const twelveHour = hours % 12 === 0 ? 12 : hours % 12
+
+  return minutes === 0
+    ? `${twelveHour}${suffix}`
+    : `${twelveHour}:${minutes.toString().padStart(2, '0')}${suffix}`
+}
+
+export function formatMatchDateTime(
+  value: string | Date,
+  dateStyle: 'full' | 'long' | 'medium' | 'short' = 'medium',
+): string {
+  const date = value instanceof Date ? value : new Date(value)
+  if (Number.isNaN(date.getTime())) {
+    return ''
+  }
+
+  const formatter = new Intl.DateTimeFormat(undefined, { dateStyle })
+  return `${formatter.format(date)} ${formatMatchTime(date)}`
+}
+
+export function createGoogleMapsUrl(...parts: (string | undefined | null)[]): string | undefined {
+  const query = parts
+    .map((part) => part?.trim())
+    .filter((part): part is string => Boolean(part))
+    .join(', ')
+
+  if (!query) {
+    return undefined
+  }
+
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`
+}
+
 export function formatOpponentName(match: MatchRecord, club: ClubDirectoryEntry | undefined): string {
   if (!club) {
     return 'Unknown opponent'
@@ -199,6 +280,86 @@ export function getPlayerMatchAvailabilityStatus(
   }
 
   return null
+}
+
+export type PlayerMatchResponse = 'SELECTED' | 'AVAILABLE' | 'UNAVAILABLE' | 'NO_RESPONSE'
+
+export function getPlayerMatchResponse(
+  match: MatchRecord,
+  playerId: string | undefined,
+): PlayerMatchResponse {
+  return getPlayerMatchAvailabilityStatus(match, playerId) ?? 'NO_RESPONSE'
+}
+
+export type PlayerAvailabilityAnswer = 'AVAILABLE' | 'UNAVAILABLE' | 'NO_RESPONSE'
+
+/**
+ * The answer the player gave, independent of whether the captain has since selected them.
+ */
+export function getPlayerAvailabilityAnswer(
+  match: MatchRecord,
+  playerId: string | undefined,
+): PlayerAvailabilityAnswer {
+  if (!playerId) {
+    return 'NO_RESPONSE'
+  }
+
+  if ((match.availablePlayerIds ?? []).includes(playerId)) {
+    return 'AVAILABLE'
+  }
+
+  if ((match.unavailablePlayerIds ?? []).includes(playerId)) {
+    return 'UNAVAILABLE'
+  }
+
+  return 'NO_RESPONSE'
+}
+
+export function isPlayerSelectedForMatch(
+  match: MatchRecord,
+  playerId: string | undefined,
+): boolean {
+  return Boolean(playerId) && (match.assignedPlayerIds ?? []).includes(playerId as string)
+}
+
+export function formatPlayerMatchResponse(response: PlayerMatchResponse): string {
+  switch (response) {
+    case 'SELECTED':
+      return "You're selected"
+    case 'AVAILABLE':
+      return "You're available"
+    case 'UNAVAILABLE':
+      return "You're unavailable"
+    default:
+      return "You haven't responded"
+  }
+}
+
+export interface PlayerPairAssignment {
+  pairSlot: string
+  partnerIds: string[]
+}
+
+export function getPlayerPairAssignment(
+  match: MatchRecord,
+  playerId: string | undefined,
+): PlayerPairAssignment | undefined {
+  if (!playerId) {
+    return undefined
+  }
+
+  const pair = (match.assignedPairs ?? []).find((candidate) =>
+    candidate.playerIds.includes(playerId),
+  )
+
+  if (!pair) {
+    return undefined
+  }
+
+  return {
+    pairSlot: pair.pairSlot,
+    partnerIds: pair.playerIds.filter((candidateId) => candidateId !== playerId),
+  }
 }
 
 export function gamesNeededToWin(bestOf: number): number {

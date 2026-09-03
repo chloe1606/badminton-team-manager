@@ -5,7 +5,6 @@ import { ProtectedRoute } from '../components/routing/ProtectedRoute'
 import { ClubContactsPage } from '../pages/ClubContactsPage'
 import { AdminUsersPage } from '../pages/AdminUsersPage'
 import { DashboardPage } from '../pages/DashboardPage'
-import { FeaturePage } from '../pages/FeaturePage'
 import { LoginPage } from '../pages/LoginPage'
 import { MatchesPage } from '../pages/MatchesPage'
 import { LeaguePage } from '../pages/LeaguePage'
@@ -32,15 +31,6 @@ export const appRouter = createBrowserRouter([
           {
             path: '/',
             element: <DashboardPage />,
-          },
-          {
-            path: '/attendance',
-            element: (
-              <FeaturePage
-                title="Attendance"
-                description="Track who is available and confirmed for each practice."
-              />
-            ),
           },
           {
             path: '/matches',
