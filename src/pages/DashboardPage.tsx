@@ -374,7 +374,7 @@ export function DashboardPage() {
               })}
             </div>
           ) : (
-            <p className="muted">You have responded to all upcoming matches.</p>
+            <p className="muted">No actions required</p>
           )}
         </Card>
       ) : null}
