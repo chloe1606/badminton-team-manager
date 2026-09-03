@@ -1750,20 +1750,6 @@ export function MatchesPage() {
                                     </span>
                                   ) : null}
                                 </h2>
-                                {isPlayerSelected && playerPair ? (
-                                  <p className="muted match-card-pairing">
-                                    {playerPair.pairSlot}
-                                    {playerPair.partnerIds.length > 0
-                                      ? ` with ${playerPair.partnerIds
-                                          .map(
-                                            (partnerId: string) =>
-                                              playersById.get(partnerId)?.fullName ??
-                                              'Unknown player',
-                                          )
-                                          .join(', ')}`
-                                      : ' · partner to be confirmed'}
-                                  </p>
-                                ) : null}
                               </div>
                             </div>
 
@@ -1785,6 +1771,23 @@ export function MatchesPage() {
                                 <dt>Format</dt>
                                 <dd>{match.format.numberOfRubbers} rubbers</dd>
                               </div>
+                              {isPlayerSelected && playerPair ? (
+                                <div>
+                                  <dt>Your pairing</dt>
+                                  <dd>
+                                    {playerPair.pairSlot}
+                                    {playerPair.partnerIds.length > 0
+                                      ? ` with ${playerPair.partnerIds
+                                          .map(
+                                            (partnerId: string) =>
+                                              playersById.get(partnerId)?.fullName ??
+                                              'Unknown player',
+                                          )
+                                          .join(', ')}`
+                                      : ' · partner to be confirmed'}
+                                  </dd>
+                                </div>
+                              ) : null}
                             </dl>
                             {user?.playerId && !isExpired ? (
                               <PlayerAvailabilityActions

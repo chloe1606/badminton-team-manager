@@ -1698,11 +1698,7 @@ a {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-2);
-}
-
-.match-card-pairing {
-  margin: var(--space-1) 0 0;
+  gap: var(--space-4);
 }
 
 .match-roster-details {
