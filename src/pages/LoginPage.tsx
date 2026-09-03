@@ -40,7 +40,7 @@ export function LoginPage() {
     <main className="auth-layout">
       <Card className="auth-card" aria-labelledby="login-heading">
         <h1 id="login-heading">Badminton Team Manager</h1>
-        <p className="muted">Sign in with your Supabase email address and password.</p>
+        <p className="muted">Sign in with your email address and password.</p>
         {!isSupabaseConfigured && (
           <p role="alert" className="error-text">
             Supabase is not configured. {supabaseConfigError}

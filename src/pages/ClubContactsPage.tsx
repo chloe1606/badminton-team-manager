@@ -1,5 +1,6 @@
 import { clubDirectory } from '../data/clubContacts'
 import { Card } from '../components/ui/Card'
+import { createGoogleMapsUrl } from '../utils/matches'
 
 export function ClubContactsPage() {
   return (
@@ -42,14 +43,26 @@ export function ClubContactsPage() {
               <section>
                 <h3>Venue</h3>
                 <ul className="detail-list">
-                  {club.addresses.map((address) => (
-                    <li key={address.id}>
-                      <strong>{address.venueName}</strong>
-                      <br />
-                      {address.address}
-                      {address.notes ? <p className="muted venue-note">Notes: {address.notes}</p> : null}
-                    </li>
-                  ))}
+                  {club.addresses.map((address) => {
+                    const mapsUrl = createGoogleMapsUrl(address.venueName, address.address)
+
+                    return (
+                      <li key={address.id}>
+                        <strong>{address.venueName}</strong>
+                        <br />
+                        {address.address}
+                        {mapsUrl ? (
+                          <>
+                            <br />
+                            <a href={mapsUrl} rel="noreferrer" target="_blank">
+                              View on Google Maps
+                            </a>
+                          </>
+                        ) : null}
+                        {address.notes ? <p className="muted venue-note">Notes: {address.notes}</p> : null}
+                      </li>
+                    )
+                  })}
                 </ul>
               </section>
             </div>

@@ -8,6 +8,8 @@ import { defaultTeamSettings } from '../data/matches'
 import type { MatchRecord } from '../types/matches'
 import { createMatchesCalendarIcs, downloadIcs, type CalendarFixture } from '../utils/calendar'
 import {
+  createGoogleMapsUrl,
+  formatMatchDateTime,
   formatOpponentName,
   getClubById,
   getAddressById,
@@ -17,11 +19,21 @@ import {
 } from '../utils/matches'
 
 function formatMatchDateRange(startAt: string): string {
-  const formatter = new Intl.DateTimeFormat(undefined, {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  })
-  return formatter.format(new Date(startAt))
+  return formatMatchDateTime(startAt, 'medium')
+}
+
+function getMatchVenue(match: MatchRecord) {
+  const venueClub =
+    match.location === 'home'
+      ? getClubById(clubDirectory, defaultTeamSettings.profile.homeClubId)
+      : getClubById(clubDirectory, match.opponentClubId)
+
+  return (
+    getAddressById(venueClub, match.venueId) ??
+    (match.venueName || match.venueAddress
+      ? { id: match.venueId, venueName: match.venueName ?? '', address: match.venueAddress ?? '' }
+      : undefined)
+  )
 }
 
 function formatMonthHeading(dateValue: string): string {
@@ -70,6 +82,84 @@ function createDashboardCalendarFixture(
   }
 }
 
+function PlayerMatchesSection({
+  title,
+  description,
+  matches,
+  isLoading,
+  emptyMessage,
+  isSelected = false,
+  onExport,
+}: {
+  title: string
+  description: string
+  matches: MatchRecord[]
+  isLoading: boolean
+  emptyMessage: string
+  isSelected?: boolean
+  onExport: () => void
+}) {
+  return (
+    <Card>
+      <div className="card-heading">
+        <div>
+          <h2>{title}</h2>
+          <p className="muted">{description}</p>
+        </div>
+        <Button onClick={onExport} variant="secondary" disabled={matches.length === 0}>
+          Export all to calendar
+        </Button>
+      </div>
+      {isLoading ? (
+        <p className="muted">Loading matches...</p>
+      ) : matches.length > 0 ? (
+        <div className="dashboard-match-grid">
+          {matches.map((match, index) => {
+            const opponentClub = getClubById(clubDirectory, match.opponentClubId)
+            const opponentName = formatOpponentName(match, opponentClub)
+            const venue = getMatchVenue(match)
+            const mapsUrl = createGoogleMapsUrl(venue?.venueName, venue?.address)
+
+            return (
+              <section
+                key={match.id}
+                className={`dashboard-match-card${isSelected ? ' dashboard-match-card--selected' : ''}`}
+                aria-label={`Match ${index + 1}`}
+              >
+                <p className="eyebrow">Match {index + 1}</p>
+                <h3 className="dashboard-match-title">{match.teamDisplayName} vs {opponentName}</h3>
+                <dl className="dashboard-match-meta">
+                  <div>
+                    <dt>Location</dt>
+                    <dd>
+                      {[venue?.venueName, venue?.address].filter(Boolean).join(', ') || 'Venue TBC'}{' '}
+                      ({match.location === 'home' ? 'Home' : 'Away'})
+                      {mapsUrl ? (
+                        <>
+                          <br />
+                          <a href={mapsUrl} rel="noreferrer" target="_blank">
+                            View on Google Maps
+                          </a>
+                        </>
+                      ) : null}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Date and time</dt>
+                    <dd>{formatMatchDateRange(match.startAt)}</dd>
+                  </div>
+                </dl>
+              </section>
+            )
+          })}
+        </div>
+      ) : (
+        <p className="muted">{emptyMessage}</p>
+      )}
+    </Card>
+  )
+}
+
 export function DashboardPage() {
   const { matches, isLoadingMatches, playersById } = useAppData()
   const { isAdmin, user } = useAuth()
@@ -111,6 +201,19 @@ export function DashboardPage() {
             (match.assignedPlayerIds ?? []).includes(playerId)),
       ),
     [futureMatches, playerId],
+  )
+  const selectedPlayerMatches = useMemo(
+    () => playerMatches.filter((match) => (match.assignedPlayerIds ?? []).includes(playerId ?? '')),
+    [playerMatches, playerId],
+  )
+  const availablePlayerMatches = useMemo(
+    () =>
+      playerMatches.filter(
+        (match) =>
+          (match.availablePlayerIds ?? []).includes(playerId ?? '') &&
+          !(match.assignedPlayerIds ?? []).includes(playerId ?? ''),
+      ),
+    [playerMatches, playerId],
   )
   const summaryMatch = useMemo(
     () => futureMatches.find((match) => match.id === selectedSummaryMatchId) ?? futureMatches[0],
@@ -155,15 +258,15 @@ export function DashboardPage() {
     }
   }
 
-  function exportAllMatchesToCalendar() {
-    if (playerMatches.length === 0) {
+  function exportMatchesToCalendar(fileName: string, matchesToExport: MatchRecord[]) {
+    if (matchesToExport.length === 0) {
       return
     }
 
     downloadIcs(
-      'dashboard-match-fixtures.ics',
+      fileName,
       createMatchesCalendarIcs(
-        playerMatches.map((match) => createDashboardCalendarFixture(match, playerId)),
+        matchesToExport.map((match) => createDashboardCalendarFixture(match, playerId)),
       ),
     )
   }
@@ -210,68 +313,36 @@ export function DashboardPage() {
           )}
         </Card>
       ) : null}
-      <Card>
-        <div className="card-heading">
-          <div>
-            <h2>Your Matches</h2>
-            <p className="muted">Matches you have marked available for or been selected to play.</p>
-          </div>
-          <Button
-            onClick={exportAllMatchesToCalendar}
-            variant="secondary"
-            disabled={playerMatches.length === 0}
-          >
-            Export all to calendar
-          </Button>
-        </div>
-        {isLoadingMatches ? (
-          <p className="muted">Loading matches...</p>
-        ) : playerMatches.length > 0 ? (
-          <div className="dashboard-match-grid">
-            {playerMatches.map((match, index) => {
-              const opponentClub = getClubById(clubDirectory, match.opponentClubId)
-              const opponentName = formatOpponentName(match, opponentClub)
-              const isAvailable = (match.availablePlayerIds ?? []).includes(playerId ?? '')
-              const isSelected = (match.assignedPlayerIds ?? []).includes(playerId ?? '')
+      <PlayerMatchesSection
+        title="Your Selected Matches"
+        description="Matches you have been selected to play."
+        matches={selectedPlayerMatches}
+        isLoading={isLoadingMatches}
+        emptyMessage={
+          playerId
+            ? 'You have not been selected for any future matches.'
+            : 'This account is not linked to a player.'
+        }
+        isSelected
+        onExport={() =>
+          exportMatchesToCalendar('dashboard-selected-matches.ics', selectedPlayerMatches)
+        }
+      />
 
-              return (
-                <section
-                  key={match.id}
-                  className={`dashboard-match-card${isSelected ? ' dashboard-match-card--selected' : ''}`}
-                  aria-label={`Match ${index + 1}`}
-                >
-                  <p className="eyebrow">Match {index + 1}</p>
-                  <h3 className="dashboard-match-title">{match.teamDisplayName} vs {opponentName}</h3>
-                  <dl className="dashboard-match-meta">
-                    <div>
-                      <dt>Location</dt>
-                      <dd>{match.location === 'home' ? 'Home' : 'Away'}</dd>
-                    </div>
-                    <div>
-                      <dt>Date and time</dt>
-                      <dd>{formatMatchDateRange(match.startAt)}</dd>
-                    </div>
-                    <div>
-                      <dt>Available</dt>
-                      <dd>{isAvailable ? 'Yes' : 'No'}</dd>
-                    </div>
-                    <div>
-                      <dt>Selected</dt>
-                      <dd>{isSelected ? 'Yes' : 'No'}</dd>
-                    </div>
-                  </dl>
-                </section>
-              )
-            })}
-          </div>
-        ) : (
-          <p className="muted">
-            {playerId
-              ? 'You are not currently available for or selected for any future matches.'
-              : 'This account is not linked to a player.'}
-          </p>
-        )}
-      </Card>
+      <PlayerMatchesSection
+        title="Your Available Matches"
+        description="Matches you have marked yourself available for."
+        matches={availablePlayerMatches}
+        isLoading={isLoadingMatches}
+        emptyMessage={
+          playerId
+            ? 'You have not marked yourself available for any future matches.'
+            : 'This account is not linked to a player.'
+        }
+        onExport={() =>
+          exportMatchesToCalendar('dashboard-available-matches.ics', availablePlayerMatches)
+        }
+      />
       {isAdmin ? (
         <Card>
           <div className="card-heading">

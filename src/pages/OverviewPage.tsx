@@ -6,6 +6,7 @@ import { clubDirectory } from '../data/clubContacts'
 import type { MatchRecord } from '../types/matches'
 import { createMatchesCalendarIcs, downloadIcs } from '../utils/calendar'
 import {
+  formatMatchDateTime,
   formatOpponentName,
   getAddressById,
   getClubById,
@@ -22,11 +23,7 @@ function getVenueClub(match: MatchRecord, homeClubId: string) {
 }
 
 function formatMatchDateRange(startAt: string): string {
-  const formatter = new Intl.DateTimeFormat(undefined, {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  })
-  return formatter.format(new Date(startAt))
+  return formatMatchDateTime(startAt, 'medium')
 }
 
 export function OverviewPage() {

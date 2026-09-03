@@ -166,6 +166,48 @@ export function getAddressById(
   return club?.addresses.find((address) => address.id === addressId)
 }
 
+export function formatMatchTime(value: string | Date): string {
+  const date = value instanceof Date ? value : new Date(value)
+  if (Number.isNaN(date.getTime())) {
+    return ''
+  }
+
+  const hours = date.getHours()
+  const minutes = date.getMinutes()
+  const suffix = hours < 12 ? 'am' : 'pm'
+  const twelveHour = hours % 12 === 0 ? 12 : hours % 12
+
+  return minutes === 0
+    ? `${twelveHour}${suffix}`
+    : `${twelveHour}:${minutes.toString().padStart(2, '0')}${suffix}`
+}
+
+export function formatMatchDateTime(
+  value: string | Date,
+  dateStyle: 'full' | 'long' | 'medium' | 'short' = 'medium',
+): string {
+  const date = value instanceof Date ? value : new Date(value)
+  if (Number.isNaN(date.getTime())) {
+    return ''
+  }
+
+  const formatter = new Intl.DateTimeFormat(undefined, { dateStyle })
+  return `${formatter.format(date)} ${formatMatchTime(date)}`
+}
+
+export function createGoogleMapsUrl(...parts: (string | undefined | null)[]): string | undefined {
+  const query = parts
+    .map((part) => part?.trim())
+    .filter((part): part is string => Boolean(part))
+    .join(', ')
+
+  if (!query) {
+    return undefined
+  }
+
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`
+}
+
 export function formatOpponentName(match: MatchRecord, club: ClubDirectoryEntry | undefined): string {
   if (!club) {
     return 'Unknown opponent'

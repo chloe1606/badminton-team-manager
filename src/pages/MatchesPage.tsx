@@ -32,6 +32,7 @@ import {
   validateRubberGames,
   getSeasonYear,
   getCurrentSeason,
+  formatMatchDateTime,
   calculateAdminStats,
   isMatchExpired,
 } from '../utils/matches'
@@ -81,6 +82,20 @@ function cloneFormat(format: MatchFormatConfig): MatchFormatConfig {
     pairingSlots: [...format.pairingSlots],
     squad: { ...format.squad },
     scoring: { ...format.scoring },
+  }
+}
+
+function withDefaultFormat(format: MatchFormatConfig | undefined): MatchFormatConfig {
+  const fallbackFormat = defaultTeamSettings.matchFormat
+
+  return {
+    ...fallbackFormat,
+    ...format,
+    numberOfRubbers: format?.numberOfRubbers ?? fallbackFormat.numberOfRubbers,
+    rubbersPerPlayer: format?.rubbersPerPlayer ?? fallbackFormat.rubbersPerPlayer,
+    pairingSlots: format?.pairingSlots?.length ? [...format.pairingSlots] : [...fallbackFormat.pairingSlots],
+    squad: { ...fallbackFormat.squad, ...format?.squad },
+    scoring: { ...fallbackFormat.scoring, ...format?.scoring },
   }
 }
 
@@ -173,11 +188,7 @@ function validateMatchDetailsInput(draft: MatchDetailsDraft, teamSettings: TeamS
 }
 
 function formatMatchDateRange(startAt: string): string {
-  const formatter = new Intl.DateTimeFormat(undefined, {
-    dateStyle: 'full',
-    timeStyle: 'short',
-  })
-  return formatter.format(new Date(startAt))
+  return formatMatchDateTime(startAt, 'full')
 }
 
 function getVenueClub(match: MatchRecord, teamSettings: TeamSettings) {
@@ -1338,7 +1349,8 @@ export function MatchesPage() {
     return [...seasonMap.entries()]
       .sort(([leftSeason], [rightSeason]) => rightSeason.localeCompare(leftSeason))
       .map(([season, seasonMatches]) => ({ season, matches: seasonMatches }))
-  }, [sortedMatches])
+      .filter((section) => isAdmin || section.season >= currentSeason)
+  }, [currentSeason, isAdmin, sortedMatches])
   const currentAndFutureSeasonMatches = useMemo(
     () =>
       seasonSections
@@ -1468,13 +1480,14 @@ export function MatchesPage() {
         data.matchType ?? matchType,
         Number.isNaN(requestedDivision) ? 3 : requestedDivision,
       )
+      const resolvedFormat = withDefaultFormat(selectedFormat ?? teamSettings.matchFormat)
 
       await handleAddMatch({
         ...data,
         teamDisplayName,
         leagueName: (teamSettings.profile.leagueName ?? 'NWKBA').trim(),
         matchContextKey: selectedMatchContextKey,
-        format: cloneFormat(selectedFormat ?? teamSettings.matchFormat),
+        format: cloneFormat(resolvedFormat),
       })
 
       setOpponentClubId('')
@@ -1504,14 +1517,16 @@ export function MatchesPage() {
             </p>
           </div>
           <div className="form-actions">
-            <label className="checkbox-row">
-              <input
-                type="checkbox"
-                checked={showAllDivisions}
-                onChange={(event) => setShowAllDivisions(event.target.checked)}
-              />
-              <span>All Divisions</span>
-            </label>
+            {isAdmin ? (
+              <label className="checkbox-row">
+                <input
+                  type="checkbox"
+                  checked={showAllDivisions}
+                  onChange={(event) => setShowAllDivisions(event.target.checked)}
+                />
+                <span>All Divisions</span>
+              </label>
+            ) : null}
             <Button onClick={exportAllMatches} variant="secondary">
               Export all to calendar
             </Button>
@@ -1639,7 +1654,9 @@ export function MatchesPage() {
                               <div>
                                 <dt>Location</dt>
                                 <dd>
-                                  {match.location === 'home' ? 'Home' : 'Away'}
+                                  {[address?.venueName, address?.address].filter(Boolean).join(', ') ||
+                                    'Venue TBC'}{' '}
+                                  ({match.location === 'home' ? 'Home' : 'Away'})
                                   {match.notes ? <p className="muted match-notes">{match.notes}</p> : null}
                                 </dd>
                               </div>

@@ -7,6 +7,7 @@ import type { MatchRecord } from '../types/matches'
 import { createMatchContextKey } from '../lib/matchContext'
 import { createDefaultMatchFilters, filterMatches, getMatchSeasonOptions } from '../utils/matchFilters'
 import {
+  formatMatchDateTime,
   formatTeamDisplayName,
   formatOpponentName,
   getAddressById,
@@ -16,11 +17,7 @@ import {
 } from '../utils/matches'
 
 function formatMatchDateRange(startAt: string): string {
-  const formatter = new Intl.DateTimeFormat(undefined, {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  })
-  return formatter.format(new Date(startAt))
+  return formatMatchDateTime(startAt, 'medium')
 }
 
 function getVenueClub(match: MatchRecord, homeClubId: string) {
