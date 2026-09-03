@@ -1,4 +1,4 @@
-import { FormEvent, Fragment, useEffect, useMemo, useRef, useState } from 'react'
+import { FormEvent, Fragment, ReactNode, useEffect, useMemo, useRef, useState } from 'react'
 import { useAppData } from '../app/AppDataProvider'
 import { useAuth } from '../auth/hooks/useAuth'
 import { Button } from '../components/ui/Button'
@@ -27,10 +27,10 @@ import {
   formatTeamDisplayName,
   getAddressById,
   getClubById,
+  getPlayerAvailabilityAnswer,
   getPlayerMatchAvailabilityStatus,
-  getPlayerMatchResponse,
   getPlayerPairAssignment,
-  formatPlayerMatchResponse,
+  isPlayerSelectedForMatch,
   normalizeAssignedPairs,
   suggestAssignedPairs,
   sortMatchesChronologically,
@@ -205,6 +205,27 @@ function getVenueClub(match: MatchRecord, teamSettings: TeamSettings) {
   }
 
   return getClubById(clubDirectory, match.opponentClubId)
+}
+
+function MatchRosterDisclosure({
+  isExpanded,
+  summaryLabel,
+  children,
+}: {
+  isExpanded: boolean
+  summaryLabel: string
+  children: ReactNode
+}) {
+  if (isExpanded) {
+    return <>{children}</>
+  }
+
+  return (
+    <details className="match-roster-details">
+      <summary className="details-summary">{summaryLabel}</summary>
+      {children}
+    </details>
+  )
 }
 
 function createCalendarFixture(
@@ -1406,6 +1427,17 @@ export function MatchesPage() {
         .flatMap((section) => section.matches),
     [currentSeason, seasonSections],
   )
+  const matchesNeedingResponse = useMemo(
+    () =>
+      user?.playerId
+        ? currentAndFutureSeasonMatches.filter(
+            (match) =>
+              !isMatchExpired(match) &&
+              getPlayerAvailabilityAnswer(match, user.playerId) === 'NO_RESPONSE',
+          )
+        : [],
+    [currentAndFutureSeasonMatches, user?.playerId],
+  )
   const adminStats = useMemo(
     () => calculateAdminStats(currentAndFutureSeasonMatches, players),
     [currentAndFutureSeasonMatches, players],
@@ -1586,6 +1618,18 @@ export function MatchesPage() {
         </div>
       </Card>
 
+      {matchesNeedingResponse.length > 0 ? (
+        <Card className="response-summary-card">
+          <p className="response-summary">
+            <strong>
+              {matchesNeedingResponse.length}{' '}
+              {matchesNeedingResponse.length === 1 ? 'match needs' : 'matches need'} your response
+            </strong>{' '}
+            <a href={`#match-${matchesNeedingResponse[0].id}`}>Go to the first one</a>
+          </p>
+        </Card>
+      ) : null}
+
       {isAdmin ? (
         <Card>
           <div className="admin-summary">
@@ -1668,14 +1712,20 @@ export function MatchesPage() {
                         const availablePlayerIds = match.availablePlayerIds ?? []
                         const unavailablePlayerIds = match.unavailablePlayerIds ?? []
                         const assignedPlayerIds = match.assignedPlayerIds ?? []
-                        const playerResponse = getPlayerMatchResponse(match, user?.playerId)
+                        const playerAnswer = getPlayerAvailabilityAnswer(match, user?.playerId)
+                        const isPlayerSelected = isPlayerSelectedForMatch(match, user?.playerId)
                         const playerPair = getPlayerPairAssignment(match, user?.playerId)
                         const isExpired = isMatchExpired(match)
 
                         return (
                           <Card
                             key={match.id}
-                            className={`match-card${isExpired ? ' match-card--expired' : ''}`}
+                            id={`match-${match.id}`}
+                            className={`match-card${isExpired ? ' match-card--expired' : ''}${
+                              user?.playerId && !isExpired
+                                ? ` match-card--${playerAnswer.toLowerCase().replace('_', '-')}`
+                                : ''
+                            }`}
                           >
                             <div className="card-heading">
                               <div>
@@ -1692,7 +1742,28 @@ export function MatchesPage() {
                                     Export to calendar
                                   </Button>
                                 </div>
-                                <h2>{match.teamDisplayName} vs {opponentName}</h2>
+                                <h2 className="match-card-title">
+                                  {match.teamDisplayName} vs {opponentName}
+                                  {isPlayerSelected ? (
+                                    <span className="response-chip response-chip--selected">
+                                      You&rsquo;re selected
+                                    </span>
+                                  ) : null}
+                                </h2>
+                                {isPlayerSelected && playerPair ? (
+                                  <p className="muted match-card-pairing">
+                                    {playerPair.pairSlot}
+                                    {playerPair.partnerIds.length > 0
+                                      ? ` with ${playerPair.partnerIds
+                                          .map(
+                                            (partnerId: string) =>
+                                              playersById.get(partnerId)?.fullName ??
+                                              'Unknown player',
+                                          )
+                                          .join(', ')}`
+                                      : ' · partner to be confirmed'}
+                                  </p>
+                                ) : null}
                               </div>
                             </div>
 
@@ -1711,41 +1782,23 @@ export function MatchesPage() {
                                 </dd>
                               </div>
                               <div>
-                                <dt>Your status</dt>
-                                <dd>
-                                  {user?.playerId ? (
-                                    <>
-                                      <span
-                                        className={`response-chip response-chip--${playerResponse.toLowerCase()}`}
-                                      >
-                                        {formatPlayerMatchResponse(playerResponse)}
-                                      </span>
-                                      {playerPair ? (
-                                        <p className="muted match-notes">
-                                          {playerPair.pairSlot}
-                                          {playerPair.partnerIds.length > 0
-                                            ? ` with ${playerPair.partnerIds
-                                                .map(
-                                                  (partnerId: string) =>
-                                                    playersById.get(partnerId)?.fullName ??
-                                                    'Unknown player',
-                                                )
-                                                .join(', ')}`
-                                            : ' · partner to be confirmed'}
-                                        </p>
-                                      ) : null}
-                                    </>
-                                  ) : (
-                                    <span className="muted">Not linked to a player</span>
-                                  )}
-                                </dd>
-                              </div>
-                              <div>
                                 <dt>Format</dt>
                                 <dd>{match.format.numberOfRubbers} rubbers</dd>
                               </div>
                             </dl>
+                            {user?.playerId && !isExpired ? (
+                              <PlayerAvailabilityActions
+                                match={match}
+                                playerId={user.playerId}
+                                onChange={updateMatchAvailability}
+                              />
+                            ) : null}
+
                             <div className="match-players-row">
+                              <MatchRosterDisclosure
+                                isExpanded={isAdmin}
+                                summaryLabel={`${availablePlayerIds.length} available · ${unavailablePlayerIds.length} unavailable · ${assignedPlayerIds.length} selected`}
+                              >
                               <dl className="match-players-grid">
                                 <div>
                                   <dt>Available</dt>
@@ -1836,13 +1889,7 @@ export function MatchesPage() {
                                   </div>
                                 ) : null}
                               </dl>
-                              {user?.playerId && !isExpired ? (
-                                <PlayerAvailabilityActions
-                                  match={match}
-                                  playerId={user.playerId}
-                                  onChange={updateMatchAvailability}
-                                />
-                              ) : null}
+                              </MatchRosterDisclosure>
                             </div>
 
                             {isAdmin && match.result ? (

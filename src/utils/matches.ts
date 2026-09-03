@@ -291,6 +291,37 @@ export function getPlayerMatchResponse(
   return getPlayerMatchAvailabilityStatus(match, playerId) ?? 'NO_RESPONSE'
 }
 
+export type PlayerAvailabilityAnswer = 'AVAILABLE' | 'UNAVAILABLE' | 'NO_RESPONSE'
+
+/**
+ * The answer the player gave, independent of whether the captain has since selected them.
+ */
+export function getPlayerAvailabilityAnswer(
+  match: MatchRecord,
+  playerId: string | undefined,
+): PlayerAvailabilityAnswer {
+  if (!playerId) {
+    return 'NO_RESPONSE'
+  }
+
+  if ((match.availablePlayerIds ?? []).includes(playerId)) {
+    return 'AVAILABLE'
+  }
+
+  if ((match.unavailablePlayerIds ?? []).includes(playerId)) {
+    return 'UNAVAILABLE'
+  }
+
+  return 'NO_RESPONSE'
+}
+
+export function isPlayerSelectedForMatch(
+  match: MatchRecord,
+  playerId: string | undefined,
+): boolean {
+  return Boolean(playerId) && (match.assignedPlayerIds ?? []).includes(playerId as string)
+}
+
 export function formatPlayerMatchResponse(response: PlayerMatchResponse): string {
   switch (response) {
     case 'SELECTED':
