@@ -377,6 +377,10 @@ a {
   justify-content: space-between;
 }
 
+.dashboard-section-heading {
+  margin-bottom: var(--space-4);
+}
+
 .responsive-columns {
   display: grid;
   gap: var(--space-4);
@@ -1578,15 +1582,32 @@ a {
 }
 
 @media (max-width: 47.99rem) {
+  .header-content {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+  }
+
+  .brand {
+    min-width: 0;
+  }
+
+  .app-nav {
+    grid-column: 1 / -1;
+    min-width: 0;
+  }
+
+  .auth-actions {
+    min-width: 0;
+    justify-content: flex-end;
+  }
+
   .app-nav ul {
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    padding-bottom: var(--space-1);
+    flex-wrap: wrap;
   }
 
   .app-nav li {
-    flex: 0 0 auto;
+    min-width: 0;
   }
 }
 

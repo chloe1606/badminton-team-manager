@@ -213,7 +213,7 @@ export function formatMatchTime(value: string | Date): string {
 
   const hours = date.getHours()
   const minutes = date.getMinutes()
-  const suffix = hours < 12 ? 'am' : 'pm'
+  const suffix = hours < 12 ? 'AM' : 'PM'
   const twelveHour = hours % 12 === 0 ? 12 : hours % 12
 
   return minutes === 0
@@ -231,7 +231,11 @@ export function formatMatchDateTime(
   }
 
   const formatter = new Intl.DateTimeFormat(undefined, { dateStyle })
-  return `${formatter.format(date)} ${formatMatchTime(date)}`
+  return `${formatter.format(date)} at ${formatMatchTime(date)}`
+}
+
+export function formatMatchFormat(format: MatchFormatConfig): string {
+  return `${format.numberOfRubbers} rubbers`
 }
 
 export function createGoogleMapsUrl(...parts: (string | undefined | null)[]): string | undefined {

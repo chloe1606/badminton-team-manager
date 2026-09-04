@@ -91,7 +91,7 @@ function PlayerMatchesSection({
 }) {
   return (
     <Card>
-      <div className="card-heading">
+      <div className="card-heading dashboard-section-heading">
         <div>
           <h2>{title}</h2>
           <p className="muted">{description}</p>
