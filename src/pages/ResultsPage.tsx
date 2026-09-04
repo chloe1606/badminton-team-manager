@@ -15,6 +15,7 @@ import {
 import { createDefaultMatchFilters, filterMatches, getMatchSeasonOptions } from '../utils/matchFilters'
 import {
   formatMatchDateTime,
+  formatMatchFormat,
   formatTeamDisplayName,
   formatOpponentName,
   getClubById,
@@ -183,7 +184,7 @@ export function ResultsPage() {
                   <div>
                     <dt>Format</dt>
                     <dd>
-                      {match.format.numberOfRubbers} rubbers
+                      {formatMatchFormat(match.format)}
                       {pendingRubbers > 0 ? ` (${pendingRubbers} pending)` : ''}
                     </dd>
                   </div>

@@ -4,7 +4,7 @@
     "team_number": "1",
     "match_type": "Mens 6",
     "division": "1",
-    "rubbers": 6,
+    "rubbers": 9,
     "display_name": "Parklangley 1 in Mens 6 Div 1"
   },
   {
@@ -12,7 +12,7 @@
     "team_number": "2",
     "match_type": "Mens 6",
     "division": "2",
-    "rubbers": 6,
+    "rubbers": 9,
     "display_name": "Parklangley 2 in Mens 6 Div 2"
   },
   {
@@ -20,7 +20,7 @@
     "team_number": "1",
     "match_type": "Mixed 6",
     "division": "1",
-    "rubbers": 6,
+    "rubbers": 9,
     "display_name": "Parklangley 1 in Mixed 6 Div 1"
   },
   {
@@ -28,7 +28,7 @@
     "team_number": "3",
     "match_type": "Mens 6",
     "division": "2",
-    "rubbers": 6,
+    "rubbers": 9,
     "display_name": "Parklangley 3 in Mens 6 Div 2"
   },
   {
@@ -36,7 +36,7 @@
     "team_number": "1",
     "match_type": "Ladies 6",
     "division": "1",
-    "rubbers": 6,
+    "rubbers": 9,
     "display_name": "Parklangley 1 in Ladies 6 Div 1"
   },
   {
@@ -44,7 +44,7 @@
     "team_number": "1",
     "match_type": "Ladies 4",
     "division": "3",
-    "rubbers": 4,
+    "rubbers": 6,
     "display_name": "Parklangley 1 in Ladies 4 Div 3"
   },
   {
@@ -52,7 +52,7 @@
     "team_number": "4",
     "match_type": "Mens 6",
     "division": "3",
-    "rubbers": 6,
+    "rubbers": 9,
     "display_name": "Parklangley 4 in Mens 6 Div 3"
   },
   {
@@ -60,7 +60,7 @@
     "team_number": null,
     "match_type": "Mens 4",
     "division": "1",
-    "rubbers": 4,
+    "rubbers": 6,
     "display_name": "Parklangley in Mens 4 Div 1"
   },
   {
@@ -68,7 +68,7 @@
     "team_number": null,
     "match_type": "Composite",
     "division": "1",
-    "rubbers": 6,
+    "rubbers": 9,
     "display_name": "Parklangley in Composite Div 1"
   }
 ]

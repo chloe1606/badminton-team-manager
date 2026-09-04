@@ -39,6 +39,7 @@ import {
   getSeasonYear,
   getCurrentSeason,
   formatMatchDateTime,
+  formatMatchFormat,
   calculateAdminStats,
   isMatchExpired,
 } from '../utils/matches'
@@ -1769,7 +1770,7 @@ export function MatchesPage() {
                               </div>
                               <div>
                                 <dt>Format</dt>
-                                <dd>{match.format.numberOfRubbers} rubbers</dd>
+                                <dd>{formatMatchFormat(match.format)}</dd>
                               </div>
                               {isPlayerSelected && playerPair ? (
                                 <div>

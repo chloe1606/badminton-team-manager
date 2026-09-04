@@ -91,7 +91,7 @@ function PlayerMatchesSection({
 }) {
   return (
     <Card>
-      <div className="card-heading">
+      <div className="card-heading dashboard-section-heading">
         <div>
           <h2>{title}</h2>
           <p className="muted">{description}</p>
@@ -117,7 +117,10 @@ function PlayerMatchesSection({
                 className={`dashboard-match-card${isSelected ? ' dashboard-match-card--selected' : ''}`}
                 aria-label={`Match ${index + 1}`}
               >
-                <p className="eyebrow">Match {index + 1}</p>
+                <p className="eyebrow">
+                  Match {index + 1} · {match.matchType ?? DEFAULT_MATCH_TYPE} Div{' '}
+                  {match.divisionNumber ?? DEFAULT_DIVISION_NUMBER}
+                </p>
                 <h3 className="dashboard-match-title">{match.teamDisplayName} vs {opponentName}</h3>
                 <dl className="dashboard-match-meta">
                   <div>
