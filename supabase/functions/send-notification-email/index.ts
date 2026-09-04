@@ -17,6 +17,16 @@ const APP_URL =
 const GOOGLE_MAPS_BASE_URL =
   "https://www.google.com/maps/search/?api=1&query=";
 
+function jsonResponse(body: unknown, status = 200): Response {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: {
+      ...corsHeaders,
+      "Content-Type": "application/json",
+    },
+  });
+}
+
 function isPastMatch(startAt: string | null | undefined): boolean {
   if (!startAt) {
     return false;
@@ -53,18 +63,9 @@ Deno.serve(async (req) => {
     if (!webhookSecret || suppliedSecret !== webhookSecret) {
       console.error("Invalid webhook secret");
 
-      return new Response(
-        JSON.stringify({
+      return jsonResponse({
           error: "Unauthorized",
-        }),
-        {
-          status: 401,
-          headers: {
-            ...corsHeaders,
-            "Content-Type": "application/json",
-          },
-        },
-      );
+        }, 401);
     }
 
     // --------------------------------------------------
@@ -143,21 +144,12 @@ Deno.serve(async (req) => {
           `Skipping notifications for past match ${match.id} (${match.start_at})`,
         );
 
-        return new Response(
-          JSON.stringify({
+        return jsonResponse({
             success: true,
             type: "new_match",
             skipped: true,
             reason: "match_is_in_past",
-          }),
-          {
-            status: 200,
-            headers: {
-              ...corsHeaders,
-              "Content-Type": "application/json",
-            },
-          },
-        );
+          });
       }
 
       const result = await notifyAllPlayers(
@@ -165,20 +157,11 @@ Deno.serve(async (req) => {
         match,
       );
 
-      return new Response(
-        JSON.stringify({
+      return jsonResponse({
           success: true,
           type: "new_match",
           result,
-        }),
-        {
-          status: 200,
-          headers: {
-            ...corsHeaders,
-            "Content-Type": "application/json",
-          },
-        },
-      );
+        });
     }
 
     // ==================================================
@@ -191,21 +174,12 @@ Deno.serve(async (req) => {
           `Skipping selection notifications for past match ${match.id} (${match.start_at})`,
         );
 
-        return new Response(
-          JSON.stringify({
+        return jsonResponse({
             success: true,
             type: "update",
             skipped: true,
             reason: "match_is_in_past",
-          }),
-          {
-            status: 200,
-            headers: {
-              ...corsHeaders,
-              "Content-Type": "application/json",
-            },
-          },
-        );
+          });
       }
 
       const newAssigned =
@@ -232,20 +206,11 @@ Deno.serve(async (req) => {
       );
 
       if (newlySelectedPlayers.length === 0) {
-        return new Response(
-          JSON.stringify({
+        return jsonResponse({
             success: true,
             type: "update",
             message: "No newly selected players",
-          }),
-          {
-            status: 200,
-            headers: {
-              ...corsHeaders,
-              "Content-Type": "application/json",
-            },
-          },
-        );
+          });
       }
 
       // Send an email to each newly selected player.
@@ -261,55 +226,28 @@ Deno.serve(async (req) => {
         results.push(result);
       }
 
-      return new Response(
-        JSON.stringify({
+      return jsonResponse({
           success: true,
           type: "player_selected",
           results,
-        }),
-        {
-          status: 200,
-          headers: {
-            ...corsHeaders,
-            "Content-Type": "application/json",
-          },
-        },
-      );
+        });
     }
 
     // We don't need DELETE notifications.
-    return new Response(
-      JSON.stringify({
+    return jsonResponse({
         success: true,
         message: "Event ignored",
-      }),
-      {
-        status: 200,
-        headers: {
-          ...corsHeaders,
-          "Content-Type": "application/json",
-        },
-      },
-    );
+      });
   } catch (error) {
     console.error("Function error:", error);
 
-    return new Response(
-      JSON.stringify({
+    return jsonResponse({
         success: false,
         error:
           error instanceof Error
             ? error.message
             : "Unknown error",
-      }),
-      {
-        status: 500,
-        headers: {
-          ...corsHeaders,
-          "Content-Type": "application/json",
-        },
-      },
-    );
+      }, 500);
   }
 });
 
@@ -333,13 +271,15 @@ async function notifyAllPlayers(
     );
   }
 
+  const safeProfiles = profiles ?? [];
+
   console.log(
-    `Found ${profiles.length} players to notify`,
+    `Found ${safeProfiles.length} players to notify`,
   );
 
   const results = [];
 
-  for (const profile of profiles) {
+  for (const profile of safeProfiles) {
     if (!profile.email) {
       continue;
     }

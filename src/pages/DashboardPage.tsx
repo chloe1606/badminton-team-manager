@@ -27,6 +27,11 @@ function formatMonthHeading(dateValue: string): string {
   return formatter.format(new Date(dateValue))
 }
 
+function getDashboardOpponentName(match: MatchRecord): string {
+  const opponentClub = getClubById(clubDirectory, match.opponentClubId)
+  return formatOpponentName(match, opponentClub)
+}
+
 interface CalendarMonthGroup {
   monthKey: string
   monthLabel: string
@@ -37,8 +42,7 @@ function createDashboardCalendarFixture(
   match: MatchRecord,
   playerId: string | undefined,
 ): CalendarFixture {
-  const opponentClub = getClubById(clubDirectory, match.opponentClubId)
-  const opponentName = formatOpponentName(match, opponentClub)
+  const opponentName = getDashboardOpponentName(match)
   const fallbackHomeClub = getClubById(clubDirectory, defaultTeamSettings.profile.homeClubId)
   const fallbackHomeVenue = getAddressById(fallbackHomeClub, defaultTeamSettings.profile.homeVenueId)
   const availabilityStatus = getPlayerMatchAvailabilityStatus(match, playerId)
@@ -66,6 +70,56 @@ function createDashboardCalendarFixture(
       .filter(Boolean)
       .join('\n'),
   }
+}
+
+function MatchCardMeta({
+  match,
+  pairAssignment,
+  playersById,
+  dateFirst = false,
+}: {
+  match: MatchRecord
+  pairAssignment?: ReturnType<typeof getPlayerPairAssignment>
+  playersById: Map<string, { fullName: string }>
+  dateFirst?: boolean
+}) {
+  const date = (
+    <div>
+      <dt>Date and time</dt>
+      <dd>{formatMatchDateTime(match.startAt, 'medium')}</dd>
+    </div>
+  )
+  const location = (
+    <div>
+      <dt>Location</dt>
+      <dd>
+        <MatchLocationDetails
+          match={match}
+          homeClubId={defaultTeamSettings.profile.homeClubId}
+        />
+      </dd>
+    </div>
+  )
+
+  return (
+    <dl className="dashboard-match-meta">
+      {dateFirst ? date : location}
+      {dateFirst ? location : date}
+      {pairAssignment ? (
+        <div>
+          <dt>Your pairing</dt>
+          <dd>
+            {pairAssignment.pairSlot}
+            {pairAssignment.partnerIds.length > 0
+              ? ` with ${pairAssignment.partnerIds
+                  .map((partnerId) => playersById.get(partnerId)?.fullName ?? 'Unknown player')
+                  .join(', ')}`
+              : ' · partner to be confirmed'}
+          </dd>
+        </div>
+      ) : null}
+    </dl>
+  )
 }
 
 function PlayerMatchesSection({
@@ -107,8 +161,7 @@ function PlayerMatchesSection({
       ) : matches.length > 0 ? (
         <div className="dashboard-match-grid">
           {matches.map((match, index) => {
-            const opponentClub = getClubById(clubDirectory, match.opponentClubId)
-            const opponentName = formatOpponentName(match, opponentClub)
+            const opponentName = getDashboardOpponentName(match)
             const pairAssignment = isSelected ? getPlayerPairAssignment(match, playerId) : undefined
 
             return (
@@ -122,37 +175,11 @@ function PlayerMatchesSection({
                   {match.divisionNumber ?? DEFAULT_DIVISION_NUMBER}
                 </p>
                 <h3 className="dashboard-match-title">{match.teamDisplayName} vs {opponentName}</h3>
-                <dl className="dashboard-match-meta">
-                  <div>
-                    <dt>Location</dt>
-                    <dd>
-                      <MatchLocationDetails
-                        match={match}
-                        homeClubId={defaultTeamSettings.profile.homeClubId}
-                      />
-                    </dd>
-                  </div>
-                  <div>
-                    <dt>Date and time</dt>
-                    <dd>{formatMatchDateTime(match.startAt, 'medium')}</dd>
-                  </div>
-                  {pairAssignment ? (
-                    <div>
-                      <dt>Your pairing</dt>
-                      <dd>
-                        {pairAssignment.pairSlot}
-                        {pairAssignment.partnerIds.length > 0
-                          ? ` with ${pairAssignment.partnerIds
-                              .map(
-                                (partnerId) =>
-                                  playersById.get(partnerId)?.fullName ?? 'Unknown player',
-                              )
-                              .join(', ')}`
-                          : ' · partner to be confirmed'}
-                      </dd>
-                    </div>
-                  ) : null}
-                </dl>
+                <MatchCardMeta
+                  match={match}
+                  pairAssignment={pairAssignment}
+                  playersById={playersById}
+                />
               </section>
             )
           })}
@@ -249,8 +276,7 @@ export function DashboardPage() {
       return 'No future matches available.'
     }
 
-    const opponentClub = getClubById(clubDirectory, summaryMatch.opponentClubId)
-    const opponentName = formatOpponentName(summaryMatch, opponentClub)
+    const opponentName = getDashboardOpponentName(summaryMatch)
 
     const selectedPlayersLine = summarySelectedPlayers.length > 0
       ? summarySelectedPlayers.map((name) => `- ${name}`).join('\n')
@@ -309,8 +335,7 @@ export function DashboardPage() {
                   <h3 className="dashboard-calendar-month-title">{monthGroup.monthLabel}</h3>
                   <div className="dashboard-calendar-list">
                     {monthGroup.matches.map((match) => {
-                      const opponentClub = getClubById(clubDirectory, match.opponentClubId)
-                      const opponentName = formatOpponentName(match, opponentClub)
+                      const opponentName = getDashboardOpponentName(match)
                       return (
                         <article key={match.id} className="dashboard-calendar-item">
                           <p className="dashboard-calendar-time">{formatMatchDateTime(match.startAt, 'medium')}</p>
@@ -344,29 +369,18 @@ export function DashboardPage() {
           ) : unansweredMatches.length > 0 ? (
             <div className="dashboard-match-grid">
               {unansweredMatches.map((match) => {
-                const opponentClub = getClubById(clubDirectory, match.opponentClubId)
-                const opponentName = formatOpponentName(match, opponentClub)
+                const opponentName = getDashboardOpponentName(match)
 
                 return (
                   <section key={match.id} className="dashboard-match-card">
                     <h3 className="dashboard-match-title">
                       {match.teamDisplayName} vs {opponentName}
                     </h3>
-                    <dl className="dashboard-match-meta">
-                      <div>
-                        <dt>Date and time</dt>
-                        <dd>{formatMatchDateTime(match.startAt, 'medium')}</dd>
-                      </div>
-                      <div>
-                        <dt>Location</dt>
-                        <dd>
-                          <MatchLocationDetails
-                            match={match}
-                            homeClubId={defaultTeamSettings.profile.homeClubId}
-                          />
-                        </dd>
-                      </div>
-                    </dl>
+                    <MatchCardMeta
+                      match={match}
+                      playersById={playersById}
+                      dateFirst
+                    />
                     <PlayerAvailabilityActions
                       match={match}
                       playerId={playerId}
@@ -448,8 +462,7 @@ export function DashboardPage() {
                     <option value="">No future matches available</option>
                   ) : (
                     futureMatches.map((match) => {
-                      const opponentClub = getClubById(clubDirectory, match.opponentClubId)
-                      const opponentName = formatOpponentName(match, opponentClub)
+                      const opponentName = getDashboardOpponentName(match)
                       return (
                         <option key={match.id} value={match.id}>
                           {formatMatchDateTime(match.startAt, 'medium')} - {match.teamDisplayName} vs {opponentName}
