@@ -4,6 +4,14 @@
 DO $$
 DECLARE
   policy_name text;
+  admin_check text := $policy$
+    EXISTS (
+      SELECT 1
+      FROM public.profiles AS me
+      WHERE me.id = auth.uid()
+        AND me.role = 'admin'
+    )
+  $policy$;
 BEGIN
   -- Drop any previously-created conflicting profile update policies.
   FOREACH policy_name IN ARRAY ARRAY[
@@ -26,23 +34,11 @@ BEGIN
   EXECUTE '
     CREATE POLICY "Admins can update profiles"
       ON public.profiles FOR UPDATE
-      USING (
-        EXISTS (
-          SELECT 1
-          FROM public.profiles AS me
-          WHERE me.id = auth.uid()
-            AND me.role = ''admin''
-        )
-      )
-      WITH CHECK (
-        EXISTS (
-          SELECT 1
-          FROM public.profiles AS me
-          WHERE me.id = auth.uid()
-            AND me.role = ''admin''
-        )
-      )
-  ';
+  ' || format(
+    'USING (%s) WITH CHECK (%s)',
+    admin_check,
+    admin_check
+  );
 
   -- Ensure authenticated users can read teams in the app.
   IF EXISTS (
@@ -78,50 +74,22 @@ BEGIN
       USING (auth.role() = ''authenticated'')
   ';
 
-  EXECUTE '
+  EXECUTE format('
     CREATE POLICY "Admins can insert teams"
       ON public.teams FOR INSERT
-      WITH CHECK (
-        EXISTS (
-          SELECT 1
-          FROM public.profiles AS me
-          WHERE me.id = auth.uid()
-            AND me.role = ''admin''
-        )
-      )
-  ';
+      WITH CHECK (%s)
+  ', admin_check);
 
-  EXECUTE '
+  EXECUTE format('
     CREATE POLICY "Admins can update teams"
       ON public.teams FOR UPDATE
-      USING (
-        EXISTS (
-          SELECT 1
-          FROM public.profiles AS me
-          WHERE me.id = auth.uid()
-            AND me.role = ''admin''
-        )
-      )
-      WITH CHECK (
-        EXISTS (
-          SELECT 1
-          FROM public.profiles AS me
-          WHERE me.id = auth.uid()
-            AND me.role = ''admin''
-        )
-      )
-  ';
+      USING (%s)
+      WITH CHECK (%s)
+  ', admin_check, admin_check);
 
-  EXECUTE '
+  EXECUTE format('
     CREATE POLICY "Admins can delete teams"
       ON public.teams FOR DELETE
-      USING (
-        EXISTS (
-          SELECT 1
-          FROM public.profiles AS me
-          WHERE me.id = auth.uid()
-            AND me.role = ''admin''
-        )
-      )
-  ';
+      USING (%s)
+  ', admin_check);
 END $$;
