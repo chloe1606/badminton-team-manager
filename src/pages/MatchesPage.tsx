@@ -45,7 +45,6 @@ import {
 } from '../utils/matches'
 import {
   DEFAULT_DIVISION_NUMBER,
-  DEFAULT_MATCH_CONTEXT_KEY,
   DEFAULT_MATCH_TYPE,
   createMatchContextKey,
   isDefaultMatchType,
@@ -1364,24 +1363,10 @@ export function MatchesPage() {
   const [notes, setNotes] = useState('')
   const [error, setError] = useState('')
   const [status, setStatus] = useState('')
-  const [showAllDivisions, setShowAllDivisions] = useState(false)
   const [collapsedSeasons, setCollapsedSeasons] = useState<Record<string, boolean>>({})
-  const selectedMatchContextKey = createMatchContextKey(matchType, Number(divisionNumber))
-  const playerDefaultContextKey = DEFAULT_MATCH_CONTEXT_KEY
   const selectedMatches = useMemo(
-    () => {
-      if (showAllDivisions) {
-        return matches.filter((match) => isDefaultMatchType(match.matchType, match.matchContextKey))
-      }
-
-      const targetContextKey = isAdmin ? selectedMatchContextKey : playerDefaultContextKey
-      return matches.filter(
-        (match) =>
-          (match.matchContextKey ?? createMatchContextKey(match.matchType ?? '', match.divisionNumber ?? 0)) ===
-          targetContextKey,
-      )
-    },
-    [isAdmin, matches, playerDefaultContextKey, selectedMatchContextKey, showAllDivisions],
+    () => matches.filter((match) => isDefaultMatchType(match.matchType, match.matchContextKey)),
+    [matches],
   )
   const visibleMatches = useMemo(() => selectedMatches, [selectedMatches])
 
@@ -1556,18 +1541,26 @@ export function MatchesPage() {
     }
 
     try {
-      const requestedDivision = data.divisionNumber ?? Number.parseInt(divisionNumber, 10)
-      const selectedFormat = await getTeamMatchSettingsFormat(
-        data.matchType ?? matchType,
-        Number.isNaN(requestedDivision) ? DEFAULT_DIVISION_NUMBER : requestedDivision,
-      )
+      const selectedDivisionNumber = Number.parseInt(divisionNumber, 10)
+      const fallbackDivisionNumber = Number.isNaN(selectedDivisionNumber)
+        ? DEFAULT_DIVISION_NUMBER
+        : selectedDivisionNumber
+      const submittedDivisionNumber =
+        data.divisionNumber === undefined ? Number.NaN : Number.parseInt(String(data.divisionNumber), 10)
+      const resolvedDivision =
+        Number.isNaN(submittedDivisionNumber)
+          ? fallbackDivisionNumber
+          : submittedDivisionNumber
+      const selectedFormat = await getTeamMatchSettingsFormat(data.matchType ?? matchType, resolvedDivision)
       const resolvedFormat = withDefaultFormat(selectedFormat ?? teamSettings.matchFormat)
+      const resolvedMatchType = data.matchType ?? matchType
+      const matchContextKey = createMatchContextKey(resolvedMatchType, resolvedDivision)
 
       await handleAddMatch({
         ...data,
         teamDisplayName,
         leagueName: (teamSettings.profile.leagueName ?? 'NWKBA').trim(),
-        matchContextKey: selectedMatchContextKey,
+        matchContextKey,
         format: cloneFormat(resolvedFormat),
       })
 
@@ -1595,23 +1588,11 @@ export function MatchesPage() {
             <p>
               Fixtures for <strong>{teamDisplayName}</strong> in{' '}
               <strong>
-                {showAllDivisions
-                  ? `${DEFAULT_MATCH_TYPE} - All Divisions`
-                  : `${matchType} Div ${divisionNumber}`}
+                {`${DEFAULT_MATCH_TYPE} - All Divisions`}
               </strong>.
             </p>
           </div>
           <div className="form-actions">
-            {isAdmin ? (
-              <label className="checkbox-row">
-                <input
-                  type="checkbox"
-                  checked={showAllDivisions}
-                  onChange={(event) => setShowAllDivisions(event.target.checked)}
-                />
-                <span>All Divisions</span>
-              </label>
-            ) : null}
             <Button onClick={exportAllMatches} variant="secondary">
               Export all to calendar
             </Button>
