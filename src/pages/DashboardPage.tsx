@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useAppData } from '../app/AppDataProvider'
 import { useAuth } from '../auth/hooks/useAuth'
 import { Button } from '../components/ui/Button'
@@ -264,6 +264,14 @@ export function DashboardPage() {
       defaultMatchTypeFutureMatches[0],
     [defaultMatchTypeFutureMatches, selectedSummaryMatchId],
   )
+  useEffect(() => {
+    if (
+      selectedSummaryMatchId &&
+      !defaultMatchTypeFutureMatches.some((match) => match.id === selectedSummaryMatchId)
+    ) {
+      setSelectedSummaryMatchId('')
+    }
+  }, [defaultMatchTypeFutureMatches, selectedSummaryMatchId])
   const summarySelectedPlayers = useMemo(() => {
     if (!summaryMatch) {
       return []
