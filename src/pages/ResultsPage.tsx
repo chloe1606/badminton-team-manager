@@ -30,12 +30,10 @@ export function ResultsPage() {
   const [filters, setFilters] = useState<MatchFiltersValue>(() =>
     createDefaultMatchFilters(getCurrentSeason()),
   )
-  const [showAllDivisions, setShowAllDivisions] = useState(false)
   const teamDisplayName = useMemo(() => formatTeamDisplayName(teamSettings.profile), [teamSettings.profile])
-  const canShowAllDivisions = isAdmin && showAllDivisions
 
   const scopedMatches = useMemo(() => {
-    if (canShowAllDivisions) {
+    if (isAdmin) {
       return matches.filter((match) =>
         isDefaultMatchType(match.matchType, match.matchContextKey),
       )
@@ -46,7 +44,7 @@ export function ResultsPage() {
         (match.matchContextKey ?? createMatchContextKey(match.matchType ?? '', match.divisionNumber ?? 0)) ===
         DEFAULT_MATCH_CONTEXT_KEY,
     )
-  }, [canShowAllDivisions, matches])
+  }, [isAdmin, matches])
 
   const seasonOptions = useMemo(() => getMatchSeasonOptions(scopedMatches), [scopedMatches])
   const completedMatches = useMemo(() => {
@@ -82,22 +80,10 @@ export function ResultsPage() {
             <p>
               Results for <strong>{teamDisplayName}</strong> in{' '}
               <strong>
-                {canShowAllDivisions
-                  ? `${DEFAULT_MATCH_TYPE} - All Divisions`
-                  : `${DEFAULT_MATCH_TYPE} Div ${DEFAULT_DIVISION_NUMBER}`}
+                {isAdmin ? `${DEFAULT_MATCH_TYPE} - All Divisions` : `${DEFAULT_MATCH_TYPE} Div ${DEFAULT_DIVISION_NUMBER}`}
               </strong>.
             </p>
           </div>
-          {isAdmin ? (
-            <label className="checkbox-row">
-              <input
-                type="checkbox"
-                checked={showAllDivisions}
-                onChange={(event) => setShowAllDivisions(event.target.checked)}
-              />
-              <span>All Divisions</span>
-            </label>
-          ) : null}
         </div>
 
         {totalMatches > 0 && (
