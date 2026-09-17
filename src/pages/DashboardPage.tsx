@@ -5,7 +5,7 @@ import { Button } from '../components/ui/Button'
 import { Card } from '../components/ui/Card'
 import { MatchLocationDetails } from '../components/matches/MatchLocationDetails'
 import { PlayerAvailabilityActions } from '../components/matches/PlayerAvailabilityActions'
-import { DEFAULT_DIVISION_NUMBER, DEFAULT_MATCH_TYPE } from '../lib/matchContext'
+import { DEFAULT_DIVISION_NUMBER, DEFAULT_MATCH_TYPE, isDefaultMatchType } from '../lib/matchContext'
 import { clubDirectory } from '../data/clubContacts'
 import { defaultTeamSettings } from '../data/matches'
 import type { MatchRecord } from '../types/matches'
@@ -202,6 +202,10 @@ export function DashboardPage() {
     () => sortMatchesChronologically(matches).filter((match) => !isMatchExpired(match)),
     [matches],
   )
+  const defaultMatchTypeFutureMatches = useMemo(
+    () => futureMatches.filter((match) => isDefaultMatchType(match.matchType, match.matchContextKey)),
+    [futureMatches],
+  )
   const calendarMonthGroups = useMemo<CalendarMonthGroup[]>(() => {
     const grouped = new Map<string, MatchRecord[]>()
 
@@ -223,15 +227,13 @@ export function DashboardPage() {
   }, [futureMatches])
   const playerMatches = useMemo(
     () =>
-      futureMatches.filter(
+      defaultMatchTypeFutureMatches.filter(
         (match) =>
           playerId &&
-          match.matchType === DEFAULT_MATCH_TYPE &&
-          match.divisionNumber === DEFAULT_DIVISION_NUMBER &&
           ((match.availablePlayerIds ?? []).includes(playerId) ||
             (match.assignedPlayerIds ?? []).includes(playerId)),
       ),
-    [futureMatches, playerId],
+    [defaultMatchTypeFutureMatches, playerId],
   )
   const selectedPlayerMatches = useMemo(
     () => playerMatches.filter((match) => (match.assignedPlayerIds ?? []).includes(playerId ?? '')),
@@ -249,18 +251,18 @@ export function DashboardPage() {
   const unansweredMatches = useMemo(
     () =>
       playerId
-        ? futureMatches.filter(
+        ? defaultMatchTypeFutureMatches.filter(
             (match) =>
-              match.matchType === DEFAULT_MATCH_TYPE &&
-              match.divisionNumber === DEFAULT_DIVISION_NUMBER &&
               getPlayerMatchResponse(match, playerId) === 'NO_RESPONSE',
           )
         : [],
-    [futureMatches, playerId],
+    [defaultMatchTypeFutureMatches, playerId],
   )
   const summaryMatch = useMemo(
-    () => futureMatches.find((match) => match.id === selectedSummaryMatchId) ?? futureMatches[0],
-    [futureMatches, selectedSummaryMatchId],
+    () =>
+      defaultMatchTypeFutureMatches.find((match) => match.id === selectedSummaryMatchId) ??
+      defaultMatchTypeFutureMatches[0],
+    [defaultMatchTypeFutureMatches, selectedSummaryMatchId],
   )
   const summarySelectedPlayers = useMemo(() => {
     if (!summaryMatch) {
@@ -456,12 +458,12 @@ export function DashboardPage() {
                   className="input"
                   value={summaryMatch?.id ?? ''}
                   onChange={(event) => setSelectedSummaryMatchId(event.target.value)}
-                  disabled={futureMatches.length === 0}
+                  disabled={defaultMatchTypeFutureMatches.length === 0}
                 >
-                  {futureMatches.length === 0 ? (
+                  {defaultMatchTypeFutureMatches.length === 0 ? (
                     <option value="">No future matches available</option>
                   ) : (
-                    futureMatches.map((match) => {
+                    defaultMatchTypeFutureMatches.map((match) => {
                       const opponentName = getDashboardOpponentName(match)
                       return (
                         <option key={match.id} value={match.id}>
