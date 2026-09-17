@@ -191,9 +191,11 @@ function normalizePlayersForMatchContext(players: PlayerProfile[]): PlayerProfil
 function combineContextSettings(
   teamMatchSettings: TeamMatchSettingsRecord[],
 ): TeamSettings {
-  const defaultContextKey = 'mixed-6__3'
+  const preferredContextKey = 'mixed-6__3'
   const teamMatchSetting =
-    teamMatchSettings.find((setting) => setting.matchContextKey === defaultContextKey) ?? teamMatchSettings[0]
+    teamMatchSettings.find((setting) => setting.matchContextKey === preferredContextKey) ??
+    teamMatchSettings.find((setting) => setting.matchContextKey?.startsWith('mixed-6__')) ??
+    teamMatchSettings[0]
 
   return normalizeTeamSettings({
     profile: {
