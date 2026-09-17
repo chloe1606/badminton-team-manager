@@ -1,11 +1,10 @@
 import { createClient } from "@supabase/supabase-js";
 
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_ANON_KEY
-);
-
 async function keepAlive() {
+  const supabase = createClient(
+    process.env.SUPABASE_URL,
+    process.env.SUPABASE_ANON_KEY
+  );
   const { error } = await supabase
     .from("suppliers")
     .select("supplier_id")
@@ -19,4 +18,7 @@ async function keepAlive() {
   console.log("Keep-alive successful:", new Date().toISOString());
 }
 
-keepAlive();
+keepAlive().catch((error) => {
+  console.error("Keep-alive failed:", error);
+  process.exit(1);
+});
