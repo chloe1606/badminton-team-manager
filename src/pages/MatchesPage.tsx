@@ -1594,7 +1594,9 @@ export function MatchesPage() {
             <p>
               Fixtures for <strong>{teamDisplayName}</strong> in{' '}
               <strong>
-                {isAdmin ? `${DEFAULT_MATCH_TYPE} - All Divisions` : `${matchType} Div ${divisionNumber}`}
+                {isAdmin
+                  ? `${DEFAULT_MATCH_TYPE} - All Divisions`
+                  : `${DEFAULT_MATCH_TYPE} Div ${DEFAULT_DIVISION_NUMBER}`}
               </strong>.
             </p>
           </div>
