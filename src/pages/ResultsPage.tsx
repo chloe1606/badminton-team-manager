@@ -1,17 +1,10 @@
 import { Fragment, useMemo, useState } from 'react'
 import { useAppData } from '../app/AppDataProvider'
-import { useAuth } from '../auth/hooks/useAuth'
 import { MatchFilters, type MatchFiltersValue } from '../components/matches/MatchFilters'
 import { MatchLocationDetails } from '../components/matches/MatchLocationDetails'
 import { Card } from '../components/ui/Card'
 import { clubDirectory } from '../data/clubContacts'
-import {
-  DEFAULT_DIVISION_NUMBER,
-  DEFAULT_MATCH_CONTEXT_KEY,
-  DEFAULT_MATCH_TYPE,
-  createMatchContextKey,
-  isDefaultMatchType,
-} from '../lib/matchContext'
+import { DEFAULT_MATCH_TYPE, isDefaultMatchType } from '../lib/matchContext'
 import { createDefaultMatchFilters, filterMatches, getMatchSeasonOptions } from '../utils/matchFilters'
 import {
   formatMatchDateTime,
@@ -26,25 +19,15 @@ import {
 
 export function ResultsPage() {
   const { matches, isLoadingMatches, playersById, teamSettings } = useAppData()
-  const { isAdmin } = useAuth()
   const [filters, setFilters] = useState<MatchFiltersValue>(() =>
     createDefaultMatchFilters(getCurrentSeason()),
   )
   const teamDisplayName = useMemo(() => formatTeamDisplayName(teamSettings.profile), [teamSettings.profile])
 
-  const scopedMatches = useMemo(() => {
-    if (isAdmin) {
-      return matches.filter((match) =>
-        isDefaultMatchType(match.matchType, match.matchContextKey),
-      )
-    }
-
-    return matches.filter(
-      (match) =>
-        (match.matchContextKey ?? createMatchContextKey(match.matchType ?? '', match.divisionNumber ?? 0)) ===
-        DEFAULT_MATCH_CONTEXT_KEY,
-    )
-  }, [isAdmin, matches])
+  const scopedMatches = useMemo(
+    () => matches.filter((match) => isDefaultMatchType(match.matchType, match.matchContextKey)),
+    [matches],
+  )
 
   const seasonOptions = useMemo(() => getMatchSeasonOptions(scopedMatches), [scopedMatches])
   const completedMatches = useMemo(() => {
@@ -80,7 +63,7 @@ export function ResultsPage() {
             <p>
               Results for <strong>{teamDisplayName}</strong> in{' '}
               <strong>
-                {isAdmin ? `${DEFAULT_MATCH_TYPE} - All Divisions` : `${DEFAULT_MATCH_TYPE} Div ${DEFAULT_DIVISION_NUMBER}`}
+                {`${DEFAULT_MATCH_TYPE} - All Divisions`}
               </strong>.
             </p>
           </div>

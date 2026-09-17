@@ -45,7 +45,6 @@ import {
 } from '../utils/matches'
 import {
   DEFAULT_DIVISION_NUMBER,
-  DEFAULT_MATCH_CONTEXT_KEY,
   DEFAULT_MATCH_TYPE,
   createMatchContextKey,
   isDefaultMatchType,
@@ -1366,21 +1365,9 @@ export function MatchesPage() {
   const [status, setStatus] = useState('')
   const [collapsedSeasons, setCollapsedSeasons] = useState<Record<string, boolean>>({})
   const selectedMatchContextKey = createMatchContextKey(matchType, Number(divisionNumber))
-  const playerDefaultContextKey = DEFAULT_MATCH_CONTEXT_KEY
   const selectedMatches = useMemo(
-    () => {
-      if (isAdmin) {
-        return matches.filter((match) => isDefaultMatchType(match.matchType, match.matchContextKey))
-      }
-
-      const targetContextKey = playerDefaultContextKey
-      return matches.filter(
-        (match) =>
-          (match.matchContextKey ?? createMatchContextKey(match.matchType ?? '', match.divisionNumber ?? 0)) ===
-          targetContextKey,
-      )
-    },
-    [isAdmin, matches, playerDefaultContextKey],
+    () => matches.filter((match) => isDefaultMatchType(match.matchType, match.matchContextKey)),
+    [matches],
   )
   const visibleMatches = useMemo(() => selectedMatches, [selectedMatches])
 
@@ -1594,9 +1581,7 @@ export function MatchesPage() {
             <p>
               Fixtures for <strong>{teamDisplayName}</strong> in{' '}
               <strong>
-                {isAdmin
-                  ? `${DEFAULT_MATCH_TYPE} - All Divisions`
-                  : `${DEFAULT_MATCH_TYPE} Div ${DEFAULT_DIVISION_NUMBER}`}
+                {`${DEFAULT_MATCH_TYPE} - All Divisions`}
               </strong>.
             </p>
           </div>
