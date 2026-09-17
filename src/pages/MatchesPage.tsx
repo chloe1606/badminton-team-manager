@@ -1364,24 +1364,23 @@ export function MatchesPage() {
   const [notes, setNotes] = useState('')
   const [error, setError] = useState('')
   const [status, setStatus] = useState('')
-  const [showAllDivisions, setShowAllDivisions] = useState(false)
   const [collapsedSeasons, setCollapsedSeasons] = useState<Record<string, boolean>>({})
   const selectedMatchContextKey = createMatchContextKey(matchType, Number(divisionNumber))
   const playerDefaultContextKey = DEFAULT_MATCH_CONTEXT_KEY
   const selectedMatches = useMemo(
     () => {
-      if (showAllDivisions) {
+      if (isAdmin) {
         return matches.filter((match) => isDefaultMatchType(match.matchType, match.matchContextKey))
       }
 
-      const targetContextKey = isAdmin ? selectedMatchContextKey : playerDefaultContextKey
+      const targetContextKey = playerDefaultContextKey
       return matches.filter(
         (match) =>
           (match.matchContextKey ?? createMatchContextKey(match.matchType ?? '', match.divisionNumber ?? 0)) ===
           targetContextKey,
       )
     },
-    [isAdmin, matches, playerDefaultContextKey, selectedMatchContextKey, showAllDivisions],
+    [isAdmin, matches, playerDefaultContextKey],
   )
   const visibleMatches = useMemo(() => selectedMatches, [selectedMatches])
 
@@ -1595,23 +1594,11 @@ export function MatchesPage() {
             <p>
               Fixtures for <strong>{teamDisplayName}</strong> in{' '}
               <strong>
-                {showAllDivisions
-                  ? `${DEFAULT_MATCH_TYPE} - All Divisions`
-                  : `${matchType} Div ${divisionNumber}`}
+                {isAdmin ? `${DEFAULT_MATCH_TYPE} - All Divisions` : `${matchType} Div ${divisionNumber}`}
               </strong>.
             </p>
           </div>
           <div className="form-actions">
-            {isAdmin ? (
-              <label className="checkbox-row">
-                <input
-                  type="checkbox"
-                  checked={showAllDivisions}
-                  onChange={(event) => setShowAllDivisions(event.target.checked)}
-                />
-                <span>All Divisions</span>
-              </label>
-            ) : null}
             <Button onClick={exportAllMatches} variant="secondary">
               Export all to calendar
             </Button>
