@@ -1541,19 +1541,26 @@ export function MatchesPage() {
     }
 
     try {
-      const requestedDivision = data.divisionNumber ?? Number.parseInt(divisionNumber, 10)
-      const resolvedDivision = Number.isNaN(requestedDivision) ? DEFAULT_DIVISION_NUMBER : requestedDivision
+      const selectedDivisionNumber = Number.parseInt(divisionNumber, 10)
+      const fallbackDivisionNumber = Number.isNaN(selectedDivisionNumber)
+        ? DEFAULT_DIVISION_NUMBER
+        : selectedDivisionNumber
+      const resolvedDivision = data.divisionNumber ?? fallbackDivisionNumber
       const selectedFormat = await getTeamMatchSettingsFormat(
         data.matchType ?? matchType,
         resolvedDivision,
       )
       const resolvedFormat = withDefaultFormat(selectedFormat ?? teamSettings.matchFormat)
+      const matchContextKey =
+        data.divisionNumber !== undefined
+          ? createMatchContextKey(data.matchType ?? matchType, data.divisionNumber)
+          : createMatchContextKey(matchType, fallbackDivisionNumber)
 
       await handleAddMatch({
         ...data,
         teamDisplayName,
         leagueName: (teamSettings.profile.leagueName ?? 'NWKBA').trim(),
-        matchContextKey: createMatchContextKey(data.matchType ?? matchType, resolvedDivision),
+        matchContextKey,
         format: cloneFormat(resolvedFormat),
       })
 
