@@ -1364,7 +1364,6 @@ export function MatchesPage() {
   const [error, setError] = useState('')
   const [status, setStatus] = useState('')
   const [collapsedSeasons, setCollapsedSeasons] = useState<Record<string, boolean>>({})
-  const selectedMatchContextKey = createMatchContextKey(matchType, Number(divisionNumber))
   const selectedMatches = useMemo(
     () => matches.filter((match) => isDefaultMatchType(match.matchType, match.matchContextKey)),
     [matches],
@@ -1543,9 +1542,10 @@ export function MatchesPage() {
 
     try {
       const requestedDivision = data.divisionNumber ?? Number.parseInt(divisionNumber, 10)
+      const resolvedDivision = Number.isNaN(requestedDivision) ? DEFAULT_DIVISION_NUMBER : requestedDivision
       const selectedFormat = await getTeamMatchSettingsFormat(
         data.matchType ?? matchType,
-        Number.isNaN(requestedDivision) ? DEFAULT_DIVISION_NUMBER : requestedDivision,
+        resolvedDivision,
       )
       const resolvedFormat = withDefaultFormat(selectedFormat ?? teamSettings.matchFormat)
 
@@ -1553,7 +1553,7 @@ export function MatchesPage() {
         ...data,
         teamDisplayName,
         leagueName: (teamSettings.profile.leagueName ?? 'NWKBA').trim(),
-        matchContextKey: selectedMatchContextKey,
+        matchContextKey: createMatchContextKey(data.matchType ?? matchType, resolvedDivision),
         format: cloneFormat(resolvedFormat),
       })
 
