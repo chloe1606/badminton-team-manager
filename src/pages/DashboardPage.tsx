@@ -78,11 +78,13 @@ function MatchCardMeta({
   match,
   pairAssignment,
   playersById,
+  homeClubId,
   dateFirst = false,
 }: {
   match: MatchRecord
   pairAssignment?: ReturnType<typeof getPlayerPairAssignment>
   playersById: Map<string, { fullName: string }>
+  homeClubId: string
   dateFirst?: boolean
 }) {
   const date = (
@@ -97,7 +99,7 @@ function MatchCardMeta({
       <dd>
         {formatMatchLocationLabel(match.location)}
         {(() => {
-          const venue = getMatchVenue(clubDirectory, match, defaultTeamSettings.profile.homeClubId)
+          const venue = getMatchVenue(clubDirectory, match, homeClubId)
           const mapsUrl = createGoogleMapsUrl(venue?.venueName, venue?.address)
 
           return mapsUrl ? (
@@ -144,6 +146,7 @@ function PlayerMatchesSection({
   isSelected = false,
   playerId,
   playersById,
+  homeClubId,
   onExport,
 }: {
   title: string
@@ -154,6 +157,7 @@ function PlayerMatchesSection({
   isSelected?: boolean
   playerId: string | undefined
   playersById: Map<string, { fullName: string }>
+  homeClubId: string
   onExport: () => void
 }) {
   return (
@@ -192,6 +196,7 @@ function PlayerMatchesSection({
                   match={match}
                   pairAssignment={pairAssignment}
                   playersById={playersById}
+                  homeClubId={homeClubId}
                 />
               </section>
             )
@@ -205,7 +210,7 @@ function PlayerMatchesSection({
 }
 
 export function DashboardPage() {
-  const { matches, isLoadingMatches, playersById, updateMatchAvailability } = useAppData()
+  const { matches, isLoadingMatches, playersById, teamSettings, updateMatchAvailability } = useAppData()
   const { isAdmin, user } = useAuth()
   const [isSummaryEmailVisible, setIsSummaryEmailVisible] = useState(false)
   const [selectedSummaryMatchId, setSelectedSummaryMatchId] = useState<string>('')
@@ -402,6 +407,7 @@ export function DashboardPage() {
                     <MatchCardMeta
                       match={match}
                       playersById={playersById}
+                      homeClubId={teamSettings.profile.homeClubId}
                       dateFirst
                     />
                     <PlayerAvailabilityActions
@@ -432,6 +438,7 @@ export function DashboardPage() {
         isSelected
         playerId={playerId}
         playersById={playersById}
+        homeClubId={teamSettings.profile.homeClubId}
         onExport={() =>
           exportMatchesToCalendar('dashboard-selected-matches.ics', selectedPlayerMatches)
         }
@@ -449,6 +456,7 @@ export function DashboardPage() {
         }
         playerId={playerId}
         playersById={playersById}
+        homeClubId={teamSettings.profile.homeClubId}
         onExport={() =>
           exportMatchesToCalendar('dashboard-available-matches.ics', availablePlayerMatches)
         }

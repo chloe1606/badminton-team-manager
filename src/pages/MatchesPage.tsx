@@ -1545,17 +1545,14 @@ export function MatchesPage() {
       const fallbackDivisionNumber = Number.isNaN(selectedDivisionNumber)
         ? DEFAULT_DIVISION_NUMBER
         : selectedDivisionNumber
-      const resolvedDivision = data.divisionNumber ?? fallbackDivisionNumber
-      const selectedFormat = await getTeamMatchSettingsFormat(
-        data.matchType ?? matchType,
-        resolvedDivision,
-      )
+      const resolvedDivision =
+        data.divisionNumber === undefined || Number.isNaN(data.divisionNumber)
+          ? fallbackDivisionNumber
+          : data.divisionNumber
+      const selectedFormat = await getTeamMatchSettingsFormat(data.matchType ?? matchType, resolvedDivision)
       const resolvedFormat = withDefaultFormat(selectedFormat ?? teamSettings.matchFormat)
       const resolvedMatchType = data.matchType ?? matchType
-      const matchContextKey =
-        data.divisionNumber !== undefined
-          ? createMatchContextKey(resolvedMatchType, data.divisionNumber)
-          : createMatchContextKey(resolvedMatchType, fallbackDivisionNumber)
+      const matchContextKey = createMatchContextKey(resolvedMatchType, resolvedDivision)
 
       await handleAddMatch({
         ...data,
