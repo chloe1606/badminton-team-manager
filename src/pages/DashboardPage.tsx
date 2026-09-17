@@ -3,7 +3,6 @@ import { useAppData } from '../app/AppDataProvider'
 import { useAuth } from '../auth/hooks/useAuth'
 import { Button } from '../components/ui/Button'
 import { Card } from '../components/ui/Card'
-import { MatchLocationDetails } from '../components/matches/MatchLocationDetails'
 import { PlayerAvailabilityActions } from '../components/matches/PlayerAvailabilityActions'
 import { DEFAULT_DIVISION_NUMBER, DEFAULT_MATCH_TYPE, isDefaultMatchType } from '../lib/matchContext'
 import { clubDirectory } from '../data/clubContacts'
@@ -11,10 +10,13 @@ import { defaultTeamSettings } from '../data/matches'
 import type { MatchRecord } from '../types/matches'
 import { createMatchesCalendarIcs, downloadIcs, type CalendarFixture } from '../utils/calendar'
 import {
+  createGoogleMapsUrl,
+  formatMatchLocationLabel,
   formatMatchDateTime,
   formatOpponentName,
   getClubById,
   getAddressById,
+  getMatchVenue,
   getPlayerPairAssignment,
   isMatchExpired,
   getPlayerMatchAvailabilityStatus,
@@ -93,10 +95,21 @@ function MatchCardMeta({
     <div>
       <dt>Location</dt>
       <dd>
-        <MatchLocationDetails
-          match={match}
-          homeClubId={defaultTeamSettings.profile.homeClubId}
-        />
+        {formatMatchLocationLabel(match.location)}
+        {(() => {
+          const venue = getMatchVenue(clubDirectory, match, defaultTeamSettings.profile.homeClubId)
+          const mapsUrl = createGoogleMapsUrl(venue?.venueName, venue?.address)
+
+          return mapsUrl ? (
+            <>
+              {' '}
+              ·{' '}
+              <a href={mapsUrl} rel="noreferrer" target="_blank">
+                View on Google Maps
+              </a>
+            </>
+          ) : null
+        })()}
       </dd>
     </div>
   )
