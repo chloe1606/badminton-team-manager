@@ -1551,10 +1551,11 @@ export function MatchesPage() {
         resolvedDivision,
       )
       const resolvedFormat = withDefaultFormat(selectedFormat ?? teamSettings.matchFormat)
+      const resolvedMatchType = data.matchType ?? matchType
       const matchContextKey =
         data.divisionNumber !== undefined
-          ? createMatchContextKey(data.matchType ?? matchType, data.divisionNumber)
-          : createMatchContextKey(matchType, fallbackDivisionNumber)
+          ? createMatchContextKey(resolvedMatchType, data.divisionNumber)
+          : createMatchContextKey(resolvedMatchType, fallbackDivisionNumber)
 
       await handleAddMatch({
         ...data,
