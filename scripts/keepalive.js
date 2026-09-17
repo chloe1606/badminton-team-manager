@@ -11,8 +11,7 @@ async function keepAlive() {
     .limit(1);
 
   if (error) {
-    console.error("Keep-alive failed:", error);
-    process.exit(1);
+    throw error;
   }
 
   console.log("Keep-alive successful:", new Date().toISOString());
